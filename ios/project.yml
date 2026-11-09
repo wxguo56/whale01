@@ -1,0 +1,51 @@
+name: WhaleAgent
+options:
+  bundleIdPrefix: com.whale01
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "0.1.0"
+targets:
+  WhaleAgent:
+    type: application
+    platform: iOS
+    sources:
+      - path: WhaleAgent
+        excludes:
+          - "Info.plist"
+          - "WhaleAgent.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.whale01.agent
+        PRODUCT_NAME: WhaleAgent
+        INFOPLIST_FILE: WhaleAgent/Info.plist
+        CODE_SIGN_ENTITLEMENTS: WhaleAgent/WhaleAgent.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: NO
+        CODE_SIGN_STYLE: Automatic
+    dependencies:
+      - sdk: EventKit.framework
+      - sdk: HealthKit.framework
+      - sdk: MapKit.framework
+      - sdk: CoreLocation.framework
+      - sdk: Contacts.framework
+      - sdk: MessageUI.framework
+      - sdk: MusicKit.framework
+      - sdk: WeatherKit.framework
+schemes:
+  WhaleAgent:
+    build:
+      targets:
+        WhaleAgent: all
+    run:
+      config: Debug
+    archive:
+      config: Release

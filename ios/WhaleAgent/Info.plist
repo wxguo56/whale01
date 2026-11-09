@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>zh_CN</string>
+  <key>CFBundleDisplayName</key>
+  <string>鲸鱼</string>
+  <key>CFBundleExecutable</key>
+  <string>$(EXECUTABLE_NAME)</string>
+  <key>CFBundleIdentifier</key>
+  <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>$(PRODUCT_NAME)</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>$(MARKETING_VERSION)</string>
+  <key>CFBundleVersion</key>
+  <string>$(CURRENT_PROJECT_VERSION)</string>
+  <key>LSRequiresIPhoneOS</key>
+  <true/>
+  <key>UIApplicationSceneManifest</key>
+  <dict>
+    <key>UIApplicationSupportsMultipleScenes</key>
+    <false/>
+  </dict>
+  <key>UILaunchScreen</key>
+  <dict/>
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+  </array>
+  <key>UIBackgroundModes</key>
+  <array>
+    <string>audio</string>
+  </array>
+  <key>NSRemindersFullAccessUsageDescription</key>
+  <string>用于把你说的事项写入系统提醒事项，并在到点提醒你。</string>
+  <key>NSRemindersUsageDescription</key>
+  <string>用于把你说的事项写入系统提醒事项。</string>
+  <key>NSCalendarsFullAccessUsageDescription</key>
+  <string>用于读取和写入你的日历，帮你安排日程。</string>
+  <key>NSCalendarsUsageDescription</key>
+  <string>用于读取和写入你的日历。</string>
+  <key>NSHealthShareUsageDescription</key>
+  <string>用于读取步数、活动能量、锻炼时间和步行距离，生成你的运动摘要。</string>
+  <key>NSHealthUpdateUsageDescription</key>
+  <string>用于在获得授权后写入健康数据。</string>
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>用于搜索附近地点、查询天气和打开地图导航。</string>
+  <key>NSContactsUsageDescription</key>
+  <string>用于在短信或邮件草稿中查找收件人。</string>
+  <key>NSAppleMusicUsageDescription</key>
+  <string>用于搜索你的音乐库并播放你选择的歌曲。</string>
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsArbitraryLoads</key>
+    <true/>
+    <key>NSAllowsLocalNetworking</key>
+    <true/>
+  </dict>
+</dict>
+</plist>

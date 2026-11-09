@@ -1,7 +1,11 @@
 backend/data/
 node_modules/
 .env
+backend/.env
 *.log
 .DS_Store
 *.zip
 release/
+ios/WhaleAgent.xcodeproj/
+ios/build/
+ios/DerivedData/
