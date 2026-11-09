@@ -5,7 +5,10 @@ backend/.env
 *.log
 .DS_Store
 *.zip
-release/
+release/*
+!release/beta-0.3.0/
+!release/beta-0.3.0/*.md
+build-artifacts/
 ios/WhaleAgent.xcodeproj/
 ios/build/
 ios/DerivedData/
