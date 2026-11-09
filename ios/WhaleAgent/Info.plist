@@ -53,6 +53,10 @@
   <string>用于搜索附近地点、查询天气和打开地图导航。</string>
   <key>NSContactsUsageDescription</key>
   <string>用于在短信或邮件草稿中查找收件人。</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>用于语音输入，把你的话转成文字发给鲸鱼。</string>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>用于把语音转写成文字，方便你直接说话安排事情。</string>
   <key>NSAppleMusicUsageDescription</key>
   <string>用于搜索你的音乐库并播放你选择的歌曲。</string>
   <key>NSAppTransportSecurity</key>

@@ -11,7 +11,7 @@ settings:
     SWIFT_STRICT_CONCURRENCY: minimal
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     CURRENT_PROJECT_VERSION: "2"
-    MARKETING_VERSION: "0.2.0"
+    MARKETING_VERSION: "0.2.1"
 targets:
   WhaleAgent:
     type: application
@@ -40,6 +40,7 @@ targets:
       - sdk: MessageUI.framework
       - sdk: MusicKit.framework
       - sdk: WeatherKit.framework
+      - sdk: Speech.framework
   WhaleAgentSideload:
     type: application
     platform: iOS
@@ -69,6 +70,7 @@ targets:
       - sdk: MessageUI.framework
       - sdk: MusicKit.framework
       - sdk: WeatherKit.framework
+      - sdk: Speech.framework
 schemes:
   WhaleAgent:
     build:

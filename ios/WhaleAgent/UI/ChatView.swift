@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ChatView: View {
     @ObservedObject var model: AppModel
+    @StateObject private var voice = VoiceInputController()
+    @FocusState private var inputFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -29,6 +31,12 @@ struct ChatView: View {
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
+                }
+            }
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完成") { inputFocused = false }
                 }
             }
         }
@@ -87,7 +95,8 @@ struct ChatView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 18)
             }
-            .scrollDismissesKeyboard(.interactively)
+            .scrollDismissesKeyboard(.immediately)
+            .onTapGesture { inputFocused = false }
             .onChange(of: model.messages.count) {
                 scrollToBottom(proxy)
             }
@@ -131,38 +140,103 @@ struct ChatView: View {
     }
 
     private var inputBar: some View {
-        HStack(alignment: .bottom, spacing: 9) {
-            TextField("告诉鲸鱼你想做什么", text: $model.input, axis: .vertical)
-                .lineLimit(1...4)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 11)
-                .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.06))
+        VStack(spacing: 0) {
+            if voice.isRecording {
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(Color.red)
+                        .frame(width: 8, height: 8)
+                    Text(voice.transcript.isEmpty ? "正在听你说…" : voice.transcript)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                    Spacer(minLength: 8)
+                    Button("停止") { voice.stop() }
+                        .font(.caption.weight(.semibold))
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.red.opacity(0.07))
+            }
+
+            HStack(alignment: .bottom, spacing: 9) {
+                Button {
+                    inputFocused = false
+                    Task { await voice.toggle() }
+                } label: {
+                    Image(systemName: voice.isRecording ? "waveform.circle.fill" : "mic.circle.fill")
+                        .font(.system(size: 31, weight: .regular))
+                        .foregroundStyle(voice.isRecording ? Color.red : WhaleTheme.accent)
+                        .frame(width: 38, height: 44)
+                }
+                .buttonStyle(.plain)
                 .disabled(model.isBusy)
-                .submitLabel(.send)
-                .onSubmit {
-                    Task { await model.send() }
+                .opacity(model.isBusy ? 0.45 : 1)
+                .accessibilityLabel(voice.isRecording ? "停止语音输入" : "语音输入")
+
+                TextField("告诉鲸鱼你想做什么", text: $model.input, axis: .vertical)
+                    .lineLimit(1...4)
+                    .focused($inputFocused)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                    .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.06))
+                    }
+                    .disabled(model.isBusy)
+                    .submitLabel(.send)
+                    .onSubmit { submitFromKeyboard() }
+
+                if inputFocused {
+                    Button {
+                        inputFocused = false
+                    } label: {
+                        Image(systemName: "keyboard.chevron.compact.down")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 32, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("收起键盘")
                 }
 
-            Button {
-                Task { await model.send() }
-            } label: {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(WhaleTheme.accent, in: Circle())
+                Button {
+                    submitFromKeyboard()
+                } label: {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(WhaleTheme.accent, in: Circle())
+                }
+                .disabled(model.isBusy || model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .opacity(model.isBusy || model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1)
             }
-            .disabled(model.isBusy || model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            .opacity(model.isBusy || model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1)
+            .padding(.horizontal, 14)
+            .padding(.top, 9)
+            .padding(.bottom, 10)
+
+            if let voiceError = voice.errorText {
+                Text(voiceError)
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+            }
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 9)
-        .padding(.bottom, 10)
         .background(.bar)
+        .onChange(of: voice.transcript) { _, text in
+            guard !text.isEmpty else { return }
+            model.input = text
+        }
+    }
+
+    private func submitFromKeyboard() {
+        if voice.isRecording { voice.stop() }
+        inputFocused = false
+        Task { await model.send() }
     }
 
     private func scrollToBottom(_ proxy: ScrollViewProxy) {
