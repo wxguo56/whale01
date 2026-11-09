@@ -82,3 +82,15 @@ xcodebuild \
 - MusicKit：用户音乐库搜索与播放控制。
 - WeatherKit：天气查询（需要 WeatherKit entitlement）。
 - 分享内容摘要仍由后端模型处理，不伪装成手机系统写入。
+
+## 0.2.0 原生业务界面
+
+- 四个 Tab：首页 / 对话 / 音乐 / 设置；诊断信息集中在“开发设置与诊断”。
+- 首页与音乐页只读真实 EventKit / MusicKit 数据，无权限或无数据时如实说明。
+- 对话页保留真实后端链路，新增原生确认 Sheet、断线重试与新建会话。
+- 版本 `0.2.0`，Build 号由 CI 的 `github.run_number` 递增；本次构建为 Build 3。
+
+## 真机辅助工具
+
+- `tools/phone_hid.py`：直连 `UniversalHIDServiceService` 的 USB HID 驱动，支持 `wake`、`tap`、`swipe`、`text`、`key`、`paste`、`shot`。iOS 26 上 `touch_session` 会报 “Remote control requires iOS 27.0 or later”，因此不再使用它；锁屏状态下系统会丢弃 HID 触控，必须人工解锁。
+- `tools/serve-ipa.mjs`：`node tools/serve-ipa.mjs release 8089`，在 `0.0.0.0:8089` 分发 IPA，供 AltStore 深链 `altstore://install?url=...` 拉取。

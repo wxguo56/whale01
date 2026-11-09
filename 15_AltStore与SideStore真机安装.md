@@ -85,3 +85,23 @@ AltStore / SideStore 只用于当前真机验收，不等于正式交付：
 - 正式 Beta 仍需付费 Apple Developer 账号、证书、描述文件和 App Store Connect。
 
 免费路线跑通后，付费账号到位时直接切换到 `WhaleAgent` scheme 和正式 Bundle ID，代码不需要重写。
+
+## 第四步 C：局域网直装（0.2.0 起的实际做法）
+
+不需要把 IPA 导进手机，也不需要反复下载 artifact：
+
+1. 电脑进入仓库根目录，启动分发服务：`node tools/serve-ipa.mjs release 8089`。
+2. 查电脑局域网 IP：`ipconfig`，当前为 `10.219.86.103`。
+3. 手机与电脑连同一 Wi-Fi，AltServer 保持运行，iPhone 已解锁。
+4. 手机 Safari 打开：
+
+   `altstore://install?url=http://10.219.86.103:8089/WhaleAgent-Sideload.ipa`
+
+5. 系统询问时选择在 AltStore 中打开，AltStore 会拉取 IPA、重签并安装。
+6. 装完在 设置 → 通用 → 关于 → WhaleAgent 核对 `0.2.0 (3)`。
+
+注意：
+
+- iOS 26 在锁屏状态下会丢弃 USB HID 触控，无法用脚本代替人工解锁；必须先在手机上输密码或 Face ID。
+- 电脑 IP 变化时同步改深链里的地址；`tools/serve-ipa.mjs` 默认监听 `0.0.0.0:8089`，Windows 防火墙需放行该端口。
+- 免费签名 7 天有效，AltStore 需定期刷新；刷新同样要求手机解锁并连上同一 Wi-Fi。

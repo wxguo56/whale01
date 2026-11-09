@@ -112,3 +112,58 @@ Swift 源码共 19 个文件、约 2159 行。
 - 流水线：`.github/workflows/ios-simulator-build.yml`
 - 后端测试：`backend/test/`
 - 构建路线：`14_Windows构建与真机安装路线.md`
+
+## 11. 0.2.0 原生业务界面与真机验收状态
+
+### 11.1 已完成（代码与云编译）
+
+| 项目 | 结果 |
+| --- | --- |
+| 提交 | `bc890ee` feat(ios): replace validation shell with native business UI |
+| 版本 | `MARKETING_VERSION=0.2.0`，`CURRENT_PROJECT_VERSION=github.run_number` → Build 3 |
+| 模拟器构建 | GitHub Actions run `42593063615`，`BUILD SUCCEEDED` |
+| 免费签名 IPA | GitHub Actions run `42593063834`，`ARCHIVE SUCCEEDED` |
+| 产物 | `release/WhaleAgent-Sideload.ipa`，334,790 bytes |
+| SHA256 | `f25e054db83b7bd01686ca090196be18ea43a7ce0a02e3ea6bfb03a4137977f8` |
+| Bundle ID | `com.whale01.whaleagent.alt` |
+| 后端测试 | 47/47 通过 |
+| Swift 语法 | 25 个文件 tree-sitter 解析 0 错误 |
+
+界面改动：
+
+1. 首页：品牌 Hero、快捷入口、真实日历日程、权限摘要、最近执行记录；没有数据时显示空状态，不造假。
+2. 对话：业务聊天、置信确认卡、原生确认 Sheet、断线重试、新建会话；顶部不再挂诊断信息。
+3. 音乐：MusicKit 音乐库、搜索、播放/暂停/上一首/下一首、权限引导。
+4. 设置：权限状态绑定、授权入口、关于；诊断信息集中到“开发设置与诊断”。
+
+### 11.2 真机安装步骤（iPhone 16 Pro / iOS 26.5.2）
+
+设备信息：`iPhone17,1`，iOS `26.5.2 (23F84)`，UDID `00008140-001429613442801C`。
+
+1. 在 iPhone 上手动解锁并保持亮屏（iOS 26 锁屏时会丢弃 USB HID 触控，无法远程解锁）。
+2. 电脑启动局域网 IPA 服务：`node tools/serve-ipa.mjs release 8089`。
+3. 手机与电脑同一 Wi-Fi，确认电脑地址（当前 `10.219.86.103`）。
+4. 手机 Safari 打开：`altstore://install?url=http://10.219.86.103:8089/WhaleAgent-Sideload.ipa`，确认交给 AltStore。
+5. 等待 AltStore 重签安装完成，系统设置 → 通用 → 关于 → WhaleAgent 确认版本 `0.2.0 (3)`。
+
+辅助工具：`tools/phone_hid.py`（wake / tap / swipe / text / paste / shot），用于截图与界面操作；该工具在锁屏时无效。
+
+### 11.3 待验收清单（0.2.0）
+
+- [ ] 安装成功，系统“关于”显示 `0.2.0 (3)`。
+- [ ] 首页：真实日历读取正确；无授权时显示引导而非假数据。
+- [ ] 对话：真实模型回复、确认 Sheet、确认后执行、拒绝后不执行。
+- [ ] 提醒：系统“提醒事项”出现记录，到点通知到达。
+- [ ] 幂等：相同请求重复提交只写入一条。
+- [ ] 日历：查询与创建事件，时区/全天事件正确。
+- [ ] 地点：搜索与地图交接。
+- [ ] 短信：MessageUI 草稿与取消回调。
+- [ ] 音乐：库读取、搜索、播放/暂停/切歌。
+- [ ] 免费版边界：天气/运动返回 `unavailable_in_free_build`。
+- [ ] 权限拒绝：界面如实提示，不伪造成功。
+- [ ] 设置页“开发设置与诊断”可展开，主流程不出现诊断噪声。
+
+### 11.4 证据边界
+
+- 现有真机证据（`取快递` 提醒写入、`operationId=op_turn_73b39cd7...`、`recordId=3A4A797A-...`）来自 0.1.0 构建，只能证明 EventKit 链路曾经打通。
+- 0.2.0 目前只有代码、云编译与未签名 IPA，尚未在手机上安装，因此不能写成“0.2.0 真机验收通过”。
