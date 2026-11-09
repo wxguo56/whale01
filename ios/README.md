@@ -7,12 +7,14 @@
 - 已提交最小原生工程：19 个 Swift 文件、`project.yml`、Info.plist、entitlements、实际 Scheme。
 - 静态校验：19/19 文件通过 Swift 语法解析；15 个契约工具中 14 个设备工具全部有手机执行路由，`summarize_shared_content` 明确留在后端。
 - 后端回归：`cd backend; npm test`，45/45 通过。
-- 当前 Windows 执行机没有 Xcode、Swift、XcodeGen、签名证书或 iOS 工程产物，因此还没有真实的 `xcodebuild` 结果。
-- GitHub Actions 尚未运行：本地提交已就绪，但远端仓库和 GitHub 认证还没配置。
+- GitHub Actions 已实际运行并通过：run `42579515669`，commit `d30b702`，Xcode 16.4 / iOS 18.5 SDK，日志 `** BUILD SUCCEEDED **`。
+- 签名、TestFlight、iPhone 安装与真实系统写入仍未执行。
 
-## 第一次云端编译
+## 云端编译（已完成）
 
-1. 在 GitHub 创建一个私有仓库（例如 `whale01`），不要勾选初始化 README。
+首次运行记录：<https://github.com/wxguo56/whale01/actions/runs/42579515669>。复现步骤：
+
+1. 私有仓库已创建：`wxguo56/whale01`。
 2. 在仓库根目录执行：
 
 ```bash

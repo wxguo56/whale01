@@ -5,10 +5,12 @@ on:
   push:
     paths:
       - "ios/**"
+      - "!ios/**/*.md"
       - ".github/workflows/ios-simulator-build.yml"
   pull_request:
     paths:
       - "ios/**"
+      - "!ios/**/*.md"
       - ".github/workflows/ios-simulator-build.yml"
 
 concurrency:
