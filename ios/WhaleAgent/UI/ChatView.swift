@@ -2,49 +2,59 @@ import SwiftUI
 
 struct ChatView: View {
     @ObservedObject var model: AppModel
+    @Binding var startVoiceOnAppear: Bool
+    @Binding var focusOnAppear: Bool
     @StateObject private var voice = VoiceInputController()
     @FocusState private var inputFocused: Bool
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                if !model.backendOnline || model.errorText != nil {
-                    connectionBanner
-                }
-                conversation
-                if model.messages.count <= 2 {
-                    suggestionRow
-                }
-                inputBar
+        VStack(spacing: 0) {
+            if !model.backendOnline || model.errorText != nil {
+                connectionBanner
             }
-            .background(WhaleTheme.background)
-            .navigationTitle("对话")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    HStack(spacing: 8) {
-                        AgentOrbView(state: activityState, size: 24)
-                        Text("对话")
-                            .font(.headline)
-                    }
+            conversation
+            if model.messages.count <= 2 {
+                suggestionRow
+            }
+            inputBar
+        }
+        .background(WhaleTheme.background)
+        .navigationTitle("对话")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 8) {
+                    AgentOrbView(state: activityState, size: 22)
+                    Text("对话")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button {
-                            model.newConversation()
-                        } label: {
-                            Label("开启新会话", systemImage: "square.and.pencil")
-                        }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        model.newConversation()
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Label("开启新会话", systemImage: "square.and.pencil")
                     }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
             }
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("完成") { inputFocused = false }
-                }
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("完成") { inputFocused = false }
+            }
+        }
+        .task {
+            if startVoiceOnAppear {
+                startVoiceOnAppear = false
+                await voice.start()
+            } else if focusOnAppear {
+                focusOnAppear = false
+                inputFocused = true
             }
         }
     }
@@ -159,7 +169,7 @@ struct ChatView: View {
             if voice.isRecording {
                 HStack(spacing: 8) {
                     Circle()
-                        .fill(Color.red)
+                        .fill(WhaleTheme.danger)
                         .frame(width: 8, height: 8)
                     Text(voice.transcript.isEmpty ? "正在听你说…" : voice.transcript)
                         .font(.caption)
@@ -171,7 +181,7 @@ struct ChatView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(Color.red.opacity(0.07))
+                .background(WhaleTheme.danger.opacity(0.07))
             }
 
             HStack(alignment: .bottom, spacing: 9) {
@@ -179,10 +189,10 @@ struct ChatView: View {
                     inputFocused = false
                     Task { await voice.toggle() }
                 } label: {
-                    Image(systemName: voice.isRecording ? "waveform.circle.fill" : "mic.circle.fill")
-                        .font(.system(size: 31, weight: .regular))
-                        .foregroundStyle(voice.isRecording ? Color.red : WhaleTheme.accent)
-                        .frame(width: 38, height: 44)
+                    Image(systemName: voice.isRecording ? "waveform" : "mic")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(voice.isRecording ? WhaleTheme.danger : WhaleTheme.ink)
+                        .frame(width: 40, height: 44)
                 }
                 .buttonStyle(.plain)
                 .disabled(model.isBusy)
@@ -192,12 +202,12 @@ struct ChatView: View {
                 TextField("告诉鲸鱼你想做什么", text: $model.input, axis: .vertical)
                     .lineLimit(1...4)
                     .focused($inputFocused)
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, 15)
                     .padding(.vertical, 11)
-                    .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.06))
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .strokeBorder(WhaleTheme.line, lineWidth: 1)
                     }
                     .disabled(model.isBusy)
                     .submitLabel(.send)
@@ -222,7 +232,7 @@ struct ChatView: View {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 40, height: 40)
                         .background(WhaleTheme.accent, in: Circle())
                 }
                 .disabled(model.isBusy || model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -241,7 +251,12 @@ struct ChatView: View {
                     .padding(.bottom, 8)
             }
         }
-        .background(.bar)
+        .background(WhaleTheme.background)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(WhaleTheme.line)
+                .frame(height: 0.5)
+        }
         .onChange(of: voice.transcript) { _, text in
             guard !text.isEmpty else { return }
             model.input = text
@@ -267,51 +282,57 @@ private struct MessageRow: View {
     let message: ChatMessage
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 8) {
-            if message.role == .user { Spacer(minLength: 48) }
-
-            if message.role == .assistant {
-                assistantAvatar
-            }
-
-            VStack(alignment: .leading, spacing: 5) {
-                if message.role == .tool {
-                    Label(message.text, systemImage: "iphone.gen3")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(WhaleTheme.accent)
-                } else {
+        Group {
+            if message.role == .user {
+                HStack {
+                    Spacer(minLength: 52)
                     Text(message.text)
-                        .font(.body)
-                        .foregroundStyle(message.role == .user ? Color.white : Color.primary)
+                        .font(.system(size: 16))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .padding(.horizontal, 15)
+                        .padding(.vertical, 12)
+                        .background(WhaleTheme.soft, in: UnevenRoundedRectangle(
+                            topLeadingRadius: 19,
+                            bottomLeadingRadius: 19,
+                            bottomTrailingRadius: 5,
+                            topTrailingRadius: 19,
+                            style: .continuous
+                        ))
                 }
-
-                if let detail = message.detail, !detail.isEmpty {
-                    Text(detail)
-                        .font(.caption)
-                        .foregroundStyle(message.role == .user ? Color.white.opacity(0.72) : Color.secondary)
+            } else if message.role == .assistant {
+                VStack(alignment: .leading, spacing: 6) {
+                    byline
+                    Text(message.text)
+                        .font(.system(size: 17))
+                        .lineSpacing(4)
+                        .foregroundStyle(WhaleTheme.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let detail = message.detail, !detail.isEmpty {
+                        Text(detail)
+                            .font(.system(size: 13))
+                            .foregroundStyle(WhaleTheme.muted)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Label(message.text, systemImage: "iphone.gen3")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(WhaleTheme.accent)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(WhaleTheme.accentSoft, in: Capsule())
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 11)
-            .background(bubbleColor, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-
-            if message.role != .user { Spacer(minLength: 40) }
         }
     }
 
-    private var assistantAvatar: some View {
-        Image(systemName: "waveform")
-            .font(.caption.weight(.bold))
-            .foregroundStyle(.white)
-            .frame(width: 30, height: 30)
-            .background(WhaleTheme.accent, in: Circle())
-    }
-
-    private var bubbleColor: Color {
-        switch message.role {
-        case .user: return WhaleTheme.accent
-        case .assistant: return WhaleTheme.card
-        case .tool: return WhaleTheme.accent.opacity(0.08)
+    private var byline: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(WhaleTheme.accent)
+                .frame(width: 6, height: 6)
+            Text("鲸鱼")
+                .font(.system(size: 12))
+                .foregroundStyle(WhaleTheme.muted)
         }
     }
 }

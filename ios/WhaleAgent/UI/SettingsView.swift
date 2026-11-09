@@ -191,7 +191,7 @@ private struct PermissionSettingsRow: View {
     }
 }
 
-private struct DeveloperSettingsView: View {
+struct DeveloperSettingsView: View {
     @ObservedObject var model: AppModel
 
     var body: some View {

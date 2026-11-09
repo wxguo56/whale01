@@ -3,34 +3,36 @@ import UniformTypeIdentifiers
 
 struct MusicView: View {
     @ObservedObject var model: AppModel
+    var showsClose = false
+
+    @Environment(\.dismiss) private var dismiss
     @State private var showImporter = false
+    @State private var showSourceInfo = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    nowPlaying
-                    searchArea
-                    library
+                VStack(spacing: 22) {
+                    playerCard
+                    librarySection
                     if model.permissionsSnapshot["music"] != "granted" {
-                        permissionView
+                        permissionCard
                     }
                 }
-                .padding(.horizontal, 18)
+                .padding(.horizontal, WhaleTheme.pagePadding)
                 .padding(.top, 8)
-                .padding(.bottom, 28)
+                .padding(.bottom, 32)
             }
+            .scrollIndicators(.hidden)
             .background(WhaleTheme.background)
             .navigationTitle("音乐")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showImporter = true
-                    } label: {
-                        Image(systemName: "square.and.arrow.down")
+                if showsClose {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("完成") { dismiss() }
+                            .font(.system(size: 15, weight: .semibold))
                     }
-                    .accessibilityLabel("导入音乐文件")
                 }
             }
             .task { await model.musicAppeared() }
@@ -46,119 +48,72 @@ struct MusicView: View {
                 guard case .success(let urls) = result else { return }
                 Task { await model.importLocalMusic(from: urls) }
             }
-        }
-    }
-
-    private var permissionView: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            ZStack(alignment: .bottomLeading) {
-                WhaleTheme.heroGradient
-                Image(systemName: "music.note.list")
-                    .font(.system(size: 96, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.09))
-                    .offset(x: 210, y: 8)
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Label("系统音乐库", systemImage: "checkmark.seal.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.78))
-                    Text("读取系统\n「音乐」App。")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                    Text("汽水音乐等第三方 App 下载的歌曲在各自沙盒里，iOS 不允许其他 App 读取。这类歌曲请用「导入音乐文件」，不需要授权。")
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.82))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(22)
-            }
-            .frame(minHeight: 235)
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 14) {
-                Label("授权读取系统音乐库", systemImage: "lock.shield")
-                    .font(.headline)
-                Text("授权后可读取系统「音乐」App 里的曲目。导入的本机文件不依赖这个权限，鲸鱼也不会上传你的音乐。")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                if model.permissionsSnapshot["music"] == "denied" {
-                    Button {
-                        model.openSystemSettings()
-                    } label: {
-                        Text("前往系统设置")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 13)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(WhaleTheme.accent)
-                } else {
-                    Button {
-                        Task { await model.requestMusicAccess() }
-                    } label: {
-                        Text("允许访问音乐")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 13)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(WhaleTheme.accent)
-                    .disabled(model.isMusicBusy)
-                }
-            }
-            .whaleCard()
-
-            if let error = model.musicError, !error.isEmpty {
-                Label(error, systemImage: "exclamationmark.triangle")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+            .alert("音乐从哪来", isPresented: $showSourceInfo) {
+                Button("知道了", role: .cancel) {}
+            } message: {
+                Text("系统「音乐」App 里的歌曲需要音乐库授权。汽水音乐等第三方 App 的离线缓存位于各自的沙盒，iOS 不允许其他 App 读取，请先用「选取音频」导入你自己拥有的文件。")
             }
         }
     }
 
-    private var nowPlaying: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Label("正在播放", systemImage: "waveform")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.75))
-                Spacer()
-                Text(model.playback.stateText)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.7))
+    private var playerCard: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [WhaleTheme.accent.opacity(0.85), WhaleTheme.accentDeep],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 240, height: 240)
+                Image(systemName: model.playback.isPlaying ? "waveform" : "music.note")
+                    .font(.system(size: 64, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.9))
+            }
+            .shadow(color: WhaleTheme.accent.opacity(0.2), radius: 18, y: 10)
+
+            VStack(spacing: 5) {
+                Text(model.playback.track?.title ?? "选一首开始播放")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                Text(model.playback.track?.artist ?? "本机文件或系统音乐库")
+                    .font(.system(size: 14))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .lineLimit(1)
             }
 
-            HStack(spacing: 15) {
-                artwork(url: model.playback.track?.artworkURL, size: 82)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(model.playback.track?.title ?? "从音乐库选一首")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                    Text(model.playback.track?.artist ?? "音乐会在你确认后由系统播放")
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.72))
-                        .lineLimit(1)
-                    if let album = model.playback.track?.album, !album.isEmpty {
-                        Text(album)
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.52))
-                            .lineLimit(1)
+            VStack(spacing: 6) {
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(WhaleTheme.line)
+                        Capsule()
+                            .fill(WhaleTheme.accent)
+                            .frame(width: proxy.size.width * progressFraction)
                     }
                 }
-                Spacer(minLength: 0)
+                .frame(height: 4)
+                HStack {
+                    Text(timeText(model.playback.positionSec))
+                    Spacer()
+                    Text(timeText(model.playback.track?.durationSec ?? 0))
+                }
+                .font(.system(size: 11))
+                .foregroundStyle(WhaleTheme.muted)
             }
+            .padding(.horizontal, 8)
 
-            HStack(spacing: 24) {
-                Spacer()
+            HStack(spacing: 34) {
                 Button {
                     Task { await model.playPrevious() }
                 } label: {
                     Image(systemName: "backward.fill")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .frame(width: 44, height: 44)
                 }
                 .disabled(model.isMusicBusy)
 
@@ -166,10 +121,10 @@ struct MusicView: View {
                     Task { await model.togglePlayback() }
                 } label: {
                     Image(systemName: model.playback.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(WhaleTheme.ink)
-                        .frame(width: 56, height: 56)
-                        .background(.white, in: Circle())
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 66, height: 66)
+                        .background(WhaleTheme.accent, in: Circle())
                 }
                 .disabled(model.isMusicBusy)
 
@@ -178,205 +133,207 @@ struct MusicView: View {
                 } label: {
                     Image(systemName: "forward.fill")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .frame(width: 44, height: 44)
                 }
                 .disabled(model.isMusicBusy)
-                Spacer()
-            }
-
-            if model.playback.queueLength > 0 {
-                Text("队列 \(model.playback.queueLength) 首 · \(model.playback.audioOutput ? "系统音频输出" : "等待播放")")
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.55))
             }
         }
-        .padding(20)
-        .background(
-            LinearGradient(
-                colors: [WhaleTheme.accentDeep, Color(red: 0.22, green: 0.10, blue: 0.38)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            in: RoundedRectangle(cornerRadius: 28, style: .continuous)
-        )
-        .shadow(color: WhaleTheme.accentDeep.opacity(0.18), radius: 20, y: 10)
+        .padding(.top, 4)
     }
 
-    private var searchArea: some View {
-        HStack(spacing: 9) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-            TextField("搜索歌名或艺人", text: $model.musicQuery)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
-                .onSubmit {
-                    Task { await model.loadMusicLibrary() }
-                }
-            if !model.musicQuery.isEmpty {
-                Button {
-                    model.musicQuery = ""
-                    Task { await model.loadMusicLibrary() }
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            Button("搜索") {
-                Task { await model.loadMusicLibrary() }
-            }
-            .font(.caption.weight(.semibold))
-            .disabled(model.isMusicBusy)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var library: some View {
+    private var librarySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("你的音乐")
-                    .font(.headline)
+                Text("我的曲库")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                Text("· \(model.musicTracks.count) 首")
+                    .font(.system(size: 13))
+                    .foregroundStyle(WhaleTheme.muted)
                 Spacer()
-                if model.isMusicBusy {
-                    ProgressView()
-                        .scaleEffect(0.75)
-                } else {
-                    Text("\(model.musicTracks.count) 首")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
                 Button {
                     showImporter = true
                 } label: {
-                    Label("导入", systemImage: "plus")
-                        .font(.caption.weight(.semibold))
+                    Label("选取音频", systemImage: "plus")
+                        .font(.system(size: 13, weight: .semibold))
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
                 .tint(WhaleTheme.accent)
             }
 
             if let error = model.musicError, !error.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
                     Label(error, systemImage: "info.circle")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 13))
+                        .foregroundStyle(WhaleTheme.muted)
                         .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 14) {
-                        Button("导入音乐文件") { showImporter = true }
+                        Button("选取音频") { showImporter = true }
                         Button("重新读取") { Task { await model.loadMusicLibrary() } }
                     }
-                    .font(.caption.weight(.semibold))
+                    .font(.system(size: 13, weight: .semibold))
+                    .tint(WhaleTheme.accent)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .whaleCard()
-            } else if model.musicTracks.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "music.note.list")
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
-                    Text(model.musicDidLoad ? "这里还没有歌" : "正在读取音乐库…")
-                        .font(.subheadline.weight(.medium))
-                    Text("用「导入音乐文件」选择手机或 iCloud 里的 mp3、m4a、wav，导入后就能直接播放。系统「音乐」App 里的曲目在授权后也会显示。")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Button {
-                        showImporter = true
-                    } label: {
-                        Label("导入音乐文件", systemImage: "square.and.arrow.down")
-                            .font(.subheadline.weight(.semibold))
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(WhaleTheme.accent)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
-                .padding(.horizontal, 14)
-                .whaleCard()
+            }
+
+            if model.musicTracks.isEmpty {
+                emptyLibrary
             } else {
-                VStack(spacing: 0) {
-                    ForEach(model.musicTracks) { track in
-                        Button {
-                            Task { await model.play(track) }
+                trackList
+            }
+        }
+    }
+
+    private var emptyLibrary: some View {
+        VStack(spacing: 13) {
+            WhaleIconTile(systemName: "music.note", size: 68)
+                .padding(.top, 8)
+            Text("音乐库还没有歌曲")
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(WhaleTheme.ink)
+            Text("系统「音乐」资料库里有了歌曲后，可以在这里选择播放。也可以选取自己拥有的音频文件。")
+                .font(.system(size: 14))
+                .foregroundStyle(WhaleTheme.muted)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 8)
+            Button {
+                showImporter = true
+            } label: {
+                Label("选取音频文件", systemImage: "plus")
+                    .whalePrimaryButton()
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 6)
+            Button("了解音乐来源") { showSourceInfo = true }
+                .font(.system(size: 13, weight: .medium))
+                .tint(WhaleTheme.accent)
+                .padding(.bottom, 6)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 18)
+        .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(WhaleTheme.line, lineWidth: 1)
+        }
+    }
+
+    private var trackList: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(model.musicTracks.enumerated()), id: \.element.id) { index, track in
+                Button {
+                    Task { await model.play(track) }
+                } label: {
+                    HStack(spacing: 12) {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [WhaleTheme.accent.opacity(0.55), WhaleTheme.accentDeep.opacity(0.9)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 46, height: 46)
+                            .overlay {
+                                Image(systemName: "music.note")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundStyle(.white.opacity(0.9))
+                            }
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(track.title)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(WhaleTheme.ink)
+                                .lineLimit(1)
+                            HStack(spacing: 6) {
+                                if track.isLocal {
+                                    Text("本机")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1)
+                                        .background(WhaleTheme.accentSoft, in: Capsule())
+                                        .foregroundStyle(WhaleTheme.accent)
+                                }
+                                Text(track.artist)
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(WhaleTheme.muted)
+                                    .lineLimit(1)
+                            }
+                        }
+                        Spacer()
+                        Text(track.durationText)
+                            .font(.system(size: 11))
+                            .foregroundStyle(WhaleTheme.muted)
+                        Image(systemName: isCurrent(track) && model.playback.isPlaying ? "waveform" : "play.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(WhaleTheme.accent)
+                            .frame(width: 20)
+                    }
+                    .padding(.vertical, 10)
+                }
+                .buttonStyle(.plain)
+                .contextMenu {
+                    if track.isLocal {
+                        Button(role: .destructive) {
+                            Task { await model.deleteLocalTrack(track) }
                         } label: {
-                            HStack(spacing: 12) {
-                                artwork(url: track.artworkURL, size: 46)
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(track.title)
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundStyle(.primary)
-                                        .lineLimit(1)
-                                    HStack(spacing: 6) {
-                                        if track.isLocal {
-                                            Text("本机")
-                                                .font(.system(size: 9, weight: .semibold))
-                                                .padding(.horizontal, 5)
-                                                .padding(.vertical, 1)
-                                                .background(WhaleTheme.accent.opacity(0.12), in: Capsule())
-                                                .foregroundStyle(WhaleTheme.accent)
-                                        }
-                                        Text(track.artist)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .lineLimit(1)
-                                    }
-                                }
-                                Spacer()
-                                Text(track.durationText)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                Image(systemName: model.playback.track?.id == track.id && model.playback.isPlaying ? "waveform" : "play.fill")
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(WhaleTheme.accent)
-                                    .frame(width: 22)
-                            }
-                            .padding(.vertical, 10)
-                        }
-                        .buttonStyle(.plain)
-                        .contextMenu {
-                            if track.isLocal {
-                                Button(role: .destructive) {
-                                    Task { await model.deleteLocalTrack(track) }
-                                } label: {
-                                    Label("从鲸鱼删除", systemImage: "trash")
-                                }
-                            }
-                        }
-                        if track.id != model.musicTracks.last?.id {
-                            Divider().padding(.leading, 58)
+                            Label("从鲸鱼删除", systemImage: "trash")
                         }
                     }
                 }
-                .padding(.horizontal, 14)
-                .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                if index < model.musicTracks.count - 1 {
+                    Divider().overlay(WhaleTheme.line).padding(.leading, 58)
+                }
             }
+        }
+        .padding(.horizontal, 14)
+        .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(WhaleTheme.line, lineWidth: 1)
         }
     }
 
-    @ViewBuilder
-    private func artwork(url: URL?, size: CGFloat) -> some View {
-        if let url {
-            AsyncImage(url: url) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                artworkPlaceholder(size: size)
+    private var permissionCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("系统音乐库未授权", systemImage: "lock.shield")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(WhaleTheme.ink)
+            Text("授权后可以读取系统「音乐」App 里的曲目。导入的本机文件不依赖这个权限。")
+                .font(.system(size: 13))
+                .foregroundStyle(WhaleTheme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+            if model.permissionsSnapshot["music"] == "denied" {
+                Button("前往系统设置") { model.openSystemSettings() }
+                    .font(.system(size: 13, weight: .semibold))
+                    .tint(WhaleTheme.accent)
+            } else {
+                Button("允许访问系统音乐库") {
+                    Task { await model.requestMusicAccess() }
+                }
+                .font(.system(size: 13, weight: .semibold))
+                .tint(WhaleTheme.accent)
             }
-            .frame(width: size, height: size)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        } else {
-            artworkPlaceholder(size: size)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .whaleCard()
     }
 
-    private func artworkPlaceholder(size: CGFloat) -> some View {
-        Image(systemName: "music.note")
-            .font(.system(size: size * 0.34, weight: .semibold))
-            .foregroundStyle(.white.opacity(0.7))
-            .frame(width: size, height: size)
-            .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    private var progressFraction: CGFloat {
+        let duration = model.playback.track?.durationSec ?? 0
+        guard duration > 0 else { return 0 }
+        return CGFloat(min(max(model.playback.positionSec / duration, 0), 1))
+    }
+
+    private func isCurrent(_ track: MusicTrackItem) -> Bool {
+        model.playback.track?.trackId == track.trackId
+    }
+
+    private func timeText(_ seconds: Double) -> String {
+        guard seconds > 0, seconds.isFinite else { return "0:00" }
+        let value = Int(seconds.rounded())
+        return String(format: "%d:%02d", value / 60, value % 60)
     }
 }

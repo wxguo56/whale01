@@ -1,0 +1,22 @@
+{
+  "date": "2026-11-09",
+  "scope": "HTML design prototype only; not native iOS acceptance",
+  "status": "proposal-awaiting-review",
+  "referenceDevice": {"widthPt": 402, "heightPt": 874},
+  "layout": {"screens": 11, "themes": 2, "combinationsChecked": 22, "horizontalOverflowFailures": 0, "browserConsoleErrors": 0},
+  "interactionChecks": [
+    {"case": "Budget filter excludes unknown prices", "result": "passed", "visibleCards": 2},
+    {"case": "Selected merchant opens corresponding detail sheet", "result": "passed"},
+    {"case": "Reminder edits survive keyboard and text-size switches", "result": "passed"},
+    {"case": "Edited reminder shows requested title and 16:00", "result": "passed"},
+    {"case": "Music selection persists in mini player after changing tabs", "result": "passed"},
+    {"case": "Preference edit updates visible chips", "result": "passed"},
+    {"case": "Voice speaking can be interrupted back to listening", "result": "passed"}
+  ],
+  "responsiveChecks": [
+    {"viewportWidth": 402, "viewportHeight": 874, "mode": "app-only", "textSize": "large", "screen": "voice", "horizontalOverflow": false, "stopButtonVisible": true, "stopButtonHeightPx": 72},
+    {"viewportWidth": 320, "viewportHeight": 800, "mode": "app-only", "textSize": "large", "keyboard": "illustrative", "screen": "confirmation", "horizontalOverflow": false, "confirmationAboveKeyboard": true, "keyboardContentFits": true, "confirmationButtonHeightPx": 56}
+  ],
+  "notVerified": ["Native safe areas and keyboard", "VoiceOver on iPhone", "Native history gestures", "ASR and TTS", "Real music playback", "Real system writes"],
+  "notes": ["All task, location, price and music data are illustrative.", "Preview status bar and device chrome must not be copied into the app.", "Phone-only mode is a layout-check view, not an installed iOS build."]
+}

@@ -4,31 +4,41 @@ import SwiftUI
 @MainActor
 struct RootView: View {
     @StateObject private var model = AppModel()
-    @State private var selectedTab: AppTab = .home
+    @State private var selectedTab: AppTab = .conversation
+    @State private var showMusic = false
+    @AppStorage("whale.appearance") private var appearance = "system"
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            HomeView(model: model, selectedTab: $selectedTab)
-                .tag(AppTab.home)
-                .tabItem { Label("首页", systemImage: "square.grid.2x2.fill") }
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                ConversationTabView(model: model, onOpenMusic: { showMusic = true })
+                    .tag(AppTab.conversation)
+                    .tabItem { Label("对话", systemImage: "bubble.left.and.bubble.right") }
 
-            ChatView(model: model)
-                .tag(AppTab.chat)
-                .tabItem { Label("对话", systemImage: "bubble.left.and.bubble.right.fill") }
+                RecordsView(model: model)
+                    .tag(AppTab.records)
+                    .tabItem { Label("记录", systemImage: "clock") }
 
-            MusicView(model: model)
-                .tag(AppTab.music)
-                .tabItem { Label("音乐", systemImage: "music.note") }
+                ProfileView(model: model)
+                    .tag(AppTab.profile)
+                    .tabItem { Label("我的", systemImage: "person") }
+            }
+            .tint(WhaleTheme.accent)
+            .sheet(item: $model.presentedConfirmation) { item in
+                ConfirmationSheet(model: model, item: item)
+            }
 
-            SettingsView(model: model)
-                .tag(AppTab.settings)
-                .tabItem { Label("设置", systemImage: "person.crop.circle.fill") }
+            if let track = model.playback.track {
+                miniPlayer(track)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 56)
+            }
         }
-        .tint(WhaleTheme.accent)
-        .sheet(item: $model.presentedConfirmation) { item in
-            ConfirmationSheet(model: model, item: item)
+        .sheet(isPresented: $showMusic) {
+            MusicView(model: model, showsClose: true)
         }
+        .preferredColorScheme(colorScheme)
         .task {
             await model.health()
             await model.reconcileUnknownWrites()
@@ -45,8 +55,68 @@ struct RootView: View {
             Task { await model.drainSharedInbox() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .whaleOpenChat)) { _ in
-            selectedTab = .chat
+            selectedTab = .conversation
         }
+    }
+
+    private var colorScheme: ColorScheme? {
+        switch appearance {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
+        }
+    }
+
+    private func miniPlayer(_ track: MusicTrackItem) -> some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(LinearGradient(colors: [WhaleTheme.accent.opacity(0.75), WhaleTheme.accentDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 38, height: 38)
+                .overlay {
+                    Image(systemName: "music.note")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+            Button {
+                showMusic = true
+            } label: {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(track.title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .lineLimit(1)
+                    Text(model.playback.isPlaying ? "正在播放" : "已暂停")
+                        .font(.system(size: 11))
+                        .foregroundStyle(WhaleTheme.muted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            Button {
+                Task { await model.togglePlayback() }
+            } label: {
+                Image(systemName: model.playback.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .frame(width: 34, height: 34)
+            }
+            Button {
+                Task { await model.playNext() }
+            } label: {
+                Image(systemName: "forward.end.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .frame(width: 30, height: 34)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(WhaleTheme.line, lineWidth: 1)
+        }
+        .shadow(color: Color.black.opacity(0.08), radius: 10, y: 4)
     }
 }
 
@@ -59,56 +129,49 @@ private struct ConfirmationSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     HStack(spacing: 14) {
-                        Image(systemName: ToolPresentation.icon(item.tool))
-                            .font(.system(size: 25, weight: .semibold))
-                            .foregroundStyle(WhaleTheme.accent)
-                            .frame(width: 52, height: 52)
-                            .background(WhaleTheme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 16))
+                        WhaleIconTile(systemName: ToolPresentation.icon(item.tool), size: 50)
                         VStack(alignment: .leading, spacing: 4) {
                             Text(ToolPresentation.title(item.tool))
-                                .font(.title3.weight(.semibold))
+                                .font(.headline)
+                                .foregroundStyle(WhaleTheme.ink)
                             Text("执行前确认")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(WhaleTheme.muted)
                         }
                     }
 
                     Text(ToolPresentation.detail(for: item))
-                        .font(.title3)
-                        .fontWeight(.medium)
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(WhaleTheme.ink)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .whaleCard()
 
                     Label(ToolPresentation.confirmationNote(item.tool), systemImage: "checkmark.shield")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(WhaleTheme.muted)
 
                     if let error = model.errorText, !error.isEmpty {
                         Label(error, systemImage: "exclamationmark.triangle")
                             .font(.footnote)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(WhaleTheme.danger)
                     }
-
-                    Spacer(minLength: 12)
 
                     Button {
                         Task { await model.confirm(item) }
                     } label: {
-                        Text("确认执行")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
+                        Text("确认执行").whalePrimaryButton()
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(WhaleTheme.accent)
+                    .buttonStyle(.plain)
                     .disabled(model.isBusy)
+                    .padding(.top, 8)
 
                     Button(role: .destructive) {
                         Task { await model.skip(item) }
                     } label: {
-                        Text("跳过本次操作")
+                        Text("取消这次操作")
+                            .font(.system(size: 15))
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
+                            .frame(minHeight: 44)
                     }
                     .disabled(model.isBusy)
                 }

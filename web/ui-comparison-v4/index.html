@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>鲸鱼01 · 三套 UI 对比</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="variants.css">
+</head>
+<body>
+  <header class="gallery-header"><div><p class="kicker">WHALE 01 · DESIGN DIRECTIONS</p><h1>三种气质，同一只鲸鱼。</h1><p class="header-description">从排版、空间和角色出发。用同一件事，比较三种日常体验。</p></div><div class="header-side"><span class="prototype-label">可点击原型 · 所有执行和数据均为模拟</span><a href="../ui-proposal-v3/index.html">上一套基础版 ↗</a></div></header>
+  <main class="gallery-main">
+    <section class="comparison-controls" aria-label="设计比较控制"><div class="view-buttons" role="group" aria-label="选择对比方案"><button data-focus="all" aria-pressed="true">并排比较</button><button data-focus="a" aria-pressed="false">A 版式</button><button data-focus="b" aria-pressed="false">B 折光</button><button data-focus="c" aria-pressed="false">C 涂鸦</button></div><div class="control-fields"><label>同一页面<select id="pageSelect" aria-label="同一页面"></select></label><label>主题<select id="themeSelect" aria-label="主题"><option value="default">各自默认</option><option value="light">日间</option><option value="dark">夜间</option></select></label><label class="control-check"><input type="checkbox" id="largeText">大字</label><label class="control-check"><input type="checkbox" id="keyboardToggle">键盘示意</label></div></section>
+    <div class="scenario-links" aria-label="快速体验"><span>试一件事：</span><button data-page="chat">附近查价</button><button data-page="confirm">提醒确认</button><button data-page="voice">语音与打断</button><button data-page="music">听音乐</button><span class="choice-status" id="choiceStatus" role="status">尚未暂选方案</span></div>
+    <section class="design-grid" id="designGrid" aria-label="三套 iPhone 16 Pro 设计"></section>
+    <section class="decision-guide"><div><p class="kicker">HOW TO CHOOSE</p><h2>先选整体气质，再看每天用起来是否舒服。</h2><p>主页决定第一印象，语音决定交流感受，结果和确认决定办事是否清楚。</p></div><div class="guide-grid"><article><span>A / 版式</span><h3>耐看，擅长读与整理</h3><p>大文字、编号和细线建立层次。适合频繁阅读、查询和管理事项。</p></article><article><span>B / 折光</span><h3>科技感，擅长展示过程</h3><p>用材质和空间区分状态。透明度与光效受到限制，保证文字清楚。</p></article><article><span>C / 涂鸦</span><h3>有性格，擅长亲切交流</h3><p>角色和纸张形成识别。装饰留在边缘，任务数据保持端正可读。</p></article></div></section>
+    <footer class="gallery-footer"><p>主画布 402×874pt · 外壳和系统栏只作参考 · HTML验证不替代原生真机验收</p><p>页面中的“暂选”只保存比较倾向，不触发原生实施。2026-11-09</p></footer>
+  </main>
+  <script src="visuals.js"></script>
+  <script src="views.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

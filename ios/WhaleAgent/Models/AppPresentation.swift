@@ -2,10 +2,9 @@ import Foundation
 import SwiftUI
 
 enum AppTab: Hashable {
-    case home
-    case chat
-    case music
-    case settings
+    case conversation
+    case records
+    case profile
 }
 
 struct NativeActionRecord: Identifiable, Equatable {
