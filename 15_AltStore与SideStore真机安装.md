@@ -35,6 +35,8 @@
 2. 等待 job 绿色，确认日志包含 `BUILD SUCCEEDED` 和 `lipo -info` 输出 `arm64`。
 3. 下载 artifact `WhaleAgent-Sideload-ipa`，解压得到 `WhaleAgent-Sideload.ipa`。
 
+首次构建记录：<https://github.com/wxguo56/whale01/actions/runs/42582592122>。日志确认 `ARCHIVE SUCCEEDED`，二进制为 `arm64`，Bundle ID 为 `com.whale01.whaleagent.alt`。
+
 ## 第二步：Windows 准备
 
 1. 安装 Apple 官网版 iTunes 和 iCloud（不要用 Microsoft Store 版本）。
