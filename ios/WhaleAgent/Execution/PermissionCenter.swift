@@ -58,11 +58,11 @@ final class PermissionCenter: ObservableObject {
     func refresh() {
         var next: [String: String] = [:]
 
-        let eventStatus = eventStore.authorizationStatus(for: .event)
+        let eventStatus = EKEventStore.authorizationStatus(for: .event)
         next["calendarRead"] = mapEventStatus(eventStatus, readRequired: true)
         next["calendarWrite"] = mapEventStatus(eventStatus, readRequired: false)
 
-        let reminderStatus = eventStore.authorizationStatus(for: .reminder)
+        let reminderStatus = EKEventStore.authorizationStatus(for: .reminder)
         next["reminder"] = mapEventStatus(reminderStatus, readRequired: true)
         next["activityRead"] = "unknown"
 
@@ -138,7 +138,7 @@ final class PermissionCenter: ObservableObject {
     }
 
     private func ensureReminder() async -> Bool {
-        switch eventStore.authorizationStatus(for: .reminder) {
+        switch EKEventStore.authorizationStatus(for: .reminder) {
         case .fullAccess:
             statuses["reminder"] = "granted"
             return true
@@ -160,7 +160,7 @@ final class PermissionCenter: ObservableObject {
     }
 
     private func ensureCalendar(readRequired: Bool) async -> Bool {
-        let status = eventStore.authorizationStatus(for: .event)
+        let status = EKEventStore.authorizationStatus(for: .event)
         if status == .fullAccess {
             statuses["calendarRead"] = "granted"
             statuses["calendarWrite"] = "granted"
