@@ -5,8 +5,12 @@ struct ConversationTabView: View {
     let onOpenMusic: () -> Void
 
     @State private var showChat = false
+    @State private var showVoice = false
+    @State private var voiceDraft: String?
+    @State private var voiceShouldSend = false
     @State private var autoFocus = false
     @State private var autoVoice = false
+    @StateObject private var voice = VoiceInputController()
 
     var body: some View {
         NavigationStack {
@@ -20,9 +24,10 @@ struct ConversationTabView: View {
                     Task { await model.send() }
                 },
                 onTalk: {
-                    autoFocus = false
-                    autoVoice = true
-                    showChat = true
+                    voice.reset()
+                    voiceDraft = nil
+                    voiceShouldSend = false
+                    showVoice = true
                 },
                 onType: {
                     autoVoice = false
@@ -39,6 +44,41 @@ struct ConversationTabView: View {
                     focusOnAppear: $autoFocus
                 )
             }
+            .fullScreenCover(isPresented: $showVoice, onDismiss: handleVoiceDismiss) {
+                VoiceView(
+                    voice: voice,
+                    onSend: { text in
+                        voiceDraft = text
+                        voiceShouldSend = true
+                        showVoice = false
+                    },
+                    onClose: { text in
+                        voiceDraft = text
+                        voiceShouldSend = false
+                        showVoice = false
+                    }
+                )
+            }
+        }
+    }
+
+    private func handleVoiceDismiss() {
+        defer {
+            voiceDraft = nil
+            voiceShouldSend = false
+        }
+        guard let text = voiceDraft?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+            return
+        }
+        model.input = text
+        autoVoice = false
+        if voiceShouldSend {
+            autoFocus = false
+            showChat = true
+            Task { await model.send() }
+        } else {
+            autoFocus = true
+            showChat = true
         }
     }
 }
