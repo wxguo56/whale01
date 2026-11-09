@@ -1,0 +1,399 @@
+{
+  "status": "passed",
+  "targetDevice": "iPhone 16 Pro",
+  "logicalReference": {
+    "width": 402,
+    "height": 874,
+    "scale": 3
+  },
+  "scope": "浏览器设计宽度与完整内容检查；不是原生安全区或真机键盘验收",
+  "layouts": 24,
+  "confirmationViews": 6,
+  "consoleErrors": [],
+  "checks": [
+    {
+      "theme": "island",
+      "colorScheme": "light",
+      "page": "home",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 933.015625,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "island-home-402-light.png"
+    },
+    {
+      "theme": "island",
+      "colorScheme": "light",
+      "page": "chat",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 877.453125,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "island-chat-402-light.png"
+    },
+    {
+      "theme": "island",
+      "colorScheme": "light",
+      "page": "music",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 1050.328125,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "island-music-402-light.png"
+    },
+    {
+      "theme": "island",
+      "colorScheme": "light",
+      "page": "settings",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 1118.9375,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "island-settings-402-light.png"
+    },
+    {
+      "theme": "island",
+      "colorScheme": "dark",
+      "page": "home",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 933.015625,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "island-home-402-dark.png"
+    },
+    {
+      "theme": "island",
+      "colorScheme": "dark",
+      "page": "chat",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 877.453125,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "island-chat-402-dark.png"
+    },
+    {
+      "theme": "island",
+      "colorScheme": "dark",
+      "page": "music",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 1050.328125,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "island-music-402-dark.png"
+    },
+    {
+      "theme": "island",
+      "colorScheme": "dark",
+      "page": "settings",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 1118.9375,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "island-settings-402-dark.png"
+    },
+    {
+      "theme": "aurora",
+      "colorScheme": "light",
+      "page": "home",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 961.15625,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "aurora-home-402-light.png"
+    },
+    {
+      "theme": "aurora",
+      "colorScheme": "light",
+      "page": "chat",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 878.453125,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "aurora-chat-402-light.png"
+    },
+    {
+      "theme": "aurora",
+      "colorScheme": "light",
+      "page": "music",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 1049.328125,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "aurora-music-402-light.png"
+    },
+    {
+      "theme": "aurora",
+      "colorScheme": "light",
+      "page": "settings",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 1117.9375,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "aurora-settings-402-light.png"
+    },
+    {
+      "theme": "aurora",
+      "colorScheme": "dark",
+      "page": "home",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 961.15625,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "aurora-home-402-dark.png"
+    },
+    {
+      "theme": "aurora",
+      "colorScheme": "dark",
+      "page": "chat",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 878.453125,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "aurora-chat-402-dark.png"
+    },
+    {
+      "theme": "aurora",
+      "colorScheme": "dark",
+      "page": "music",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 1049.328125,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "aurora-music-402-dark.png"
+    },
+    {
+      "theme": "aurora",
+      "colorScheme": "dark",
+      "page": "settings",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 1117.9375,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "aurora-settings-402-dark.png"
+    },
+    {
+      "theme": "echo",
+      "colorScheme": "light",
+      "page": "home",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 1037.703125,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "echo-home-402-light.png"
+    },
+    {
+      "theme": "echo",
+      "colorScheme": "light",
+      "page": "chat",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 876,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "echo-chat-402-light.png"
+    },
+    {
+      "theme": "echo",
+      "colorScheme": "light",
+      "page": "music",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 1113.671875,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "echo-music-402-light.png"
+    },
+    {
+      "theme": "echo",
+      "colorScheme": "light",
+      "page": "settings",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 1117.9375,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "echo-settings-402-light.png"
+    },
+    {
+      "theme": "echo",
+      "colorScheme": "dark",
+      "page": "home",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 1037.703125,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "echo-home-402-dark.png"
+    },
+    {
+      "theme": "echo",
+      "colorScheme": "dark",
+      "page": "chat",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 876,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "echo-chat-402-dark.png"
+    },
+    {
+      "theme": "echo",
+      "colorScheme": "dark",
+      "page": "music",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 1113.671875,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "echo-music-402-dark.png"
+    },
+    {
+      "theme": "echo",
+      "colorScheme": "dark",
+      "page": "settings",
+      "geometry": {
+        "logicalWidth": 402,
+        "expandedContentHeight": 1117.9375,
+        "referenceScreenHeight": 874,
+        "nativeNeedsVerticalLayoutOrScroll": true,
+        "documentWidth": 402,
+        "scrollWidth": 402,
+        "overflow": [],
+        "smallTargets": 0
+      },
+      "screenshot": "echo-settings-402-dark.png"
+    }
+  ]
+}

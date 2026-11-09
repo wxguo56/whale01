@@ -1,0 +1,22 @@
+{
+  "purpose": "独立HTML演示资源打包；保留固定版本第三方库及原有许可证说明",
+  "dependencies": [
+    {
+      "name": "floating-ui-core-1.7.3.js",
+      "url": "https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js",
+      "bytes": 12529
+    },
+    {
+      "name": "floating-ui-dom-1.7.4.js",
+      "url": "https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js",
+      "bytes": 10251
+    },
+    {
+      "name": "lucide-1.17.0.js",
+      "url": "https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js",
+      "bytes": 601680
+    }
+  ],
+  "singleFileBytes": 982090,
+  "indexPath": "F:\\VS_t\\代号鲸鱼01\\web\\design-v2\\index.html"
+}

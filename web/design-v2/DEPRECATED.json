@@ -1,0 +1,9 @@
+{
+  "status": "deprecated",
+  "effectiveDate": "2026-11-09",
+  "reason": "负责人明确废弃本批UI方案，体验不符合要求",
+  "disabledEntry": "/design-v2/index.html",
+  "decision": "13_UI方案废弃决定.md",
+  "archive": "design/deprecated-ui-2026-11-09/",
+  "rebuildAllowed": false
+}

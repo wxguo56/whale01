@@ -1,0 +1,42 @@
+{
+  "version": "2.0-proposal",
+  "purpose": "三套皮肤共享的原生动效协调契约；待实现，不是当前 App 已接通状态",
+  "sources": {
+    "listening": "实际录音生命周期",
+    "thinking": "实际模型请求生命周期",
+    "responding": "实际讯飞TTS播放生命周期；无对齐数据时仅使用实际音频包络近似",
+    "waiting_user": "结构化澄清、候选选择或可信确认请求",
+    "executing": "实际工具开始执行",
+    "completed": "可信工具成功结果",
+    "handoff": "opened_external_app",
+    "unknown": "execution_unknown",
+    "cancelled": "可信用户取消事件"
+  },
+  "states": ["idle", "listening", "thinking", "responding", "waiting_user", "executing", "completed", "handoff", "failed", "unknown", "cancelled"],
+  "independentLayers": ["task", "speech", "music", "visibility"],
+  "avatarPriority": ["waiting_user", "failed", "unknown", "listening", "responding", "thinking", "executing", "idle"],
+  "rules": {
+    "businessStateIsNotChangedByAnimation": true,
+    "successMotionRequiresTrustedSuccess": true,
+    "discardCallbacksFromOldTurnOrSpeechSession": true,
+    "cancelCurrentMotionBeforeHigherPriorityTransition": true,
+    "mergeDuplicateEventsByEventId": true,
+    "respectReduceMotion": true,
+    "hiddenOrBackgroundStopsRenderingNotPlayback": true,
+    "neverAutoplayMicrointeractionSound": true,
+    "readingAndInputReduceDecorativeMotion": true
+  },
+  "events": {
+    "press": { "visual": "scale_0.985", "durationMs": [100, 140], "haptic": "optional_light_once", "quietFallback": "surface_change" },
+    "page_back": { "visual": "short_horizontal_transition", "durationMs": [220, 320], "quietFallback": "instant_or_short_opacity" },
+    "page_forward": { "visual": "opposite_horizontal_transition", "durationMs": [220, 320], "quietFallback": "instant_or_short_opacity" },
+    "sheet_open": { "visual": "bottom_sheet_and_dim", "durationMs": [240, 320], "quietFallback": "instant_or_short_opacity" },
+    "character_touch": { "visualByTheme": { "island": "float_and_turn_once", "aurora": "orb_response_once", "echo": "record_sway_once" }, "durationMs": [480, 560], "quietFallback": "static_status_text" },
+    "listening_start": { "visualByTheme": { "island": "face_user", "aurora": "focus_ring", "echo": "gentle_attention" }, "haptic": "optional_start_once", "quietFallback": "listening_label" },
+    "speech_playing": { "visualByTheme": { "island": "audio_envelope_expression", "aurora": "audio_envelope_light", "echo": "gentle_audio_response" }, "requires": "actual_tts_playback", "haptic": "none_per_audio_frame", "quietFallback": "speaking_label", "interruption": "discard_old_speech_session_callbacks" },
+    "task_completed": { "visualByTheme": { "island": "nod_once", "aurora": "light_trace_once", "echo": "note_status_once" }, "durationMs": [320, 420], "haptic": "optional_success_once", "quietFallback": "completed_label" },
+    "task_failed": { "visual": "quiet_error_and_next_action", "durationMs": [180, 240], "haptic": "optional_error_once", "quietFallback": "error_label" },
+    "music_playing": { "visualByTheme": { "island": "static_or_low_water_motion", "aurora": "audio_driven_spectrum_if_available", "echo": "slow_record_rotation" }, "continuousRequires": ["foreground", "visible", "actual_playback", "motion_allowed"], "quietFallback": "playing_label" }
+  },
+  "validation": ["切页不重播任务", "隐藏停止装饰渲染", "减少动效保留状态", "失败不出现成功反馈", "重复事件不重复触感", "声学动画依据真实信号而不是伪造数据"]
+}

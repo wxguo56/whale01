@@ -310,13 +310,20 @@ export class Agent {
       state.modelCalls += 1;
 
       let response;
+      let streamed = false;
       try {
         const tools = this.registry.listForModel({ allowed: state.allowedTools });
         if (this.#hasActiveTasks(state)) tools.push(CANCEL_TASK_TOOL);
         response = await this.adapter.chat({
           messages: state.messages,
           tools,
-          context: { now: state.now, timezone: state.timezone, conversationId: state.conversationId }
+          context: { now: state.now, timezone: state.timezone, conversationId: state.conversationId },
+          onDelta: (text) => {
+            if (!text) return;
+            streamed = true;
+            state.reply += text;
+            this.#emit(state, "assistant.delta", { text });
+          }
         });
       } catch (error) {
         this.#fail(state, error);
@@ -335,7 +342,7 @@ export class Agent {
         continue;
       }
 
-      if (response.content) {
+      if (response.content && !streamed) {
         state.reply += response.content;
         this.#emit(state, "assistant.delta", { text: response.content });
       }

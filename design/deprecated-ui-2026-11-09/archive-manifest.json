@@ -1,0 +1,42 @@
+[
+  {
+    "Source": "F:\\VS_t\\代号鲸鱼01\\07_丹青约香蕉UI设计任务书.md",
+    "Snapshot": "F:\\VS_t\\代号鲸鱼01\\design\\deprecated-ui-2026-11-09\\07_旧UI设计任务书.md",
+    "SHA256": "C2FCA330DCC59F93CE7155F9B750E53484D2DE96B406DB6846F5DF61E9C8959D"
+  },
+  {
+    "Source": "F:\\VS_t\\代号鲸鱼01\\09_UI设计方案.md",
+    "Snapshot": "F:\\VS_t\\代号鲸鱼01\\design\\deprecated-ui-2026-11-09\\09_旧UI设计方案.md",
+    "SHA256": "E006EC4E566D8FF0501FB8C9AAC0BE9DF4977656C8ED5E2189615168E1985D74"
+  },
+  {
+    "Source": "F:\\VS_t\\代号鲸鱼01\\11_三套UI与动效系统设计方案.md",
+    "Snapshot": "F:\\VS_t\\代号鲸鱼01\\design\\deprecated-ui-2026-11-09\\11_旧三套UI与动效方案.md",
+    "SHA256": "5BD752513A06B11CE90231D11CA0EED6649DC28242F46DB24FC155F5FACA82AB"
+  },
+  {
+    "Source": "F:\\VS_t\\代号鲸鱼01\\design\\systems-v2\\design-tokens.json",
+    "Snapshot": "F:\\VS_t\\代号鲸鱼01\\design\\deprecated-ui-2026-11-09\\original-design-tokens.json",
+    "SHA256": "430C9EB2E00C6B392C1FA159DFA5123496CF70E1A32EDDBA394E8849165E3CA4"
+  },
+  {
+    "Source": "F:\\VS_t\\代号鲸鱼01\\design\\systems-v2\\motion-contract.json",
+    "Snapshot": "F:\\VS_t\\代号鲸鱼01\\design\\deprecated-ui-2026-11-09\\original-motion-contract.json",
+    "SHA256": "2E128E485986B4C5093A5844D3581B6FAC5D31E2156A3279A986B8114D9B2845"
+  },
+  {
+    "Source": "F:\\VS_t\\代号鲸鱼01\\web\\design-v2\\index.html",
+    "Snapshot": "F:\\VS_t\\代号鲸鱼01\\design\\deprecated-ui-2026-11-09\\standalone-demo.html",
+    "SHA256": "CCCC1A48A7FC216B09952ACF59C09238D421CDF28DC9B3FE719D2EB62B88305E"
+  },
+  {
+    "Source": "C:\\Users\\hzwangxiuguo\\.codex\\visualizations\\2026\\11\\09\\01a1be23-f889-7331-a4e9-1c99fa50a300\\whale01-ui-proposal.html",
+    "Snapshot": "F:\\VS_t\\代号鲸鱼01\\design\\deprecated-ui-2026-11-09\\inline-ui-proposal.html",
+    "SHA256": "3F8900BD3023189D211FD5A75845F54C1C93693C0470EEC1EC5572D8896F3496"
+  },
+  {
+    "Source": "C:\\Users\\hzwangxiuguo\\.codex\\visualizations\\2026\\11\\09\\01a1be23-f889-7331-a4e9-1c99fa50a300\\whale01-three-designs.html",
+    "Snapshot": "F:\\VS_t\\代号鲸鱼01\\design\\deprecated-ui-2026-11-09\\inline-three-designs.html",
+    "SHA256": "B7C444EBFEBE1161270CD95EC5C4BAB5F9B905F9F4AD05B746A21100529D6DEA"
+  }
+]

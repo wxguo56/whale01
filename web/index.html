@@ -46,11 +46,10 @@
               </div>
             </div>
             <div class="appbar-actions">
+              <button class="icon-btn" id="backBtn" type="button" aria-label="返回上一页" title="返回（左滑）" hidden>‹</button>
+              <button class="icon-btn" id="forwardBtn" type="button" aria-label="前进到下一页" title="前进（右滑）" hidden>›</button>
               <button class="icon-btn" id="logBtn" type="button" aria-label="查看契约事件">
                 <svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 6h14M5 12h14M5 18h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-              </button>
-              <button class="icon-btn" id="homeBtn" type="button" aria-label="回到首页" hidden>
-                <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 10.5 12 4l8 6.5V20h-6v-6h-4v6H4Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
               </button>
               <button class="icon-btn" id="settingsBtn" type="button" aria-label="设置与能力">
                 <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l1.8-1.4-2-3.4-2.1.8a7.6 7.6 0 0 0-2.6-1.5L14.2 2H9.8l-.3 2a7.6 7.6 0 0 0-2.6 1.5l-2.1-.8-2 3.4 1.8 1.4a7.6 7.6 0 0 0 0 3L2.8 13.9l2 3.4 2.1-.8a7.6 7.6 0 0 0 2.6 1.5l.3 2h4.4l.3-2a7.6 7.6 0 0 0 2.6-1.5l2.1.8 2-3.4Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
@@ -61,7 +60,7 @@
           <div class="statebar">
             <span class="state-dot" id="stateDot"></span>
             <span class="state-label" id="stateLabel">待命</span>
-            <span class="state-meta" id="stateMeta">Mock · Asia/Shanghai</span>
+            <span class="state-meta" id="stateMeta">固定时钟 · Asia/Shanghai</span>
           </div>
 
           <section class="home-view" id="homeView" aria-label="助手首页">
@@ -104,8 +103,8 @@
                 <button class="summary-card" type="button" data-home-prompt="今天运动了多少">
                   <span class="summary-icon">👟</span>
                   <small>运动概览</small>
-                  <strong>暂无数据</strong>
-                  <span>不推测为 0</span>
+                  <strong id="homeHealthStrong">暂无数据</strong>
+                  <span id="homeHealthNote">不推测为 0</span>
                 </button>
               </div>
 
@@ -117,7 +116,7 @@
 
               <button class="home-primary" id="startChat" type="button">开始对话</button>
               <button class="home-link" id="openSettings" type="button">设置与能力</button>
-              <p class="home-note">HTML 模拟 · 不连接真实系统服务，也不会写入你的数据。</p>
+              <p class="home-note">HTML 模拟 · 文字由真实 DeepSeek 理解；提醒、日历与音乐仍为 Mock，不写入真实系统。</p>
             </div>
           </section>
 
@@ -133,6 +132,7 @@
               <button type="button" data-prompt="查明天下午的安排">查明天下午的安排</button>
               <button type="button" data-prompt="今天运动了多少">今天运动了多少</button>
               <button type="button" data-prompt="附近咖啡店，带我去第二家">附近咖啡店</button>
+              <button type="button" data-prompt="我想听歌">我想听歌</button>
             </div>
             <form class="inputbar" id="composerForm">
               <button class="circle-btn mic" id="micBtn" type="button" aria-label="模拟语音输入">
@@ -143,6 +143,16 @@
                 <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 19V6m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
             </form>
+          </div>
+
+          <div class="music-mini" id="musicMini" hidden>
+            <span class="music-mini-icon" aria-hidden="true">♪</span>
+            <div class="music-mini-text">
+              <strong id="musicMiniTitle">—</strong>
+              <small id="musicMiniMeta">模拟状态 · 无真实音频</small>
+            </div>
+            <button class="mini-action" id="musicMiniToggle" type="button" data-action="music-toggle">暂停</button>
+            <button class="mini-action" type="button" data-action="music-next">下一首</button>
           </div>
 
           <div class="voice-overlay" id="voiceOverlay" hidden>
@@ -165,11 +175,23 @@
             <div class="settings-scroll">
               <section class="settings-group">
                 <h3>能力与授权</h3>
-                <div class="settings-row"><span>日历</span><em id="setCalendar">示例未开启</em></div>
+                <div class="settings-row"><span>日历读取</span><em id="setCalendarRead">已允许 · 可读取</em></div>
+                <div class="settings-row"><span>日历写入</span><em id="setCalendarWrite">已允许 · 可创建</em></div>
                 <div class="settings-row"><span>提醒事项</span><em id="setReminder">已允许</em></div>
+                <div class="settings-row"><span>音乐库</span><em id="setMusic">已允许 · 模拟</em></div>
                 <div class="settings-row"><span>运动数据</span><em id="setHealth">无数据</em></div>
                 <div class="settings-row"><span>定位</span><em>使用期间 · 示例</em></div>
+                <div class="settings-row"><span>页面手势</span><em>左滑返回 · 右滑前进</em></div>
                 <button class="settings-action" id="settingsScenario" type="button">打开演示场景与权限开关</button>
+              </section>
+              <section class="settings-group">
+                <h3>对话后端</h3>
+                <div class="settings-row"><span>当前模式</span><em id="backendModeLabel">本地规则演示</em></div>
+                <div class="settings-row"><span>模型</span><em id="backendModelLabel">未连接</em></div>
+                <div class="settings-row"><span>执行</span><em id="backendExecLabel">本地模拟</em></div>
+                <button class="settings-action" id="backendConnect" type="button">连接本地后端</button>
+                <button class="settings-action" id="backendNewConversation" type="button">开启新会话</button>
+                <p class="settings-note">连接后由后端模型理解自然语言；提醒、日历、音乐等工具仍是 Mock 模拟，不会写入真实系统。未连接时使用本地演示规则。</p>
               </section>
               <section class="settings-group">
                 <h3>语音与通知</h3>
@@ -182,7 +204,7 @@
                 <button class="settings-action" id="settingsLog" type="button">查看契约事件</button>
                 <button class="settings-action danger" id="settingsReset" type="button">清空模拟数据</button>
               </section>
-              <p class="settings-foot">契约 v1.0 · Mock 模型<br>主界面不展示 API Key、tool_call_id 或调试日志</p>
+              <p class="settings-foot">契约 v1.0 · 模型与执行分开标注<br>主界面不展示 API Key、tool_call_id 或调试日志</p>
             </div>
           </section>
 
@@ -217,8 +239,12 @@
           <div><dt>时钟</dt><dd id="clockValue">2026-11-09 10:00</dd></div>
           <div><dt>时区</dt><dd id="tzValue">Asia/Shanghai</dd></div>
           <div><dt>提醒权限</dt><dd id="permValue">已允许</dd></div>
+          <div><dt>音乐库</dt><dd id="musicValue">已允许</dd></div>
+          <div><dt>日历读取</dt><dd id="calendarReadValue">已允许</dd></div>
+          <div><dt>日历写入</dt><dd id="calendarWriteValue">已允许</dd></div>
           <div><dt>网络</dt><dd id="netValue">在线</dd></div>
           <div><dt>健康数据</dt><dd id="healthValue">无数据</dd></div>
+          <div><dt>模型链路</dt><dd id="backendValue">本地演示</dd></div>
           <div><dt>已创建提醒</dt><dd id="countValue">0</dd></div>
         </dl>
         <div class="panel-actions">
@@ -272,6 +298,30 @@
         </div>
       </fieldset>
       <fieldset>
+        <legend>日历读取权限</legend>
+        <div class="segmented" data-field="calendarRead">
+          <button type="button" data-value="granted">允许</button>
+          <button type="button" data-value="denied">拒绝</button>
+          <button type="button" data-value="revoked">已撤回</button>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>日历写入权限</legend>
+        <div class="segmented" data-field="calendarWrite">
+          <button type="button" data-value="granted">允许</button>
+          <button type="button" data-value="denied">拒绝</button>
+          <button type="button" data-value="revoked">已撤回</button>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>音乐库权限</legend>
+        <div class="segmented" data-field="musicPermission">
+          <button type="button" data-value="granted">允许</button>
+          <button type="button" data-value="denied">拒绝</button>
+          <button type="button" data-value="revoked">已撤回</button>
+        </div>
+      </fieldset>
+      <fieldset>
         <legend>网络</legend>
         <div class="segmented" data-field="network">
           <button type="button" data-value="online">在线</button>
@@ -283,6 +333,8 @@
         <div class="segmented" data-field="health">
           <button type="button" data-value="none">无数据</button>
           <button type="button" data-value="has">有数据</button>
+          <button type="button" data-value="loading">读取中</button>
+          <button type="button" data-value="error">读取失败</button>
         </div>
       </fieldset>
       <label class="switch-row">

@@ -143,6 +143,13 @@ export function createHttpServer(runtime) {
       sendJson(response, 404, { error: { code: "not_found", message: "未知路径" } });
     } catch (error) {
       if (response.headersSent) {
+        if (!response.writableEnded && String(response.getHeader("content-type") ?? "").includes("text/event-stream")) {
+          const event = {
+            type: "turn.failed",
+            payload: { code: error.code ?? "internal_error", message: error.message }
+          };
+          response.write(`event: turn.failed\ndata: ${JSON.stringify(event)}\n\n`);
+        }
         response.end();
         return;
       }

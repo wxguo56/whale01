@@ -1,0 +1,267 @@
+<div id="whale01-three-designs" class="viz-carousel viz-dotted-background" aria-label="鲸鱼助手三套完整体验方案" data-previous-label="上一方案" data-next-label="下一方案">
+  <style>
+    #whale01-three-designs { color-scheme: light dark; }
+    #whale01-three-designs .w3-stage { min-height: 1140px; padding: 54px 0 30px; display: flex; justify-content: center; align-items: flex-start; }
+    #whale01-three-designs .w3-phone { --body-size: 17px; --radius: 24px; --page-duration: 300ms; width: min(100%,402px); min-height: 874px; border: 1px solid var(--line); border-radius: 32px; overflow: hidden; position: relative; color: var(--ink); background: var(--bg); font: var(--body-size)/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif; box-shadow: 0 16px 44px light-dark(#16292316,#00000035); }
+    #whale01-three-designs .island { --bg: light-dark(#F2F8F2,#101F19); --surface: light-dark(#FFFEF8,#1C3027); --ink: light-dark(#203B32,#E8F3EB); --muted: light-dark(#586E61,#AAC1B2); --accent: light-dark(#226C59,#82CDAA); --on-accent: light-dark(#FFFFFF,#102B1E); --soft: light-dark(#DDEDE3,#294A3C); --line: light-dark(#DDE7DF,#365243); --art-top: light-dark(#E9F4DF,#294435); --art-bottom: light-dark(#B9DDD1,#234239); --radius: 24px; --page-duration: 320ms; }
+    #whale01-three-designs .aurora { --bg: light-dark(#F2F0F8,#101525); --surface: light-dark(#FCFAFF,#1C2338); --ink: light-dark(#292940,#ECEDF9); --muted: light-dark(#65627C,#B1B5CF); --accent: light-dark(#6753AD,#B9A7F5); --on-accent: light-dark(#FFFFFF,#201638); --soft: light-dark(#E9E3F7,#342C52); --line: light-dark(#DDD8EB,#3A3553); --art-top: light-dark(#EBE6F7,#25253F); --art-bottom: light-dark(#D7D5EF,#1E2741); --radius: 18px; --page-duration: 220ms; }
+    #whale01-three-designs .echo { --bg: light-dark(#FAF4EB,#241D19); --surface: light-dark(#FFFDF8,#362B24); --ink: light-dark(#49362B,#F6EDE4); --muted: light-dark(#786152,#CDB9A9); --accent: light-dark(#9F4A31,#E8AA8A); --on-accent: light-dark(#FFFFFF,#321C13); --soft: light-dark(#F3E4D4,#50392B); --line: light-dark(#E7D8C8,#604939); --art-top: light-dark(#F4E5CF,#4D3929); --art-bottom: light-dark(#E8CDB0,#3D2C22); --radius: 14px; --page-duration: 300ms; }
+    #whale01-three-designs .w3-phone * { box-sizing: border-box; }
+    #whale01-three-designs .w3-phone p, #whale01-three-designs .w3-phone h1, #whale01-three-designs .w3-phone h2, #whale01-three-designs .w3-phone h3 { margin: 0; }
+    #whale01-three-designs .w3-phone button { font: inherit; color: inherit; background: none; border: 0; padding: 10px 12px; border-radius: 12px; min-height: 44px; transition: transform 130ms ease-out, background-color 160ms ease-out; touch-action: manipulation; }
+    #whale01-three-designs .w3-phone button:active { transform: scale(.985); }
+    #whale01-three-designs .w3-phone button:disabled { opacity: .35; }
+    #whale01-three-designs .w3-phone input, #whale01-three-designs .w3-phone textarea { font: inherit; font-size: max(16px,var(--body-size)); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-height: 44px; width: 100%; min-width: 0; }
+    #whale01-three-designs .w3-shell { min-height: 874px; display: flex; flex-direction: column; }
+    #whale01-three-designs .w3-status { display: flex; justify-content: space-between; padding: 12px 21px 4px; font-size: 12px; font-weight: 600; }
+    #whale01-three-designs .w3-status-icons { display: flex; gap: 6px; align-items: center; }
+    #whale01-three-designs .w3-header { padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    #whale01-three-designs .w3-brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    #whale01-three-designs .w3-logo { width: 32px; height: 32px; border-radius: 12px; display: grid; place-items: center; color: var(--accent); background: var(--soft); }
+    #whale01-three-designs .w3-brand-name { font-size: 19px; font-weight: 600; letter-spacing: .3px; }
+    #whale01-three-designs .w3-caption { color: var(--muted); font-size: 12px; }
+    #whale01-three-designs .w3-history { display: flex; }
+    #whale01-three-designs .w3-history button { width: 44px; padding: 0; display: grid; place-items: center; }
+    #whale01-three-designs .w3-main { flex: 1; padding: 14px 20px 22px; min-width: 0; }
+    #whale01-three-designs .w3-stack { display: flex; flex-direction: column; gap: 18px; }
+    #whale01-three-designs .w3-row { display: flex; align-items: center; gap: 10px; }
+    #whale01-three-designs .w3-between { justify-content: space-between; }
+    #whale01-three-designs .w3-title { font-size: 29px; font-weight: 650; line-height: 1.3; letter-spacing: -.4px; }
+    #whale01-three-designs .echo .w3-title { font-family: Georgia,"Songti SC","Microsoft YaHei",serif; font-weight: 500; letter-spacing: .3px; }
+    #whale01-three-designs .w3-subtitle { color: var(--muted); font-size: 14px; margin-top: 7px !important; }
+    #whale01-three-designs .w3-eyebrow { color: var(--accent); font-size: 12px; letter-spacing: 1.5px; margin-bottom: 7px; }
+    #whale01-three-designs .w3-note { color: var(--muted); font-size: 13px; }
+    #whale01-three-designs .w3-section { font-size: 17px; font-weight: 600; }
+    #whale01-three-designs .w3-surface { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+    #whale01-three-designs .w3-primary { background: var(--accent) !important; color: var(--on-accent) !important; font-weight: 600 !important; }
+    #whale01-three-designs .w3-secondary { background: var(--soft) !important; }
+    #whale01-three-designs .w3-wide { width: 100%; }
+    #whale01-three-designs .w3-actions { display: flex; gap: 9px; }
+    #whale01-three-designs .w3-actions > button { flex: 1; }
+    #whale01-three-designs .w3-chip { padding: 4px 9px; border-radius: 9px; background: var(--soft); color: var(--accent); font-size: 12px; }
+    #whale01-three-designs .w3-chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    #whale01-three-designs .w3-chip-row > button { font-size: 14px; background: var(--surface); border: 1px solid var(--line); }
+    #whale01-three-designs .w3-tool-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 13px; }
+    #whale01-three-designs .w3-tool-list button { background: var(--soft); font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    #whale01-three-designs .w3-scene { height: 224px; border-radius: 26px; background: linear-gradient(155deg,var(--art-top),var(--art-bottom)); position: relative; overflow: hidden; }
+    #whale01-three-designs .aurora .w3-scene { height: 254px; border-radius: 22px; background: radial-gradient(circle at 55% 45%,var(--soft),var(--art-bottom)); }
+    #whale01-three-designs .echo .w3-scene { height: 222px; border-radius: 18px; background: linear-gradient(120deg,var(--art-top),var(--art-bottom)); }
+    #whale01-three-designs .w3-scene-caption { position: absolute; left: 16px; bottom: 14px; font-size: 13px; color: var(--ink); pointer-events: none; }
+    #whale01-three-designs .w3-wave { position: absolute; width: 145%; height: 140px; left: -18%; bottom: -95px; border-radius: 50%; background: color-mix(in srgb,var(--accent) 14%,var(--art-bottom)); transform: rotate(-7deg); pointer-events: none; }
+    #whale01-three-designs .w3-wave.second { bottom: -111px; left: -13%; background: color-mix(in srgb,var(--accent) 23%,var(--art-bottom)); transform: rotate(5deg); }
+    #whale01-three-designs .w3-sun { width: 45px; height: 45px; position: absolute; top: 22px; right: 30px; border-radius: 50%; background: light-dark(#F8E6AA,#BC9F57); opacity: .8; }
+    #whale01-three-designs .w3-scene[data-mood="mist"] .w3-sun { opacity: .12; }
+    #whale01-three-designs .w3-scene[data-mood="mist"] { background: linear-gradient(160deg,var(--soft),var(--art-bottom)); }
+    #whale01-three-designs .w3-core { position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%); width: 170px; height: 132px; display: grid; place-items: center; padding: 0 !important; }
+    #whale01-three-designs .w3-whale { display: block; width: 126px; height: 76px; position: relative; background: linear-gradient(145deg,light-dark(#91CABA,#82C8AE),light-dark(#3D927C,#387E66)); border-radius: 65% 47% 58% 49%; transform: rotate(-7deg); box-shadow: inset 0 9px 15px #FFFFFF33,0 12px 20px #173E3320; }
+    #whale01-three-designs .w3-tail { position: absolute; right: -23px; top: -9px; width: 35px; height: 38px; background: light-dark(#72B8A2,#63AD94); clip-path: polygon(0 35%,50% 0,68% 42%,100% 18%,93% 76%,49% 92%); transform: rotate(-8deg); }
+    #whale01-three-designs .w3-belly { position: absolute; left: 10px; bottom: 10px; width: 88px; height: 21px; border-radius: 50%; background: #ECF8EAAD; transform: rotate(9deg); }
+    #whale01-three-designs .w3-eye { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: #163F33; top: 28px; left: 24px; }
+    #whale01-three-designs .w3-fin { position: absolute; height: 16px; width: 29px; top: 45px; left: 72px; border-radius: 2px 3px 75% 75%; background: #326F602A; transform: rotate(18deg); }
+    #whale01-three-designs .w3-orb { width: 118px; height: 118px; border-radius: 50%; background: radial-gradient(circle at 29% 22%,#F3ECFF 0,#B9ACF1 24%,#7B69C2 53%,#485282 82%); box-shadow: inset -9px -12px 24px #233C6666,0 0 30px light-dark(#7B65CC22,#A292FC38); position: relative; }
+    #whale01-three-designs .w3-orb::before { content: ''; position: absolute; inset: -19px; border: 1px solid color-mix(in srgb,var(--accent) 32%,var(--art-bottom)); border-radius: 50%; transform: rotateX(55deg) rotate(-24deg); }
+    #whale01-three-designs .w3-orb::after { content: ''; position: absolute; inset: 24px 14px; border: 1px solid #FFFFFF5C; border-radius: 50%; transform: rotate(-28deg); }
+    #whale01-three-designs .aurora .w3-core { width: 132px; height: 132px; top: 47.5%; }
+    #whale01-three-designs .aurora .w3-scene-caption { left: 50%; transform: translateX(-50%); bottom: 12px; white-space: nowrap; font-size: 12px; }
+    #whale01-three-designs .w3-orbit-button { position: absolute; min-width: 60px; min-height: 44px; font-size: 13px !important; background: var(--surface) !important; color: var(--ink); box-shadow: 0 3px 12px light-dark(#47385E10,#00000025); }
+    #whale01-three-designs .w3-orbit-button:nth-of-type(2) { left: 12px; top: 8px; }
+    #whale01-three-designs .w3-orbit-button:nth-of-type(3) { right: 12px; top: 8px; }
+    #whale01-three-designs .w3-orbit-button:nth-of-type(4) { left: 12px; bottom: 12px; }
+    #whale01-three-designs .w3-orbit-button:nth-of-type(5) { right: 12px; bottom: 12px; }
+    #whale01-three-designs .w3-star { width: 3px; height: 3px; border-radius: 50%; background: var(--accent); position: absolute; opacity: .25; pointer-events: none; }
+    #whale01-three-designs .w3-record { width: 150px; height: 150px; border-radius: 50%; background: repeating-radial-gradient(circle,#343239 0 3px,#27272D 4px 5px); display: grid; place-items: center; box-shadow: 7px 10px 20px #2F21172A; position: relative; }
+    #whale01-three-designs .w3-record-label { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; background: #E4BD94; color: #503522; font-size: 14px; font-weight: 600; }
+    #whale01-three-designs .w3-record-label::after { content: ''; position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #2F2F33; left: calc(50% - 4px); top: calc(50% - 4px); }
+    #whale01-three-designs .w3-record-label span { padding-top: 20px; font-size: 12px; }
+    #whale01-three-designs .w3-arm { position: absolute; width: 70px; height: 8px; border-radius: 6px; background: light-dark(#8E7765,#D1B79E); right: 12px; top: 45px; transform-origin: right center; transform: rotate(-50deg); box-shadow: 0 1px 3px #00000022; pointer-events: none; }
+    #whale01-three-designs .echo .w3-core { width: 174px; height: 174px; top: 48%; }
+    #whale01-three-designs .w3-scene[data-phase="react"] .w3-whale { animation: w3-whale-response 560ms cubic-bezier(.2,.7,.2,1) 1; }
+    #whale01-three-designs .w3-scene[data-phase="react"] .w3-orb { animation: w3-orb-response 480ms ease-out 1; }
+    #whale01-three-designs .w3-scene[data-phase="react"] .w3-record { animation: w3-record-response 520ms ease-out 1; }
+    #whale01-three-designs .w3-scene[data-phase="listening"] .w3-whale { transform: rotate(0) translateY(-3px); }
+    #whale01-three-designs .w3-scene[data-phase="thinking"] .w3-whale { filter: saturate(1.1); }
+    #whale01-three-designs .w3-scene[data-phase="listening"] .w3-orb { box-shadow: 0 0 0 13px light-dark(#7863BA1D,#C8B9FF22),0 0 40px #AF9DEF44; }
+    #whale01-three-designs .w3-scene[data-phase="thinking"] .w3-orb { transform: scale(.94); }
+    #whale01-three-designs .w3-arm { transition: transform 280ms ease-out; }
+    #whale01-three-designs .w3-scene[data-phase="listening"] .w3-arm { transform: rotate(-43deg); }
+    #whale01-three-designs .w3-scene[data-phase="thinking"] .w3-arm { transform: rotate(-47deg); }
+    #whale01-three-designs .w3-scene[data-playing="true"] .w3-record { animation: w3-record-spin 28s linear infinite; }
+    #whale01-three-designs .w3-message { padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+    #whale01-three-designs .w3-user-message { align-self: flex-end; max-width: 92%; background: var(--soft); border: 0; }
+    #whale01-three-designs .island .w3-message:not(.w3-user-message) { border: 0; border-radius: 2px 20px 20px 20px; }
+    #whale01-three-designs .aurora .w3-message:not(.w3-user-message) { border-left: 3px solid var(--accent); }
+    #whale01-three-designs .echo .w3-message { border-radius: 10px; box-shadow: 0 2px 0 color-mix(in srgb,var(--line) 50%,transparent); }
+    #whale01-three-designs .w3-task { padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+    #whale01-three-designs .w3-task-fields { display: flex; flex-direction: column; gap: 10px; padding: 15px 0; }
+    #whale01-three-designs .w3-chat-content { min-height: 440px; }
+    #whale01-three-designs .w3-composer { display: flex; align-items: center; gap: 7px; }
+    #whale01-three-designs .w3-composer input { flex: 1; width: auto; }
+    #whale01-three-designs .w3-composer button { width: 44px; padding: 0; display: grid; place-items: center; }
+    #whale01-three-designs .w3-music .w3-scene { height: 188px; }
+    #whale01-three-designs .w3-music-title { font-size: 24px; font-weight: 600; }
+    #whale01-three-designs .w3-player-buttons { display: flex; gap: 17px; justify-content: center; align-items: center; }
+    #whale01-three-designs .w3-player-buttons button { width: 48px; height: 48px; padding: 0; display: grid; place-items: center; }
+    #whale01-three-designs .w3-player-buttons .w3-play { width: 58px; height: 58px; border-radius: 50%; }
+    #whale01-three-designs .w3-phone input.w3-progress { accent-color: var(--accent); padding: 0; border: 0; background: none; margin: 0; }
+    #whale01-three-designs .w3-track-list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 14px; }
+    #whale01-three-designs .w3-track { display: flex; align-items: center; text-align: left; gap: 12px; width: 100%; padding: 12px 0 !important; border-radius: 0 !important; }
+    #whale01-three-designs .w3-track + .w3-track { border-top: 1px solid var(--line); }
+    #whale01-three-designs .w3-track-art { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--soft); color: var(--accent); flex-shrink: 0; }
+    #whale01-three-designs .echo .w3-track-art { border-radius: 50%; }
+    #whale01-three-designs .w3-track-text { flex: 1; min-width: 0; }
+    #whale01-three-designs .w3-settings { padding: 0 15px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+    #whale01-three-designs .w3-setting { min-height: 54px; display: flex; gap: 12px; justify-content: space-between; align-items: center; padding: 12px 0; }
+    #whale01-three-designs .w3-setting + .w3-setting { border-top: 1px solid var(--line); }
+    #whale01-three-designs .w3-setting small { color: var(--muted); font-size: 13px; }
+    #whale01-three-designs .w3-setting label { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 44px; }
+    #whale01-three-designs .w3-setting input[type="checkbox"] { width: 23px; min-height: 23px; accent-color: var(--accent); }
+    #whale01-three-designs .w3-mini { display: flex; align-items: center; gap: 9px; padding: 6px 10px; margin: 0 14px 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+    #whale01-three-designs .w3-mini button:first-child { flex: 1; text-align: left; padding: 2px 0; }
+    #whale01-three-designs .w3-mini button:last-child { width: 44px; padding: 0; display: grid; place-items: center; }
+    #whale01-three-designs .w3-tabs { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); background: var(--surface); padding: 6px 10px; border-top: 1px solid var(--line); }
+    #whale01-three-designs .w3-tabs button { min-height: 58px; padding: 5px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted); font-size: 12px; }
+    #whale01-three-designs .w3-tabs button[aria-current="page"] { color: var(--accent); background: var(--soft); }
+    #whale01-three-designs .island .w3-tabs { margin: 0 12px; border: 1px solid var(--line); border-radius: 22px; }
+    #whale01-three-designs .aurora .w3-tabs button[aria-current="page"] { background: none; box-shadow: inset 0 -2px 0 var(--accent); border-radius: 0; }
+    #whale01-three-designs .echo .w3-tabs button[aria-current="page"] { border-radius: 14px; }
+    #whale01-three-designs .w3-home-indicator { width: 100px; height: 4px; background: var(--ink); border-radius: 4px; margin: 10px auto 11px; }
+    #whale01-three-designs .w3-overlay { position: absolute; inset: 0; z-index: 4; background: light-dark(#15231E55,#00000088); display: flex; align-items: flex-end; }
+    #whale01-three-designs .w3-sheet { background: var(--surface); width: 100%; border-radius: 26px 26px 0 0; padding: 12px 22px 26px; display: flex; flex-direction: column; gap: 19px; }
+    #whale01-three-designs .w3-sheet-handle { width: 34px; height: 4px; background: var(--line); border-radius: 4px; margin: 0 auto; }
+    #whale01-three-designs .w3-sheet h2 { font-size: 23px; font-weight: 600; }
+    #whale01-three-designs .w3-field { display: flex; flex-direction: column; gap: 8px; }
+    #whale01-three-designs .w3-voice { text-align: center; }
+    #whale01-three-designs .w3-voice .w3-scene { margin-top: 10px; }
+    #whale01-three-designs .w3-comfort[data-motion="quiet"] button, #whale01-three-designs .w3-comfort[data-motion="quiet"] .w3-whale, #whale01-three-designs .w3-comfort[data-motion="quiet"] .w3-orb, #whale01-three-designs .w3-comfort[data-motion="quiet"] .w3-record { animation: none !important; transition: none !important; }
+    #whale01-three-designs .w3-comfort[data-motion="quiet"] button:active { transform: none; }
+    #whale01-three-designs .w3-comfort[data-motion="quiet"] .w3-scene[data-phase="listening"] .w3-whale { transform: rotate(-7deg); }
+    #whale01-three-designs .w3-comfort[data-motion="quiet"] .w3-scene[data-phase="thinking"] .w3-orb { transform: none; }
+    #whale01-three-designs .w3-comfort[data-motion="quiet"] .w3-arm { transform: rotate(-50deg); transition: none; }
+    #whale01-three-designs .w3-phone[data-visual-paused="true"] .w3-record, #whale01-three-designs .w3-phone[data-visual-paused="true"] .w3-whale, #whale01-three-designs .w3-phone[data-visual-paused="true"] .w3-orb { animation-play-state: paused !important; }
+    #whale01-three-designs [hidden] { display: none !important; }
+    @keyframes w3-whale-response { 0%,100% { transform: rotate(-7deg) translateY(0); } 45% { transform: rotate(-2deg) translateY(-6px); } 70% { transform: rotate(-8deg) translateY(-2px); } }
+    @keyframes w3-orb-response { 0%,100% { transform: scale(1); } 35% { transform: scale(.94); } 66% { transform: scale(1.06); } }
+    @keyframes w3-record-response { 0%,100% { transform: rotate(0); } 45% { transform: rotate(11deg); } }
+    @keyframes w3-record-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { #whale01-three-designs .w3-phone *, #whale01-three-designs .w3-phone *::before, #whale01-three-designs .w3-phone *::after { animation: none !important; transition: none !important; } #whale01-three-designs .w3-phone button:active { transform: none; } #whale01-three-designs .w3-scene[data-phase="listening"] .w3-whale { transform: rotate(-7deg); } #whale01-three-designs .w3-scene[data-phase="thinking"] .w3-orb { transform: none; } #whale01-three-designs .w3-arm { transform: rotate(-50deg); } }
+    @media (max-width: 420px) { #whale01-three-designs .w3-main { padding: 14px 16px 20px; } #whale01-three-designs .w3-title { font-size: 26px; } #whale01-three-designs .w3-stage { min-height: 1240px; } #whale01-three-designs .w3-task .w3-row { flex-wrap: wrap; } #whale01-three-designs .w3-actions > button { padding-left: 8px; padding-right: 8px; } }
+  </style>
+  <section data-variant="汐屿 · 清新陪伴" aria-label="汐屿清新陪伴方案"><div class="w3-stage"><article id="whale03-island" class="w3-phone w3-comfort island" data-theme="island" data-motion="standard" aria-label="汐屿：清新陪伴设计"><div class="w3-shell"><div class="w3-status"><span>9:41</span><span class="w3-status-icons"><i data-lucide="signal" aria-hidden="true"></i><i data-lucide="wifi" aria-hidden="true"></i><i data-lucide="battery-full" aria-hidden="true"></i></span></div><header class="w3-header"><div class="w3-brand"><span class="w3-logo"><i data-lucide="waves" aria-hidden="true"></i></span><div><div class="w3-brand-name">鲸鱼 · 汐屿</div><div class="w3-caption">UI 与动效概念预览</div></div></div><div class="w3-history"><button class="cursor-interaction" data-action="back" aria-label="返回上一页面" disabled><i data-lucide="arrow-left" aria-hidden="true"></i></button><button class="cursor-interaction" data-action="forward" aria-label="前进到下一历史页面" disabled><i data-lucide="arrow-right" aria-hidden="true"></i></button></div></header><main class="w3-main" data-content></main><div class="w3-mini" data-mini hidden></div><nav class="w3-tabs" aria-label="主导航"><button class="cursor-interaction" data-page="home" aria-current="page"><i data-lucide="shell" aria-hidden="true"></i>岛屿</button><button class="cursor-interaction" data-page="chat"><i data-lucide="messages-square" aria-hidden="true"></i>对话</button><button class="cursor-interaction" data-page="music"><i data-lucide="music-2" aria-hidden="true"></i>音乐</button><button class="cursor-interaction" data-page="settings"><i data-lucide="user-round" aria-hidden="true"></i>我的</button></nav><div class="w3-home-indicator" aria-hidden="true"></div></div><div class="w3-overlay" data-overlay hidden></div></article></div></section>
+  <section data-variant="星潮 · 柔和科技" aria-label="星潮柔和科技方案" hidden><div class="w3-stage"><article id="whale03-aurora" class="w3-phone w3-comfort aurora" data-theme="aurora" data-motion="standard" aria-label="星潮：柔和科技设计"><div class="w3-shell"><div class="w3-status"><span>9:41</span><span class="w3-status-icons"><i data-lucide="signal" aria-hidden="true"></i><i data-lucide="wifi" aria-hidden="true"></i><i data-lucide="battery-full" aria-hidden="true"></i></span></div><header class="w3-header"><div class="w3-brand"><span class="w3-logo"><i data-lucide="orbit" aria-hidden="true"></i></span><div><div class="w3-brand-name">鲸鱼 · 星潮</div><div class="w3-caption">UI 与动效概念预览</div></div></div><div class="w3-history"><button class="cursor-interaction" data-action="back" aria-label="返回上一页面" disabled><i data-lucide="arrow-left" aria-hidden="true"></i></button><button class="cursor-interaction" data-action="forward" aria-label="前进到下一历史页面" disabled><i data-lucide="arrow-right" aria-hidden="true"></i></button></div></header><main class="w3-main" data-content></main><div class="w3-mini" data-mini hidden></div><nav class="w3-tabs" aria-label="主导航"><button class="cursor-interaction" data-page="home" aria-current="page"><i data-lucide="orbit" aria-hidden="true"></i>空间</button><button class="cursor-interaction" data-page="chat"><i data-lucide="messages-square" aria-hidden="true"></i>对话</button><button class="cursor-interaction" data-page="music"><i data-lucide="music-2" aria-hidden="true"></i>音乐</button><button class="cursor-interaction" data-page="settings"><i data-lucide="user-round" aria-hidden="true"></i>我的</button></nav><div class="w3-home-indicator" aria-hidden="true"></div></div><div class="w3-overlay" data-overlay hidden></div></article></div></section>
+  <section data-variant="回声 · 温暖音乐小馆" aria-label="回声温暖音乐小馆方案" hidden><div class="w3-stage"><article id="whale03-echo" class="w3-phone w3-comfort echo" data-theme="echo" data-motion="standard" aria-label="回声：温暖音乐小馆设计"><div class="w3-shell"><div class="w3-status"><span>9:41</span><span class="w3-status-icons"><i data-lucide="signal" aria-hidden="true"></i><i data-lucide="wifi" aria-hidden="true"></i><i data-lucide="battery-full" aria-hidden="true"></i></span></div><header class="w3-header"><div class="w3-brand"><span class="w3-logo"><i data-lucide="disc-3" aria-hidden="true"></i></span><div><div class="w3-brand-name">鲸鱼 · 回声</div><div class="w3-caption">UI 与动效概念预览</div></div></div><div class="w3-history"><button class="cursor-interaction" data-action="back" aria-label="返回上一页面" disabled><i data-lucide="arrow-left" aria-hidden="true"></i></button><button class="cursor-interaction" data-action="forward" aria-label="前进到下一历史页面" disabled><i data-lucide="arrow-right" aria-hidden="true"></i></button></div></header><main class="w3-main" data-content></main><div class="w3-mini" data-mini hidden></div><nav class="w3-tabs" aria-label="主导航"><button class="cursor-interaction" data-page="home" aria-current="page"><i data-lucide="coffee" aria-hidden="true"></i>小馆</button><button class="cursor-interaction" data-page="chat"><i data-lucide="messages-square" aria-hidden="true"></i>对话</button><button class="cursor-interaction" data-page="music"><i data-lucide="music-2" aria-hidden="true"></i>音乐</button><button class="cursor-interaction" data-page="settings"><i data-lucide="user-round" aria-hidden="true"></i>我的</button></nav><div class="w3-home-indicator" aria-hidden="true"></div></div><div class="w3-overlay" data-overlay hidden></div></article></div></section>
+  <script>
+    (() => {
+      const root = document.getElementById('whale01-three-designs');
+      const profiles = {
+        island: { name:'汐屿', home:'岛屿', eyebrow:'A LITTLE ISLAND', title:'在这里，放轻一点', subtitle:'有事慢慢说，没事也可以待一会。', touch:'轻触鲸鱼', touchFeedback:'鲸鱼轻轻回应了你 · 动效预览', tracks:['晚风慢慢','海岸散步','晨雾'], radius:24, duration:320 },
+        aurora: { name:'星潮', home:'空间', eyebrow:'YOUR QUIET SPACE', title:'把生活，轻轻接通', subtitle:'听你说，也让每一步都有回应。', touch:'触碰光核', touchFeedback:'光核回应了你 · 动效预览', tracks:['漂浮信号','远岸','安静航行'], radius:18, duration:220 },
+        echo: { name:'回声', home:'小馆', eyebrow:'A ROOM FOR YOUR DAY', title:'今天，慢一点也好', subtitle:'听一首，聊一会，记下一件小事。', touch:'轻触唱片', touchFeedback:'唱片轻摆回应 · 动效预览', tracks:['午后的留白','城市晚风','慢速散步'], radius:14, duration:300 }
+      };
+      const controllers = new Map();
+      const icon = (name) => `<i data-lucide="${name}" aria-hidden="true"></i>`;
+      const escapeText = (value) => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+      const formatDue = (value) => { const [datePart,timePart] = value.split('T'); const parts = datePart.split('-'); return `${Number(parts[1])}月${Number(parts[2])}日 ${timePart}`; };
+      const updateIcons = () => { if (typeof lucide !== 'undefined') lucide.createIcons({ attrs:{width:20,height:20} }); };
+      const scene = (theme,state,orbits=false) => {
+        let artwork;
+        if (theme === 'island') artwork = `<span class="w3-sun"></span><span class="w3-wave"></span><span class="w3-wave second"></span><button class="w3-core cursor-interaction" data-action="react" aria-label="轻触鲸鱼"><span class="w3-whale"><span class="w3-tail"></span><span class="w3-belly"></span><span class="w3-eye"></span><span class="w3-fin"></span></span></button>`;
+        else if (theme === 'aurora') artwork = `<span class="w3-star" style="left:32%;top:14%"></span><span class="w3-star" style="left:72%;top:37%"></span><span class="w3-star" style="left:26%;top:76%"></span><button class="w3-core cursor-interaction" data-action="react" aria-label="触碰光核"><span class="w3-orb"></span></button>${orbits ? `<button class="w3-orbit-button cursor-interaction" data-action="weather">天气</button><button class="w3-orbit-button cursor-interaction" data-action="calendar">日程</button><button class="w3-orbit-button cursor-interaction" data-page="music">音乐</button><button class="w3-orbit-button cursor-interaction" data-page="chat">提醒</button>` : ''}`;
+        else artwork = `<span class="w3-arm"></span><button class="w3-core cursor-interaction" data-action="react" aria-label="轻触唱片"><span class="w3-record"><span class="w3-record-label"><span>回声</span></span></span></button>`;
+        const caption = state.phase === 'listening' ? '倾听状态预览' : state.phase === 'thinking' ? '理解状态预览' : profiles[theme].touch;
+        return `<div class="w3-scene" data-phase="${state.phase}" data-mood="${state.mood}" data-playing="${theme === 'echo' && state.playing && state.page === 'music'}">${artwork}<span class="w3-scene-caption" data-scene-caption>${caption}</span></div>`;
+      };
+      const lifeTools = (state) => `<div class="w3-surface"><button class="w3-row w3-between w3-wide cursor-interaction" style="padding:0" data-action="expand-tools" aria-expanded="${state.expanded}"><span class="w3-section">生活助手</span>${icon(state.expanded ? 'chevron-up' : 'chevron-down')}</button>${state.expanded ? `<div class="w3-tool-list"><button class="cursor-interaction" data-action="weather">${icon('cloud-sun')}天气</button><button class="cursor-interaction" data-action="calendar">${icon('calendar-days')}日程</button><button class="cursor-interaction" data-action="activity">${icon('activity')}运动</button><button class="cursor-interaction" data-action="places">${icon('map-pin')}出行</button></div>` : `<p class="w3-note" style="margin-top:8px">天气、日程、运动和出行，需要时再打开。</p>`}</div>`;
+      const home = (theme,state) => {
+        const profile = profiles[theme];
+        const heading = `<div><div class="w3-eyebrow">${profile.eyebrow}</div><h1 class="w3-title">${profile.title}</h1><p class="w3-subtitle">${profile.subtitle}</p></div>`;
+        if (theme === 'island') return `<div class="w3-stack">${heading}${scene(theme,state)}<div class="w3-row w3-between"><span class="w3-note">${state.mood === 'sunny' ? '小岛光景：晴空' : '小岛光景：雨雾'}</span><button class="w3-secondary cursor-interaction" data-action="change-mood">换个光景</button></div><button class="w3-primary w3-wide cursor-interaction" data-page="chat">和鲸鱼聊聊</button><div class="w3-actions"><button class="w3-secondary cursor-interaction" data-page="music">${icon('headphones')} 听一会</button><button class="w3-secondary cursor-interaction" data-page="chat">${icon('bell')} 记件小事</button></div>${lifeTools(state)}<p class="w3-note" role="status" data-reaction-note>${state.reactionNote || '场景与互动示例 · 不读取手机数据'}</p></div>`;
+        if (theme === 'aurora') return `<div class="w3-stack">${heading}${scene(theme,state,true)}<button class="w3-primary w3-wide cursor-interaction" data-action="voice">${icon('mic')} 体验倾听回应</button><div class="w3-surface"><div class="w3-row w3-between"><span class="w3-section">一件待核对的小事</span><span class="w3-chip">示例</span></div><p style="margin-top:10px">取快递 · 明天 15:00</p><button class="w3-secondary w3-wide cursor-interaction" style="margin-top:13px" data-page="chat">查看这条安排</button></div><div class="w3-chip-row"><button class="cursor-interaction" data-page="music">${icon('headphones')} 去专注舱</button><button class="cursor-interaction" data-page="chat">聊聊我的想法</button></div><p class="w3-note" role="status" data-reaction-note>${state.reactionNote || '轻触光核看回应 · 动效不代表模型已执行'}</p></div>`;
+        return `<div class="w3-stack">${heading}${scene(theme,state)}<button class="w3-primary w3-wide cursor-interaction" data-page="music">${icon('headphones')} 一起听一会</button><div class="w3-surface"><span class="w3-note">今日话题</span><p class="w3-section" style="margin-top:8px">今天有没有一个，想留住的瞬间？</p><button class="w3-secondary w3-wide cursor-interaction" style="margin-top:13px" data-action="topic">把它说给鲸鱼听</button></div><div class="w3-actions"><button class="w3-secondary cursor-interaction" data-page="chat">聊聊</button><button class="w3-secondary cursor-interaction" data-page="chat">记件事</button></div>${lifeTools(state)}<p class="w3-note" role="status" data-reaction-note>${state.reactionNote || '小馆与短笺为体验提案 · 内容是示例'}</p></div>`;
+      };
+      const chat = (theme,state) => {
+        const titles = {island:'和鲸鱼慢慢说',aurora:'你的话，我在听',echo:'跟鲸鱼聊一会'};
+        const intro = {island:'好，明天 15:00。你先看看这条安排，确认后再创建。',aurora:'这条安排已经整理出来，请核对事项和时间。',echo:'这件小事先记在这里，核对后再创建就好。'};
+        const status = state.task === 'done' ? '已完成 · 预览' : state.task === 'cancelled' ? '已取消' : '待确认';
+        const actions = state.task === 'pending' ? `<div class="w3-actions"><button class="w3-secondary cursor-interaction" data-action="cancel-task">取消</button><button class="w3-primary cursor-interaction" data-action="confirm-sheet">查看并确认</button></div>` : state.task === 'cancelled' ? `<button class="w3-secondary w3-wide cursor-interaction" data-action="restart-task">重新预览提醒</button>` : `<p class="w3-note">只演示完成状态，没有写入系统。</p>`;
+        return `<div class="w3-stack"><div class="w3-row w3-between"><h1 class="w3-section">${titles[theme]}</h1><span class="w3-chip">对话概念</span></div><div class="w3-stack w3-chat-content"><p class="w3-message w3-user-message">明天下午三点提醒我取快递</p><p class="w3-message">${intro[theme]}</p><div class="w3-task"><div class="w3-row w3-between"><span class="w3-section">${icon('bell')} 创建提醒</span><span class="w3-chip">${status}</span></div><div class="w3-task-fields"><div class="w3-row w3-between"><span class="w3-note">事项</span><span>${escapeText(state.title)}</span></div><div class="w3-row w3-between"><span class="w3-note">时间</span><span>${formatDue(state.dueAt)}</span></div><div class="w3-row w3-between"><span class="w3-note">时区</span><span>上海</span></div></div>${actions}</div>${state.chatNote ? `<p class="w3-message" role="status">${escapeText(state.chatNote)}</p>` : ''}<div class="w3-chip-row"><button class="cursor-interaction" data-page="music">我想听歌</button><button class="cursor-interaction" data-action="voice">体验语音动效</button></div></div><form class="w3-composer" data-form><input aria-label="对话输入" placeholder="想说什么，慢慢来…" value="${escapeText(state.input)}"><button class="w3-secondary cursor-interaction" type="button" data-action="voice" aria-label="体验语音动效">${icon('mic')}</button><button class="w3-primary cursor-interaction" type="submit" aria-label="预览发送">${icon('arrow-up')}</button></form><p class="w3-note">只展示布局与交互，不调用模型或麦克风。</p></div>`;
+      };
+      const music = (theme,state) => {
+        const profile = profiles[theme];
+        const heading = {island:'听一会，慢一点',aurora:'进入你的声音空间',echo:'把这一首，留给自己'};
+        return `<div class="w3-stack w3-music"><div><div class="w3-eyebrow">${theme === 'echo' ? 'ON THE RECORD' : 'YOUR MUSIC'}</div><h1 class="w3-title">${heading[theme]}</h1><p class="w3-subtitle">${theme === 'island' ? '音乐在旁边，鲸鱼也在。' : theme === 'aurora' ? '选一首，让空间有自己的节奏。' : '想听就听，想聊就说。'}</p></div>${scene(theme,state)}<div class="w3-row w3-between"><div><div class="w3-music-title" data-track-title>${profile.tracks[state.track]}</div><p class="w3-note">示例曲目 · ${state.playing ? '播放状态演示' : '暂停／待播放'}</p></div><span class="w3-chip">无真实音源</span></div><input class="w3-progress" type="range" min="0" max="100" value="${state.progress}" aria-label="音乐进度预览" data-no-swipe><div class="w3-player-buttons"><button class="cursor-interaction" data-action="prev-track" aria-label="上一首">${icon('skip-back')}</button><button class="w3-primary w3-play cursor-interaction" data-action="toggle-play" aria-label="${state.playing ? '暂停' : '播放'}">${icon(state.playing ? 'pause' : 'play')}</button><button class="cursor-interaction" data-action="next-track" aria-label="下一首">${icon('skip-forward')}</button></div><div class="w3-row w3-between"><span class="w3-section">音乐库</span><span class="w3-note">示例候选</span></div><div class="w3-track-list">${profile.tracks.map((title,index) => `<button class="w3-track cursor-interaction" data-track="${index}" aria-label="选择${title}"><span class="w3-track-art">${icon(theme === 'echo' ? 'disc-3' : 'music-2')}</span><span class="w3-track-text"><span>${title}</span><span class="w3-caption" style="display:block">${profile.name} · 界面示例</span></span>${icon(index === state.track ? 'check' : 'play')}</button>`).join('')}</div>${theme === 'echo' ? `<button class="w3-secondary w3-wide cursor-interaction" data-action="music-topic">想聊聊这首吗？</button>` : ''}<p class="w3-note">只演示状态与动效，不播放真实声音。</p></div>`;
+      };
+      const settings = (state) => `<div class="w3-stack"><div><h1 class="w3-title">舒服地待在这里</h1><p class="w3-subtitle">文字、动效和声音，按你的习惯来。</p></div><div class="w3-section">舒适显示</div><div class="w3-settings"><div class="w3-setting"><label>减少动效<input type="checkbox" data-pref="motion" aria-label="减少动效" ${state.quiet ? 'checked' : ''}></label></div><div class="w3-setting"><label>大字阅读<input type="checkbox" data-pref="large" aria-label="大字阅读" ${state.large ? 'checked' : ''}></label></div><div class="w3-setting"><label>语音播报<input type="checkbox" data-pref="voice" aria-label="语音播报预览" ${state.voice ? 'checked' : ''}></label></div></div><div class="w3-section">能力与授权</div><div class="w3-settings"><div class="w3-setting"><span>读取日历</span><small>按需授权</small></div><div class="w3-setting"><span>创建日程</span><small>按需授权</small></div><div class="w3-setting"><span>提醒事项</span><small>按需授权</small></div><div class="w3-setting"><span>音乐库</span><small>按需授权</small></div><div class="w3-setting"><span>运动数据</span><small>按需授权</small></div><div class="w3-setting"><span>定位</span><small>使用期间</small></div></div><div class="w3-settings"><div class="w3-setting"><span>页面手势</span><small>左滑返回 · 右滑前进</small></div><div class="w3-setting"><span>微交互提示音</span><small>默认关闭</small></div></div><p class="w3-note">权限为设计占位；舒适开关只影响本预览。</p></div>`;
+      const saved = window.openai && window.openai.widgetState && window.openai.widgetState.privateContent;
+      root.querySelectorAll('.w3-phone').forEach((phone) => {
+        const theme = phone.dataset.theme;
+        const profile = profiles[theme];
+        const previous = saved && saved.version === 3 && saved[theme];
+        const state = {page:['home','chat','music','settings'].includes(previous && previous.page) ? previous.page : 'home',back:[],forward:[],track:Number.isInteger(previous && previous.track) && previous.track >= 0 && previous.track < 3 ? previous.track : 0,playing:false,musicStarted:false,progress:30,expanded:false,mood:'sunny',phase:'idle',reactionNote:'',quiet:!!(previous && previous.quiet),large:!!(previous && previous.large),voice:false,voicePreview:false,input:'',chatNote:'',task:'pending',title:'取快递',dueAt:'2026-11-10T15:00',sheet:false};
+        const preferences = {fontSize:state.large ? 19 : 17,motion:state.quiet ? '安静' : '标准',radius:profile.radius};
+        const main = phone.querySelector('[data-content]');
+        const overlay = phone.querySelector('[data-overlay]');
+        const controller = {phone,state,reactionTimer:null};
+        controllers.set(theme,controller);
+        const quiet = () => state.quiet || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const persist = () => { if (!window.openai || typeof window.openai.setWidgetState !== 'function') return; const privateContent = {version:3}; controllers.forEach((entry,key) => {privateContent[key] = {page:entry.state.page,track:entry.state.track,quiet:entry.state.quiet,large:entry.state.large};}); Promise.resolve(window.openai.setWidgetState({modelContent:{project:'代号鲸鱼01',scheme:profile.name,page:state.page},privateContent})).catch(() => {}); };
+        const updateComfort = () => {phone.dataset.motion = state.quiet ? 'quiet' : 'standard'; phone.style.setProperty('--body-size',preferences.fontSize + 'px'); phone.style.setProperty('--radius',preferences.radius + 'px');};
+        const voiceScreen = () => `<div class="w3-stack w3-voice"><h1 class="w3-title">${state.phase === 'thinking' ? '理解状态预览' : '倾听状态预览'}</h1><p class="w3-subtitle">感受${profile.name}怎样回应你的话。</p>${scene(theme,state)}<p class="w3-note">本页只演示动效，不录音、不调用模型。</p><button class="w3-primary w3-wide cursor-interaction" data-action="thinking-preview">看看理解反馈</button><button class="w3-secondary w3-wide cursor-interaction" data-action="end-voice">结束预览</button></div>`;
+        const render = (animatePage=false,direction=1) => {
+          updateComfort();
+          main.innerHTML = state.voicePreview ? voiceScreen() : state.page === 'home' ? home(theme,state) : state.page === 'chat' ? chat(theme,state) : state.page === 'music' ? music(theme,state) : settings(state);
+          phone.querySelectorAll('nav [data-page]').forEach(button => {if(button.dataset.page === state.page) button.setAttribute('aria-current','page'); else button.removeAttribute('aria-current');});
+          phone.querySelector('[data-action="back"]').disabled = !state.back.length || state.sheet;
+          phone.querySelector('[data-action="forward"]').disabled = !state.forward.length || state.sheet;
+          const mini = phone.querySelector('[data-mini]'); mini.hidden = !state.musicStarted || state.page === 'music' || state.voicePreview;
+          mini.innerHTML = state.musicStarted ? `<button class="cursor-interaction" data-page="music"><span>${profile.tracks[state.track]}</span><span class="w3-caption" style="display:block">${state.playing ? '播放预览' : '已暂停'} · 示例音乐</span></button><button class="cursor-interaction" data-action="toggle-play" aria-label="${state.playing ? '暂停' : '播放'}">${icon(state.playing ? 'pause' : 'play')}</button>` : '';
+          updateIcons();
+          if(animatePage && !quiet()) main.animate([{opacity:.5,transform:`translateX(${direction * 10}px)`},{opacity:1,transform:'translateX(0)'}],{duration:profile.duration,easing:'cubic-bezier(.2,.7,.2,1)'});
+        };
+        const stopReaction = () => {if(controller.reactionTimer) clearTimeout(controller.reactionTimer); controller.reactionTimer = null;};
+        const navigate = (page) => {if(state.sheet || page === state.page) return; stopReaction(); state.voicePreview=false; state.phase='idle'; state.back.push(state.page); state.forward=[]; state.page=page; render(true); persist();};
+        const moveHistory = (direction) => {if(state.sheet) return; const source = direction === 'back' ? state.back : state.forward; const destination = direction === 'back' ? state.forward : state.back; if(!source.length) return; stopReaction(); state.voicePreview=false; state.phase='idle'; destination.push(state.page); state.page=source.pop(); render(true,direction === 'back' ? -1 : 1); persist();};
+        const react = () => {stopReaction(); state.phase='react'; state.reactionNote=profile.touchFeedback; main.querySelectorAll('.w3-scene').forEach(sceneElement => {sceneElement.dataset.phase='idle'; void sceneElement.offsetWidth; sceneElement.dataset.phase='react';}); const note = main.querySelector('[data-reaction-note]'); if(note) note.textContent=state.reactionNote; controller.reactionTimer=setTimeout(() => {if(state.phase === 'react'){state.phase='idle'; main.querySelectorAll('.w3-scene').forEach(sceneElement => {sceneElement.dataset.phase='idle';});} controller.reactionTimer=null;},650); persist();};
+        const closeSheet = () => {state.sheet=false; overlay.hidden=true; phone.querySelector('.w3-shell').inert=false; phone.querySelector('[data-action="confirm-sheet"]')?.focus();};
+        const openSheet = () => {stopReaction(); state.sheet=true; overlay.hidden=false; phone.querySelector('.w3-shell').inert=true; overlay.innerHTML=`<section class="w3-sheet" role="dialog" aria-modal="true" aria-label="创建提醒确认"><div class="w3-sheet-handle"></div><div class="w3-row w3-between"><div><h2>${theme === 'echo' ? '核对这张小笺' : theme === 'aurora' ? '确认这条安排' : '记下这件小事'}</h2><p class="w3-note">创建提醒 · 执行前预览</p></div><button class="cursor-interaction" data-action="close-sheet" aria-label="关闭确认">${icon('x')}</button></div><label class="w3-field">事项<input aria-label="提醒事项" value="${escapeText(state.title)}"></label><label class="w3-field">时间<input type="datetime-local" aria-label="提醒时间" value="${state.dueAt}" required></label><div class="w3-row w3-between"><span>时区</span><span>上海（+08:00）</span></div><p class="w3-note">核对后再执行。本次只演示，不写入系统。</p><div class="w3-actions"><button class="w3-secondary cursor-interaction" data-action="close-sheet">取消</button><button class="w3-primary cursor-interaction" data-action="create-preview">确认创建</button></div></section>`; updateIcons(); overlay.querySelector('input').focus(); if(!quiet()) overlay.querySelector('.w3-sheet').animate([{transform:'translateY(24px)',opacity:.7},{transform:'translateY(0)',opacity:1}],{duration:profile.duration,easing:'ease-out'});};
+        let suppressClickUntil = 0;
+        phone.addEventListener('click',(event) => {if(Date.now()<suppressClickUntil){event.preventDefault();event.stopImmediatePropagation();}},true);
+        phone.addEventListener('click',(event) => {
+          phone.dataset.visualPaused='false'; const button=event.target.closest('button'); if(!button || button.disabled) return;
+          if(button.dataset.page) return navigate(button.dataset.page);
+          if(button.dataset.track!==undefined){state.track=Number(button.dataset.track);state.musicStarted=true;state.playing=true;render();persist();return;}
+          const action=button.dataset.action;
+          if(action==='back'||action==='forward') return moveHistory(action);
+          if(action==='react') return react();
+          if(action==='change-mood'){state.mood=state.mood==='sunny'?'mist':'sunny';state.reactionNote='光景已切换 · 不代表真实天气';render();persist();return;}
+          if(action==='expand-tools'){state.expanded=!state.expanded;render();return;}
+          if(action==='voice'){stopReaction();state.voicePreview=true;state.phase='listening';render(true);return;}
+          if(action==='thinking-preview'){state.phase='thinking';render(true);return;}
+          if(action==='end-voice'){state.voicePreview=false;state.phase='idle';render(true);return;}
+          if(action==='confirm-sheet') return openSheet();
+          if(action==='close-sheet') return closeSheet();
+          if(action==='create-preview'){const titleField=overlay.querySelector('[aria-label="提醒事项"]');const dateField=overlay.querySelector('[aria-label="提醒时间"]');if(!titleField.value.trim()){titleField.setCustomValidity('请填写事项');titleField.reportValidity();return;}if(!dateField.reportValidity())return;state.title=titleField.value.trim();state.dueAt=dateField.value;state.task='done';closeSheet();render(true);persist();return;}
+          if(action==='cancel-task'){state.task='cancelled';state.chatNote='已取消这个预览，没有创建记录。';render();return;}
+          if(action==='restart-task'){state.task='pending';state.chatNote='';render();return;}
+          if(action==='toggle-play'){state.musicStarted=true;state.playing=!state.playing;render();persist();return;}
+          if(action==='next-track'||action==='prev-track'){state.track=(state.track+(action==='next-track'?1:-1)+3)%3;state.musicStarted=true;render();persist();return;}
+          if(action==='topic'||action==='music-topic'){state.chatNote=action==='topic'?'今日话题：今天有没有一个想留住的瞬间？这是对话起点预览。':'围绕这首音乐聊聊：正式版本会使用真实曲目信息和你的想法。';navigate('chat');render();return;}
+          if(['weather','calendar','activity','places'].includes(action)){state.chatNote={weather:'这里展示天气结果卡；预览不读取真实预报。',calendar:'这里展示日程结果；读写权限独立，参数缺少时保留任务。',activity:'这里展示真实可得的运动摘要；无数据不当作零。',places:'这里选择地点并交接地图；不声称已抵达。'}[action];navigate('chat');render();}
+        });
+        phone.addEventListener('input',(event) => {if(event.target.matches('[data-form] input'))state.input=event.target.value;if(event.target.matches('.w3-progress'))state.progress=Number(event.target.value);if(event.target.closest('[data-overlay]'))event.target.setCustomValidity?.('');});
+        phone.addEventListener('change',(event) => {const preference=event.target.dataset.pref;if(preference==='motion'){state.quiet=event.target.checked;preferences.motion=state.quiet?'安静':'标准';}if(preference==='large'){state.large=event.target.checked;preferences.fontSize=state.large?19:17;}if(preference==='voice')state.voice=event.target.checked;updateComfort();persist();});
+        phone.addEventListener('submit',(event) => {if(!event.target.matches('[data-form]'))return;event.preventDefault();if(!state.input.trim())return;state.chatNote='输入已保留。本预览只展示界面，实际理解按自然对话升级方案接入。';render();});
+        phone.addEventListener('keydown',(event) => {if(event.key==='Escape'&&state.sheet)closeSheet();});
+        let gestureStart=null;
+        phone.addEventListener('pointerdown',(event) => {gestureStart=null;if(state.sheet||event.target.closest('input,textarea,select,label,[data-no-swipe]'))return;gestureStart={x:event.clientX,y:event.clientY};});
+        phone.addEventListener('pointerup',(event) => {if(!gestureStart)return;const deltaX=event.clientX-gestureStart.x;const deltaY=event.clientY-gestureStart.y;gestureStart=null;if(Math.abs(deltaX)>=60&&Math.abs(deltaX)>Math.abs(deltaY)*1.5){suppressClickUntil=Date.now()+320;moveHistory(deltaX<0?'back':'forward');}});
+        phone.addEventListener('pointercancel',() => {gestureStart=null;});
+        controller.restore=(restored) => {if(!restored||state.sheet)return;if(['home','chat','music','settings'].includes(restored.page))state.page=restored.page;if(Number.isInteger(restored.track)&&restored.track>=0&&restored.track<3)state.track=restored.track;state.quiet=!!restored.quiet;state.large=!!restored.large;preferences.motion=state.quiet?'安静':'标准';preferences.fontSize=state.large?19:17;render();};
+        render();
+        const variant=phone.closest('[data-variant]');new MutationObserver(() => {if(variant.hidden){phone.dataset.visualPaused='true';stopReaction();state.phase='idle';}}).observe(variant,{attributes:true,attributeFilter:['hidden']});
+        if(globalThis.Tweak){const tweak=new Tweak({container:phone,onChange:() => {state.quiet=preferences.motion==='安静';state.large=preferences.fontSize>=19;updateComfort();}});tweak.addSelect(preferences,'motion',{label:'动效节奏',options:['标准','安静'],reference:'motion-mode'});tweak.addSlider(preferences,'fontSize',{label:'正文舒适度',min:16,max:19,step:1,unit:'px',reference:'body-size'});tweak.addSlider(preferences,'radius',{label:'卡片圆角',min:12,max:28,unit:'px',reference:'card-radius'});}
+      });
+      document.addEventListener('visibilitychange',() => {if(document.hidden)controllers.forEach(controller => {controller.phone.dataset.visualPaused='true';});});
+      window.addEventListener('openai:set_globals',(event) => {const updated=event.detail&&event.detail.globals&&event.detail.globals.widgetState;if(!updated||!updated.privateContent||updated.privateContent.version!==3)return;controllers.forEach((controller,key) => controller.restore(updated.privateContent[key]));});
+    })();
+  </script>
+</div>

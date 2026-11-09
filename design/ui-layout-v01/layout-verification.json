@@ -1,0 +1,491 @@
+{
+  "status": "passed",
+  "variants": 2,
+  "pageLayoutChecks": 32,
+  "confirmationViews": 8,
+  "browserErrors": [],
+  "networkTargets": [],
+  "screenshotRoot": "F:/VS_t/代号鲸鱼01/design/ui-layout-v01",
+  "results": [
+    {
+      "design": "tide",
+      "colorScheme": "light",
+      "viewportWidth": 780,
+      "page": "home",
+      "geometry": {
+        "width": 390,
+        "height": 834.75,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-tide-home-780-light.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "light",
+      "viewportWidth": 780,
+      "page": "chat",
+      "geometry": {
+        "width": 390,
+        "height": 812,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-tide-chat-780-light.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "light",
+      "viewportWidth": 780,
+      "page": "music",
+      "geometry": {
+        "width": 390,
+        "height": 889.25,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-tide-music-780-light.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "light",
+      "viewportWidth": 780,
+      "page": "settings",
+      "geometry": {
+        "width": 390,
+        "height": 981.75,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-tide-settings-780-light.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "light",
+      "viewportWidth": 320,
+      "page": "home",
+      "geometry": {
+        "width": 288,
+        "height": 830.25,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-tide-home-320-light.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "light",
+      "viewportWidth": 320,
+      "page": "chat",
+      "geometry": {
+        "width": 288,
+        "height": 812,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-tide-chat-320-light.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "light",
+      "viewportWidth": 320,
+      "page": "music",
+      "geometry": {
+        "width": 288,
+        "height": 886.75,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-tide-music-320-light.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "light",
+      "viewportWidth": 320,
+      "page": "settings",
+      "geometry": {
+        "width": 288,
+        "height": 979.25,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-tide-settings-320-light.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "dark",
+      "viewportWidth": 780,
+      "page": "home",
+      "geometry": {
+        "width": 390,
+        "height": 834.75,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-tide-home-780-dark.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "dark",
+      "viewportWidth": 780,
+      "page": "chat",
+      "geometry": {
+        "width": 390,
+        "height": 812,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-tide-chat-780-dark.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "dark",
+      "viewportWidth": 780,
+      "page": "music",
+      "geometry": {
+        "width": 390,
+        "height": 889.25,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-tide-music-780-dark.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "dark",
+      "viewportWidth": 780,
+      "page": "settings",
+      "geometry": {
+        "width": 390,
+        "height": 981.75,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-tide-settings-780-dark.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "dark",
+      "viewportWidth": 320,
+      "page": "home",
+      "geometry": {
+        "width": 288,
+        "height": 830.25,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-tide-home-320-dark.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "dark",
+      "viewportWidth": 320,
+      "page": "chat",
+      "geometry": {
+        "width": 288,
+        "height": 812,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-tide-chat-320-dark.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "dark",
+      "viewportWidth": 320,
+      "page": "music",
+      "geometry": {
+        "width": 288,
+        "height": 886.75,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-tide-music-320-dark.png"
+    },
+    {
+      "design": "tide",
+      "colorScheme": "dark",
+      "viewportWidth": 320,
+      "page": "settings",
+      "geometry": {
+        "width": 288,
+        "height": 979.25,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-tide-settings-320-dark.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "light",
+      "viewportWidth": 780,
+      "page": "home",
+      "geometry": {
+        "width": 390,
+        "height": 834.25,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-route-home-780-light.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "light",
+      "viewportWidth": 780,
+      "page": "chat",
+      "geometry": {
+        "width": 390,
+        "height": 812,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-route-chat-780-light.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "light",
+      "viewportWidth": 780,
+      "page": "music",
+      "geometry": {
+        "width": 390,
+        "height": 889.25,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-route-music-780-light.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "light",
+      "viewportWidth": 780,
+      "page": "settings",
+      "geometry": {
+        "width": 390,
+        "height": 981.75,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-route-settings-780-light.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "light",
+      "viewportWidth": 320,
+      "page": "home",
+      "geometry": {
+        "width": 288,
+        "height": 829.75,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-route-home-320-light.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "light",
+      "viewportWidth": 320,
+      "page": "chat",
+      "geometry": {
+        "width": 288,
+        "height": 812,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-route-chat-320-light.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "light",
+      "viewportWidth": 320,
+      "page": "music",
+      "geometry": {
+        "width": 288,
+        "height": 886.75,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-route-music-320-light.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "light",
+      "viewportWidth": 320,
+      "page": "settings",
+      "geometry": {
+        "width": 288,
+        "height": 979.25,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(246, 248, 252)"
+      },
+      "screenshot": "layout-route-settings-320-light.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "dark",
+      "viewportWidth": 780,
+      "page": "home",
+      "geometry": {
+        "width": 390,
+        "height": 834.25,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-route-home-780-dark.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "dark",
+      "viewportWidth": 780,
+      "page": "chat",
+      "geometry": {
+        "width": 390,
+        "height": 812,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-route-chat-780-dark.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "dark",
+      "viewportWidth": 780,
+      "page": "music",
+      "geometry": {
+        "width": 390,
+        "height": 889.25,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-route-music-780-dark.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "dark",
+      "viewportWidth": 780,
+      "page": "settings",
+      "geometry": {
+        "width": 390,
+        "height": 981.75,
+        "documentWidth": 748,
+        "scrollWidth": 748,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-route-settings-780-dark.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "dark",
+      "viewportWidth": 320,
+      "page": "home",
+      "geometry": {
+        "width": 288,
+        "height": 829.75,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-route-home-320-dark.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "dark",
+      "viewportWidth": 320,
+      "page": "chat",
+      "geometry": {
+        "width": 288,
+        "height": 812,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-route-chat-320-dark.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "dark",
+      "viewportWidth": 320,
+      "page": "music",
+      "geometry": {
+        "width": 288,
+        "height": 886.75,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-route-music-320-dark.png"
+    },
+    {
+      "design": "route",
+      "colorScheme": "dark",
+      "viewportWidth": 320,
+      "page": "settings",
+      "geometry": {
+        "width": 288,
+        "height": 979.25,
+        "documentWidth": 288,
+        "scrollWidth": 288,
+        "overflow": [],
+        "background": "rgb(16, 23, 34)"
+      },
+      "screenshot": "layout-route-settings-320-dark.png"
+    }
+  ]
+}

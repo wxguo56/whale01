@@ -76,7 +76,7 @@ export class DeepSeekAdapter {
     this.timeoutMs = timeoutMs;
   }
 
-  async chat({ messages, tools }) {
+  async chat({ messages, tools, onDelta }) {
     if (!this.apiKey) throw new ModelError("缺少 DEEPSEEK_API_KEY", { code: "missing_api_key" });
 
     const controller = new AbortController();
@@ -93,7 +93,7 @@ export class DeepSeekAdapter {
           messages,
           tools,
           tool_choice: "auto",
-          stream: false
+          stream: true
         }),
         signal: controller.signal
       });
@@ -104,6 +104,11 @@ export class DeepSeekAdapter {
           code: response.status === 429 ? "rate_limited" : "upstream_error",
           status: response.status
         });
+      }
+
+      const contentType = response.headers.get("content-type") ?? "";
+      if (contentType.includes("text/event-stream")) {
+        return await this.#readEventStream(response, onDelta);
       }
 
       const json = await response.json();
@@ -125,5 +130,63 @@ export class DeepSeekAdapter {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  async #readEventStream(response, onDelta) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    const calls = new Map();
+    let buffer = "";
+    let content = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let newline = buffer.indexOf("\n");
+      while (newline >= 0) {
+        const line = buffer.slice(0, newline).trim();
+        buffer = buffer.slice(newline + 1);
+        newline = buffer.indexOf("\n");
+
+        if (!line.startsWith("data:")) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+
+        let chunk;
+        try {
+          chunk = JSON.parse(data);
+        } catch {
+          continue;
+        }
+
+        const delta = chunk.choices?.[0]?.delta ?? {};
+        if (typeof delta.content === "string" && delta.content) {
+          content += delta.content;
+          if (onDelta) onDelta(delta.content);
+        }
+
+        for (const part of delta.tool_calls ?? []) {
+          const key = part.index ?? 0;
+          const current = calls.get(key) ?? { id: "", name: "", arguments: "" };
+          if (part.id) current.id = part.id;
+          if (part.function?.name) current.name = part.function.name;
+          if (part.function?.arguments) current.arguments += part.function.arguments;
+          calls.set(key, current);
+        }
+      }
+    }
+
+    return {
+      content,
+      toolCalls: [...calls.entries()]
+        .sort((left, right) => left[0] - right[0])
+        .map(([index, call]) => ({
+          id: call.id || `call_${index}`,
+          name: call.name,
+          arguments: call.arguments || "{}"
+        }))
+    };
   }
 }

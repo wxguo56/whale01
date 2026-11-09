@@ -1,0 +1,36 @@
+{
+  "status": "passed",
+  "url": "file:///F:/VS_t/%E4%BB%A3%E5%8F%B7%E9%B2%B8%E9%B1%BC01/web/design-v2/index.html",
+  "pageTitle": "鲸鱼助手 · 三套UI与动效演示",
+  "schemes": 3,
+  "iconCount": 37,
+  "blockedExternalRequests": [],
+  "consoleErrors": [],
+  "results": [
+    {
+      "theme": "island",
+      "schemeSwitch": "passed",
+      "touch": "passed",
+      "confirmation": "passed",
+      "music": "passed",
+      "quietMode": "passed"
+    },
+    {
+      "theme": "aurora",
+      "schemeSwitch": "passed",
+      "touch": "passed",
+      "confirmation": "passed",
+      "music": "passed",
+      "quietMode": "passed"
+    },
+    {
+      "theme": "echo",
+      "schemeSwitch": "passed",
+      "touch": "passed",
+      "confirmation": "passed",
+      "music": "passed",
+      "quietMode": "passed"
+    }
+  ],
+  "scope": "UI和动效演示，非真实AI或音频播放"
+}

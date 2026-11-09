@@ -1,0 +1,35 @@
+{
+  "version": "2.0-proposal",
+  "status": "待选定的设计提案，不是运行时配置或已生成素材",
+  "primaryDevice": { "name": "iPhone 16 Pro", "orientation": "portrait", "logicalWidthPt": 402, "logicalHeightPt": 874, "scale": 3, "physicalWidthPx": 1206, "physicalHeightPx": 2622, "safeArea": "使用系统运行时值；不以固定顶部／底部常量替代", "previewHeightPolicy": "最低参考高度，不裁切长内容；原生正文滚动、底部操作独立锚定" },
+  "typography": { "bodyPt": 17, "secondaryPt": 13, "titlePt": 30, "bodyLineHeight": 1.55, "dynamicType": true },
+  "interaction": { "minimumHitTargetPt": 44, "backGesture": "swipe_left", "forwardGesture": "swipe_right", "preserveConversation": true, "preservePlaybackAcrossPages": true },
+  "themes": {
+    "island": {
+      "name": "汐屿",
+      "light": { "background": "#F2F8F2", "surface": "#FFFEF8", "textPrimary": "#203B32", "textSecondary": "#586E61", "accent": "#226C59", "onAccent": "#FFFFFF", "softAccent": "#DDEDE3" },
+      "dark": { "background": "#101F19", "surface": "#1C3027", "textPrimary": "#E8F3EB", "textSecondary": "#AAC1B2", "accent": "#82CDAA", "onAccent": "#102B1E", "softAccent": "#294A3C" },
+      "cardRadiusPt": 24,
+      "motionMs": { "press": 120, "page": 320, "sheet": 320, "characterResponse": 560, "success": 420 },
+      "homeStructure": "岛屿场景、角色、对话入口、音乐与小事、折叠生活能力"
+    },
+    "aurora": {
+      "name": "星潮",
+      "light": { "background": "#F2F0F8", "surface": "#FCFAFF", "textPrimary": "#292940", "textSecondary": "#65627C", "accent": "#6753AD", "onAccent": "#FFFFFF", "softAccent": "#E9E3F7" },
+      "dark": { "background": "#101525", "surface": "#1C2338", "textPrimary": "#ECEDF9", "textSecondary": "#B1B5CF", "accent": "#B9A7F5", "onAccent": "#201638", "softAccent": "#342C52" },
+      "cardRadiusPt": 18,
+      "motionMs": { "press": 100, "page": 220, "sheet": 240, "characterResponse": 480, "success": 320 },
+      "homeStructure": "中心光核、环绕能力、说话命令入口、任务状态"
+    },
+    "echo": {
+      "name": "回声",
+      "light": { "background": "#FAF4EB", "surface": "#FFFDF8", "textPrimary": "#49362B", "textSecondary": "#786152", "accent": "#9F4A31", "onAccent": "#FFFFFF", "softAccent": "#F3E4D4" },
+      "dark": { "background": "#241D19", "surface": "#362B24", "textPrimary": "#F6EDE4", "textSecondary": "#CDB9A9", "accent": "#E8AA8A", "onAccent": "#321C13", "softAccent": "#50392B" },
+      "cardRadiusPt": 14,
+      "motionMs": { "press": 140, "page": 300, "sheet": 300, "characterResponse": 520, "success": 380, "recordRotation": 28000 },
+      "homeStructure": "编辑标题、唱片与陪伴角色、今日话题、音乐与聊天入口"
+    }
+  },
+  "motionPolicy": { "autoplaySound": false, "respectSystemReduceMotion": true, "stopDecorativeMotionWhenHidden": true, "stopDecorativeMotionInBackground": true, "successRequiresTrustedResult": true, "continuousRecordAnimationRequiresVisiblePlayback": true },
+  "nativeAssets": { "provider": "丹青约香蕉，待连接与真实生成", "characterStates": ["idle", "listening", "thinking", "responding", "completed", "failed"], "renderedPreviewsAreNotGeneratedAssets": true }
+}

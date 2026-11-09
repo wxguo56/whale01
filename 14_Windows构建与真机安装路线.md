@@ -1,14 +1,14 @@
 # 代号鲸鱼01：Windows 构建与真机安装路线
 
-日期：2026-11-09｜状态：原生工程与云编译流水线已创建；尚未实际编译、配置签名或触发云构建
+日期：2026-11-09｜状态：原生工程、模拟器编译与未签名真机 IPA 已完成；重签、安装与真机验证待执行
 
 ## 1. 结论
 
-Windows 可以作为代码编辑、仓库管理和构建触发端；原生 iOS 的苹果 SDK 编译与签名在 macOS 上进行。没有自有 Mac 时，可使用 GitHub Actions 的 macOS runner、支持原生 iOS 的云构建服务或远程真实 Mac。
+Windows 可以作为代码编辑、仓库管理和构建触发端；原生 iOS 的苹果 SDK 编译在 macOS 上进行。正式 Xcode 归档签名可在 macOS 完成；已构建的真机 IPA 也可通过 Windows／iPhone 上的侧载工具，以本人 Apple 账号重新签名。没有自有 Mac 时，可使用 GitHub Actions 的 macOS runner、支持原生 iOS 的云构建服务或远程真实 Mac。
 
-本项目推荐：Windows 写 Swift 原生代码与项目配置 → GitHub Actions macOS 生成／编译工程 → 签名上传 App Store Connect → iPhone TestFlight 安装。
+当前测试路线：Windows 编辑 → GitHub Actions 构建 `WhaleAgentSideload` 真机 IPA → AltServer／AltStore／SideStore 重签与安装，详见 15_AltStore与SideStore真机安装.md。正式 TestFlight 分发仍按下文的开发者团队与签名流程另行配置。
 
-此路线不把 HTML ZIP 转成原生 App。本轮已在 `ios/` 建立最小原生工程与设备执行层；第一步的源码交付已完成，下一步是把它推到 GitHub，让 macOS runner 实际编译通过。旧 UI 方案已废弃，不按其还原。
+此路线不把 HTML ZIP 转成原生 App。`ios/` 工程与两条工作流已推送，模拟器和未签名 iPhoneOS IPA 均已构建成功。当前下一步是重签并安装到 iPhone，再验证真实系统操作。旧 UI 方案已废弃，不按其还原。
 
 ## 2. 哪一步在哪里完成
 

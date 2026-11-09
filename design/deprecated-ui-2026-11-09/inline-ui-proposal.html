@@ -1,0 +1,202 @@
+<div id="whale01-ui-proposal" class="viz-carousel viz-dotted-background" aria-label="鲸鱼助手 UI 设计方案" data-previous-label="上一方案" data-next-label="下一方案">
+  <style>
+    #whale01-ui-proposal { color-scheme: light dark; }
+    #whale01-ui-proposal .w01-stage { min-height: 960px; padding: 54px 0 26px; display: flex; justify-content: center; align-items: flex-start; }
+    #whale01-ui-proposal .w01-phone { --w01-bg: light-dark(#f6f8fc,#101722); --w01-surface: light-dark(#ffffff,#1a2533); --w01-text: light-dark(#162439,#edf3ff); --w01-muted: light-dark(#65748b,#a6b4ca); --w01-line: light-dark(#e4eaf2,#2c3a4d); --w01-soft: light-dark(#edf4ff,#1a3151); --w01-accent: #286de4; --w01-onaccent: #ffffff; --w01-radius: 20px; width: min(100%,390px); min-height: 810px; color: var(--w01-text); background: var(--w01-bg); border: 1px solid var(--w01-line); border-radius: 32px; box-shadow: 0 12px 38px light-dark(#192e5014,#00000030); font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif; font-size: 14px; line-height: 1.5; position: relative; overflow: hidden; }
+    #whale01-ui-proposal .w01-phone * { box-sizing: border-box; }
+    #whale01-ui-proposal .w01-shell { min-height: 810px; display: flex; flex-direction: column; }
+    #whale01-ui-proposal .w01-phone p, #whale01-ui-proposal .w01-phone h1, #whale01-ui-proposal .w01-phone h2, #whale01-ui-proposal .w01-phone h3 { margin: 0; }
+    #whale01-ui-proposal .w01-phone button { font: inherit; color: inherit; border: 0; background: none; min-height: 44px; padding: 8px 12px; border-radius: 12px; touch-action: manipulation; }
+    #whale01-ui-proposal .w01-phone button:disabled { opacity: .35; }
+    #whale01-ui-proposal .w01-phone input { font: inherit; font-size: 16px; color: var(--w01-text); background: var(--w01-surface); border: 1px solid var(--w01-line); border-radius: 12px; padding: 12px; min-height: 44px; min-width: 0; width: 100%; }
+    #whale01-ui-proposal .w01-status { display: flex; justify-content: space-between; align-items: center; padding: 12px 22px 4px; font-size: 12px; font-weight: 600; }
+    #whale01-ui-proposal .w01-status-right { display: flex; gap: 6px; align-items: center; }
+    #whale01-ui-proposal .w01-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; gap: 12px; }
+    #whale01-ui-proposal .w01-brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    #whale01-ui-proposal .w01-brand-mark { display: grid; place-items: center; width: 38px; height: 38px; background: var(--w01-soft); border-radius: 13px; font-size: 24px; }
+    #whale01-ui-proposal .w01-brand-name { font-size: 18px; font-weight: 600; }
+    #whale01-ui-proposal .w01-caption { font-size: 11px; color: var(--w01-muted); }
+    #whale01-ui-proposal .w01-history { display: flex; gap: 0; }
+    #whale01-ui-proposal .w01-history button { width: 44px; display: grid; place-items: center; padding: 0; }
+    #whale01-ui-proposal .w01-main { padding: 12px 20px 20px; flex: 1; min-width: 0; }
+    #whale01-ui-proposal .w01-stack { display: flex; flex-direction: column; gap: 16px; }
+    #whale01-ui-proposal .w01-row { display: flex; align-items: center; gap: 10px; }
+    #whale01-ui-proposal .w01-between { justify-content: space-between; }
+    #whale01-ui-proposal .w01-heading { font-size: 27px; line-height: 1.25; letter-spacing: -.6px; font-weight: 650; }
+    #whale01-ui-proposal .w01-subtitle { color: var(--w01-muted); margin-top: 7px !important; }
+    #whale01-ui-proposal .w01-section-title { font-size: 15px; font-weight: 600; }
+    #whale01-ui-proposal .w01-hero { text-align: center; padding: 8px 0 2px; }
+    #whale01-ui-proposal .w01-avatar { margin: 0 auto 10px; width: 104px; height: 104px; border-radius: 50%; background: radial-gradient(circle at 35% 25%,light-dark(#e5f8ff,#224157),var(--w01-soft)); display: grid; place-items: center; font-size: 68px; }
+    #whale01-ui-proposal .w01-ask { width: 100%; display: flex; align-items: center; justify-content: space-between; text-align: left; background: var(--w01-surface) !important; border: 1px solid var(--w01-line) !important; padding: 14px 16px !important; border-radius: var(--w01-radius) !important; }
+    #whale01-ui-proposal .w01-ask strong { display: block; font-weight: 600; }
+    #whale01-ui-proposal .w01-ask small { display: block; color: var(--w01-muted); margin-top: 3px; font-size: 12px; }
+    #whale01-ui-proposal .w01-summary-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+    #whale01-ui-proposal .w01-summary { text-align: left; padding: 13px 10px !important; background: var(--w01-surface) !important; border: 1px solid var(--w01-line) !important; border-radius: 16px !important; display: flex; flex-direction: column; gap: 5px; }
+    #whale01-ui-proposal .w01-summary small { color: var(--w01-muted); font-size: 11px; }
+    #whale01-ui-proposal .w01-summary strong { font-size: 13px; font-weight: 600; }
+    #whale01-ui-proposal .w01-shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    #whale01-ui-proposal .w01-shortcut { display: flex; align-items: center; justify-content: flex-start; gap: 9px; background: var(--w01-soft) !important; min-height: 54px !important; text-align: left; }
+    #whale01-ui-proposal .w01-banner { padding: 14px; border-radius: var(--w01-radius); border: 1px solid var(--w01-line); background: var(--w01-surface); }
+    #whale01-ui-proposal .w01-primary { background: var(--w01-accent) !important; color: var(--w01-onaccent) !important; font-weight: 600 !important; }
+    #whale01-ui-proposal .w01-secondary { background: var(--w01-soft) !important; color: var(--w01-text) !important; }
+    #whale01-ui-proposal .w01-wide { width: 100%; }
+    #whale01-ui-proposal .w01-label { font-size: 12px; color: var(--w01-muted); }
+    #whale01-ui-proposal .w01-pill { display: inline-flex; gap: 4px; align-items: center; padding: 4px 8px; border-radius: 9px; color: var(--w01-accent); background: var(--w01-soft); font-size: 11px; }
+    #whale01-ui-proposal .w01-message { max-width: 100%; padding: 13px 15px; background: var(--w01-surface); border: 1px solid var(--w01-line); border-radius: 18px 18px 18px 6px; }
+    #whale01-ui-proposal .w01-user-message { align-self: flex-end; max-width: 92%; color: var(--w01-onaccent); background: var(--w01-accent); border: 0; border-radius: 18px 18px 6px 18px; }
+    #whale01-ui-proposal .w01-task { padding: 16px; background: var(--w01-surface); border: 1px solid var(--w01-line); border-radius: var(--w01-radius); }
+    #whale01-ui-proposal .w01-task-lines { display: flex; flex-direction: column; gap: 9px; padding: 14px 0; }
+    #whale01-ui-proposal .w01-task-actions { display: flex; gap: 8px; }
+    #whale01-ui-proposal .w01-task-actions > button { flex: 1; }
+    #whale01-ui-proposal .w01-composer { display: flex; gap: 7px; align-items: center; padding-top: 3px; }
+    #whale01-ui-proposal .w01-composer input { flex: 1; width: auto; }
+    #whale01-ui-proposal .w01-composer button { display: grid; place-items: center; min-width: 44px; padding: 0; }
+    #whale01-ui-proposal .w01-chat { min-height: 555px; }
+    #whale01-ui-proposal .w01-chat .w01-conversation { flex: 1; }
+    #whale01-ui-proposal .w01-music-cover { width: 112px; height: 112px; border-radius: 24px; display: grid; place-items: center; margin: 4px auto 14px; background: linear-gradient(145deg,light-dark(#cbecff,#19425c),light-dark(#8ab7ef,#334d82)); color: light-dark(#19416d,#d6ebff); }
+    #whale01-ui-proposal .w01-music-cover svg { width: 42px; height: 42px; }
+    #whale01-ui-proposal .w01-now-playing { text-align: center; }
+    #whale01-ui-proposal .w01-track-title { font-size: 22px; font-weight: 600; }
+    #whale01-ui-proposal .w01-phone input.w01-progress { width: 100%; accent-color: var(--w01-accent); margin: 8px 0 0; padding: 0; border: 0; background: none; }
+    #whale01-ui-proposal .w01-player-controls { justify-content: center; gap: 15px; padding: 6px 0; }
+    #whale01-ui-proposal .w01-player-controls button { width: 48px; height: 48px; display: grid; place-items: center; padding: 0; }
+    #whale01-ui-proposal .w01-player-controls .w01-play { width: 56px; height: 56px; border-radius: 50%; }
+    #whale01-ui-proposal .w01-library { border: 1px solid var(--w01-line); border-radius: var(--w01-radius); background: var(--w01-surface); padding: 0 12px; }
+    #whale01-ui-proposal .w01-track { width: 100%; display: flex; align-items: center; gap: 11px; padding: 12px 0 !important; text-align: left; border-radius: 0 !important; }
+    #whale01-ui-proposal .w01-track + .w01-track { border-top: 1px solid var(--w01-line); }
+    #whale01-ui-proposal .w01-track-art { width: 40px; height: 40px; flex-shrink: 0; background: var(--w01-soft); border-radius: 10px; display: grid; place-items: center; color: var(--w01-accent); }
+    #whale01-ui-proposal .w01-track-text { flex: 1; }
+    #whale01-ui-proposal .w01-settings-group { border: 1px solid var(--w01-line); border-radius: var(--w01-radius); background: var(--w01-surface); padding: 0 14px; }
+    #whale01-ui-proposal .w01-setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 11px 0; }
+    #whale01-ui-proposal .w01-setting + .w01-setting { border-top: 1px solid var(--w01-line); }
+    #whale01-ui-proposal .w01-setting small { color: var(--w01-muted); font-size: 12px; }
+    #whale01-ui-proposal .w01-setting label { display: flex; width: 100%; justify-content: space-between; align-items: center; min-height: 44px; }
+    #whale01-ui-proposal .w01-setting input[type="checkbox"] { width: 22px; min-height: 22px; accent-color: var(--w01-accent); }
+    #whale01-ui-proposal .w01-mini { display: flex; gap: 9px; align-items: center; margin: 0 14px 8px; padding: 8px 10px; background: var(--w01-surface); border: 1px solid var(--w01-line); border-radius: 14px; }
+    #whale01-ui-proposal .w01-mini > button:first-child { flex: 1; text-align: left; padding: 0; }
+    #whale01-ui-proposal .w01-mini > button:last-child { width: 44px; display: grid; place-items: center; padding: 0; }
+    #whale01-ui-proposal .w01-tabs { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border-top: 1px solid var(--w01-line); background: var(--w01-surface); padding: 6px 10px 2px; }
+    #whale01-ui-proposal .w01-tabs button { display: flex; flex-direction: column; gap: 3px; align-items: center; justify-content: center; color: var(--w01-muted); border-radius: 12px; min-height: 57px; padding: 4px 0; font-size: 11px; }
+    #whale01-ui-proposal .w01-tabs button[aria-current="page"] { color: var(--w01-accent); background: var(--w01-soft); }
+    #whale01-ui-proposal .w01-home-indicator { width: 104px; height: 4px; background: var(--w01-text); border-radius: 4px; margin: 9px auto 10px; }
+    #whale01-ui-proposal .w01-sheet-overlay { position: absolute; inset: 0; z-index: 4; background: light-dark(#14243a55,#00000088); display: flex; align-items: flex-end; }
+    #whale01-ui-proposal .w01-sheet { width: 100%; padding: 12px 22px 24px; background: var(--w01-surface); border-radius: 27px 27px 0 0; display: flex; flex-direction: column; gap: 18px; }
+    #whale01-ui-proposal .w01-sheet-handle { width: 34px; height: 4px; margin: 0 auto; border-radius: 3px; background: var(--w01-line); }
+    #whale01-ui-proposal .w01-sheet h2 { font-size: 22px; font-weight: 600; }
+    #whale01-ui-proposal .w01-field-label { display: flex; flex-direction: column; gap: 7px; }
+    #whale01-ui-proposal .w01-inline-note { font-size: 12px; color: var(--w01-muted); }
+    #whale01-ui-proposal .w01-inline-note[role="status"] { min-height: 18px; }
+    #whale01-ui-proposal [hidden] { display: none !important; }
+    @media (max-width: 420px) { #whale01-ui-proposal .w01-main { padding-left: 16px; padding-right: 16px; } #whale01-ui-proposal .w01-heading { font-size: 25px; } #whale01-ui-proposal .w01-summary { padding: 12px 8px !important; } #whale01-ui-proposal .w01-stage { min-height: 990px; } }
+  </style>
+  <section data-variant="潮汐 · 陪伴型" aria-label="潮汐陪伴型设计">
+    <div class="w01-stage"><article class="w01-phone" id="whale01-phone-tide" aria-label="潮汐：鲸鱼助手界面" data-design="tide">
+      <div class="w01-shell">
+        <div class="w01-status"><span>9:41</span><span class="w01-status-right"><i data-lucide="signal" aria-hidden="true"></i><i data-lucide="wifi" aria-hidden="true"></i><i data-lucide="battery-full" aria-hidden="true"></i></span></div>
+        <header class="w01-header"><div class="w01-brand"><span class="w01-brand-mark" aria-hidden="true">🐳</span><div><div class="w01-brand-name">鲸鱼</div><div class="w01-caption">潮汐 · 交互设计预览</div></div></div><div class="w01-history"><button class="cursor-interaction" data-action="back" aria-label="返回上一页面" disabled><i data-lucide="arrow-left" aria-hidden="true"></i></button><button class="cursor-interaction" data-action="forward" aria-label="前进到下一历史页面" disabled><i data-lucide="arrow-right" aria-hidden="true"></i></button></div></header>
+        <main class="w01-main" data-page-content></main><div class="w01-mini" data-mini-player hidden></div>
+        <nav class="w01-tabs" aria-label="主导航"><button class="cursor-interaction" data-page="home" aria-current="page"><i data-lucide="house" aria-hidden="true"></i>首页</button><button class="cursor-interaction" data-page="chat"><i data-lucide="messages-square" aria-hidden="true"></i>对话</button><button class="cursor-interaction" data-page="music"><i data-lucide="music-2" aria-hidden="true"></i>音乐</button><button class="cursor-interaction" data-page="settings"><i data-lucide="user-round" aria-hidden="true"></i>我的</button></nav>
+        <div class="w01-home-indicator" aria-hidden="true"></div>
+      </div><div class="w01-sheet-overlay" data-confirm-overlay hidden></div>
+    </article></div>
+  </section>
+  <section data-variant="航线 · 任务型" aria-label="航线任务型设计" hidden>
+    <div class="w01-stage"><article class="w01-phone" id="whale01-phone-route" aria-label="航线：鲸鱼助手界面" data-design="route">
+      <div class="w01-shell">
+        <div class="w01-status"><span>9:41</span><span class="w01-status-right"><i data-lucide="signal" aria-hidden="true"></i><i data-lucide="wifi" aria-hidden="true"></i><i data-lucide="battery-full" aria-hidden="true"></i></span></div>
+        <header class="w01-header"><div class="w01-brand"><span class="w01-brand-mark" aria-hidden="true">🐳</span><div><div class="w01-brand-name">鲸鱼</div><div class="w01-caption">航线 · 交互设计预览</div></div></div><div class="w01-history"><button class="cursor-interaction" data-action="back" aria-label="返回上一页面" disabled><i data-lucide="arrow-left" aria-hidden="true"></i></button><button class="cursor-interaction" data-action="forward" aria-label="前进到下一历史页面" disabled><i data-lucide="arrow-right" aria-hidden="true"></i></button></div></header>
+        <main class="w01-main" data-page-content></main><div class="w01-mini" data-mini-player hidden></div>
+        <nav class="w01-tabs" aria-label="主导航"><button class="cursor-interaction" data-page="home" aria-current="page"><i data-lucide="house" aria-hidden="true"></i>首页</button><button class="cursor-interaction" data-page="chat"><i data-lucide="messages-square" aria-hidden="true"></i>对话</button><button class="cursor-interaction" data-page="music"><i data-lucide="music-2" aria-hidden="true"></i>音乐</button><button class="cursor-interaction" data-page="settings"><i data-lucide="user-round" aria-hidden="true"></i>我的</button></nav>
+        <div class="w01-home-indicator" aria-hidden="true"></div>
+      </div><div class="w01-sheet-overlay" data-confirm-overlay hidden></div>
+    </article></div>
+  </section>
+  <script>
+    (() => {
+      const proposalRoot = document.getElementById('whale01-ui-proposal');
+      const sampleTracks = [{ title: '海边散步', artist: '示例曲目 A' },{ title: '晨间微风', artist: '示例曲目 B' },{ title: '夜航', artist: '示例曲目 C' }];
+      const icon = (name) => `<i data-lucide="${name}" aria-hidden="true"></i>`;
+      const escapeText = (value) => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+      const formatDue = (value) => { const [datePart,timePart] = value.split('T'); const dateParts = datePart.split('-'); return `${Number(dateParts[1])}月${Number(dateParts[2])}日 ${timePart}`; };
+      const phoneControllers = new Map();
+      const refreshIcons = () => { if (typeof lucide !== 'undefined') lucide.createIcons({ attrs: { width: 20, height: 20 } }); };
+      const persist = (controller) => {
+        if (!window.openai || typeof window.openai.setWidgetState !== 'function') return;
+        const privateContent = {};
+        phoneControllers.forEach((entry,key) => { privateContent[key] = { page: entry.state.page, track: entry.state.track, playing: entry.state.playing, started: entry.state.started }; });
+        Promise.resolve(window.openai.setWidgetState({ modelContent: { project:'代号鲸鱼01', design: controller.phone.closest('[data-variant]').dataset.variant, page: controller.state.page }, privateContent })).catch(() => {});
+      };
+      const homeMarkup = (state,design) => {
+        const hero = design === 'tide' ? `<div class="w01-hero"><div class="w01-avatar" aria-hidden="true">🐳</div><p class="w01-inline-note">陪你安排今天，也陪你听一首歌。</p></div>` : `<div class="w01-banner"><div class="w01-row w01-between"><span class="w01-section-title">继续刚才的安排</span><span class="w01-pill">待确认</span></div><p style="margin-top:10px">取快递 · 明天 15:00</p><button class="w01-secondary w01-wide cursor-interaction" style="margin-top:12px" data-page="chat">查看提醒</button></div>`;
+        return `<div class="w01-stack"><div><h1 class="w01-heading">${design === 'tide' ? '你好，我是鲸鱼' : '今天，先做哪件事？'}</h1><p class="w01-subtitle">${design === 'tide' ? '有事交给我，没事聊一会儿。' : '安排、出行和音乐，一步就能开始。'}</p></div>${hero}<button class="w01-ask cursor-interaction" data-page="chat"><span><strong>今天需要我帮你做什么？</strong><small>文字输入，或开始语音对话</small></span>${icon('mic')}</button><div class="w01-summary-grid"><button class="w01-summary cursor-interaction" data-action="weather">${icon('cloud-sun')}<small>天气</small><strong>查看预报</strong></button><button class="w01-summary cursor-interaction" data-action="calendar">${icon('calendar-days')}<small>今日日程</small><strong>查看安排</strong></button><button class="w01-summary cursor-interaction" data-action="activity">${icon('activity')}<small>运动概览</small><strong>查看摘要</strong></button></div><div><div class="w01-section-title" style="margin-bottom:9px">现在想做什么</div><div class="w01-shortcuts"><button class="w01-shortcut cursor-interaction" data-page="chat">${icon('bell')}设置提醒</button><button class="w01-shortcut cursor-interaction" data-page="music">${icon('headphones')}我想听歌</button><button class="w01-shortcut cursor-interaction" data-action="places">${icon('map-pin')}附近地点</button><button class="w01-shortcut cursor-interaction" data-action="calendar">${icon('calendar-days')}查看日程</button></div></div><p class="w01-inline-note">设计稿 · 所有内容均为界面示例</p></div>`;
+      };
+      const chatMarkup = (state) => {
+        const status = state.reminderCancelled ? '已取消' : state.reminderDone ? '已完成 · 预览' : '待确认';
+        const actions = state.reminderCancelled ? `<button class="w01-secondary w01-wide cursor-interaction" data-action="restart-reminder">重新设置提醒</button>` : state.reminderDone ? `<p class="w01-inline-note">已演示创建流程，没有写入系统。</p>` : `<div class="w01-task-actions"><button class="w01-secondary cursor-interaction" data-action="cancel-reminder">取消</button><button class="w01-primary cursor-interaction" data-action="confirm-sheet">查看并确认</button></div>`;
+        return `<div class="w01-stack w01-chat"><div class="w01-row w01-between"><h1 class="w01-section-title">与鲸鱼对话</h1><span class="w01-pill">${state.reminderCancelled ? '任务已取消' : state.reminderDone ? '处理完成' : '等待你的确认'}</span></div><div class="w01-stack w01-conversation"><p class="w01-message w01-user-message">明天下午三点提醒我取快递</p><p class="w01-message">我理解为明天 15:00。你可以先核对，确认后再创建。</p><div class="w01-task"><div class="w01-row w01-between"><span class="w01-section-title">${icon('bell')} 创建提醒</span><span class="w01-pill">${status}</span></div><div class="w01-task-lines"><div class="w01-row w01-between"><span class="w01-label">事项</span><span>${escapeText(state.reminderTitle)}</span></div><div class="w01-row w01-between"><span class="w01-label">时间</span><span>${formatDue(state.reminderDue)}</span></div><div class="w01-row w01-between"><span class="w01-label">时区</span><span>上海</span></div></div>${actions}</div>${state.notice ? `<p class="w01-message" role="status">${escapeText(state.notice)}</p>` : ''}<button class="w01-shortcut cursor-interaction" data-page="music">${icon('headphones')}我想听歌</button></div><form class="w01-composer" data-chat-form><input aria-label="对话输入" placeholder="说说你想做什么…" value="${escapeText(state.input)}"><button class="w01-secondary cursor-interaction" type="button" data-action="voice-preview" aria-label="语音输入预览">${icon('mic')}</button><button class="w01-primary cursor-interaction" type="submit" aria-label="发送消息">${icon('arrow-up')}</button></form><p class="w01-inline-note">左滑返回 · 右滑前进 · 仅演示交互</p></div>`;
+      };
+      const musicMarkup = (state) => {
+        const track = sampleTracks[state.track];
+        return `<div class="w01-stack"><div class="w01-row w01-between"><div><h1 class="w01-heading">我的音乐</h1><p class="w01-subtitle">从音乐库挑一首，交给鲸鱼。</p></div><span class="w01-pill">示例曲库</span></div><div class="w01-now-playing"><div class="w01-music-cover">${icon('audio-lines')}</div><div class="w01-track-title">${track.title}</div><p class="w01-label">${track.artist} · ${state.playing ? '播放状态预览' : '已暂停／待播放'}</p><input class="w01-progress" type="range" min="0" max="100" value="${state.progress}" aria-label="播放进度预览" data-no-swipe><div class="w01-player-controls w01-row"><button class="cursor-interaction" data-action="previous-track" aria-label="上一首">${icon('skip-back')}</button><button class="w01-play w01-primary cursor-interaction" data-action="toggle-play" aria-label="${state.playing ? '暂停' : '播放'}">${icon(state.playing ? 'pause' : 'play')}</button><button class="cursor-interaction" data-action="next-track" aria-label="下一首">${icon('skip-forward')}</button></div></div><div class="w01-row w01-between"><span class="w01-section-title">音乐库</span><span class="w01-label">3 首示例</span></div><div class="w01-library">${sampleTracks.map((entry,index) => `<button class="w01-track cursor-interaction" data-track="${index}" aria-label="选择${entry.title}"><span class="w01-track-art">${icon('music-2')}</span><span class="w01-track-text"><span>${entry.title}</span><span class="w01-caption" style="display:block">${entry.artist}</span></span>${icon(index === state.track ? 'check' : 'play')}</button>`).join('')}</div><p class="w01-inline-note">仅演示播放界面，不读取音乐库或播放音频。</p></div>`;
+      };
+      const settingsMarkup = (state) => `<div class="w01-stack"><div><h1 class="w01-heading">我的鲸鱼</h1><p class="w01-subtitle">能力由你授权，使用由你决定。</p></div><div class="w01-section-title">能力与授权</div><div class="w01-settings-group"><div class="w01-setting"><span>读取日历</span><small>按需授权</small></div><div class="w01-setting"><span>创建日程</span><small>按需授权</small></div><div class="w01-setting"><span>提醒事项</span><small>按需授权</small></div><div class="w01-setting"><span>运动数据</span><small>按需授权</small></div><div class="w01-setting"><span>音乐库</span><small>按需授权</small></div><div class="w01-setting"><span>定位</span><small>使用期间</small></div></div><div class="w01-section-title">语音与偏好</div><div class="w01-settings-group"><div class="w01-setting"><label>语音播报<input type="checkbox" aria-label="语音播报预览" ${state.voice ? 'checked' : ''}></label></div><div class="w01-setting"><span>音乐播放时</span><small>优先保持你的操作</small></div></div><div class="w01-settings-group"><div class="w01-setting"><span>数据说明</span><small>查看使用范围</small></div><div class="w01-setting"><span>页面手势</span><small>左返 · 右进</small></div></div><p class="w01-inline-note">权限状态是设计占位，不代表设备已授权。</p></div>`;
+      const savedState = window.openai && window.openai.widgetState && window.openai.widgetState.privateContent;
+      proposalRoot.querySelectorAll('.w01-phone').forEach((phone) => {
+        const design = phone.dataset.design;
+        const previous = savedState && savedState[design];
+        const state = { page: ['home','chat','music','settings'].includes(previous && previous.page) ? previous.page : 'home', back: [], forward: [], track: Number.isInteger(previous && previous.track) && previous.track >= 0 && previous.track < sampleTracks.length ? previous.track : 0, playing: !!(previous && previous.playing), started: !!(previous && previous.started), progress: 25, reminderTitle:'取快递', reminderDue:'2026-11-10T15:00', reminderDone:false, reminderCancelled:false, input:'', notice:'', voice:true, sheet:false };
+        const appearance = { radius:20, accent:'#286de4' };
+        const controller = { phone,state };
+        phoneControllers.set(design,controller);
+        const main = phone.querySelector('[data-page-content]');
+        const overlay = phone.querySelector('[data-confirm-overlay]');
+        const render = () => {
+          main.innerHTML = state.page === 'home' ? homeMarkup(state,design) : state.page === 'chat' ? chatMarkup(state) : state.page === 'music' ? musicMarkup(state) : settingsMarkup(state);
+          phone.querySelectorAll('[data-page]').forEach(button => { if (button.closest('nav')) { if (button.dataset.page === state.page) button.setAttribute('aria-current','page'); else button.removeAttribute('aria-current'); } });
+          phone.querySelector('[data-action="back"]').disabled = state.back.length === 0;
+          phone.querySelector('[data-action="forward"]').disabled = state.forward.length === 0;
+          const mini = phone.querySelector('[data-mini-player]');
+          mini.hidden = !state.started || state.page === 'music';
+          mini.innerHTML = state.started ? `<button class="cursor-interaction" data-page="music"><span>${sampleTracks[state.track].title}</span><span class="w01-caption" style="display:block">${state.playing ? '播放预览' : '已暂停'} · 示例音乐</span></button><button class="cursor-interaction" data-action="toggle-play" aria-label="${state.playing ? '暂停' : '播放'}">${icon(state.playing ? 'pause' : 'play')}</button>` : '';
+          refreshIcons();
+        };
+        const navigate = (page) => { if (state.sheet || page === state.page) return; state.back.push(state.page); state.forward = []; state.page = page; render(); persist(controller); };
+        const moveHistory = (direction) => { if (state.sheet) return; const from = direction === 'back' ? state.back : state.forward; const destination = direction === 'back' ? state.forward : state.back; if (!from.length) return; destination.push(state.page); state.page = from.pop(); render(); persist(controller); };
+        const closeSheet = () => { state.sheet = false; overlay.hidden = true; phone.querySelector('.w01-shell').inert = false; phone.querySelector('[data-action="confirm-sheet"]')?.focus(); };
+        const openSheet = () => {
+          state.sheet = true; overlay.hidden = false; phone.querySelector('.w01-shell').inert = true;
+          overlay.innerHTML = `<section class="w01-sheet" role="dialog" aria-modal="true" aria-label="创建提醒确认"><div class="w01-sheet-handle"></div><div class="w01-row w01-between"><div><h2>创建提醒</h2><p class="w01-label">执行前预览 · 尚未创建</p></div><button class="cursor-interaction" data-action="close-sheet" aria-label="关闭确认">${icon('x')}</button></div><label class="w01-field-label">事项<input aria-label="提醒事项" value="${escapeText(state.reminderTitle)}"></label><label class="w01-field-label">时间<input type="datetime-local" aria-label="提醒时间" value="${state.reminderDue}" required></label><div class="w01-row w01-between"><span>时区</span><span>上海（+08:00）</span></div><p class="w01-inline-note">核对后确认，才能执行。本次只演示界面。</p><div class="w01-task-actions"><button class="w01-secondary cursor-interaction" data-action="close-sheet">取消</button><button class="w01-primary cursor-interaction" data-action="confirm-create">确认创建</button></div></section>`;
+          refreshIcons(); overlay.querySelector('input').focus();
+        };
+        phone.addEventListener('click',(event) => {
+          const button = event.target.closest('button'); if (!button || button.disabled) return;
+          if (button.dataset.page) return navigate(button.dataset.page);
+          if (button.dataset.track !== undefined) { state.track = Number(button.dataset.track); state.started = true; state.playing = true; render(); persist(controller); return; }
+          const action = button.dataset.action;
+          if (action === 'back' || action === 'forward') return moveHistory(action);
+          if (action === 'confirm-sheet') return openSheet();
+          if (action === 'close-sheet') return closeSheet();
+          if (action === 'confirm-create') { const titleField = overlay.querySelector('input[aria-label="提醒事项"]'); const dueField = overlay.querySelector('input[aria-label="提醒时间"]'); const title = titleField.value.trim(); if (!title) { titleField.setCustomValidity('请填写事项'); titleField.reportValidity(); return; } if (!dueField.reportValidity()) return; state.reminderTitle = title; state.reminderDue = dueField.value; state.reminderDone = true; state.reminderCancelled = false; closeSheet(); render(); persist(controller); return; }
+          if (action === 'cancel-reminder') { state.notice = '已取消这次提醒预览，没有创建记录。'; state.reminderDone = false; state.reminderCancelled = true; render(); return; }
+          if (action === 'restart-reminder') { state.reminderCancelled = false; state.reminderDone = false; state.notice = ''; render(); return; }
+          if (action === 'toggle-play') { state.started = true; state.playing = !state.playing; render(); persist(controller); return; }
+          if (action === 'previous-track' || action === 'next-track') { state.track = (state.track + (action === 'next-track' ? 1 : -1) + sampleTracks.length) % sampleTracks.length; state.started = true; render(); persist(controller); return; }
+          if (action === 'voice-preview') { state.notice = '语音入口预览：可以说“我想听歌”。'; render(); return; }
+          if (['weather','calendar','activity','places'].includes(action)) { state.notice = {weather:'天气结果在这里以卡片展示，未接入真实预报。',calendar:'日程结果在这里展示，缺少时间时保留任务并追问。',activity:'运动摘要与首页共用数据状态，不把无数据当作零。',places:'地点选择完成后，明确交接到地图，不声称已到达。'}[action]; navigate('chat'); render(); }
+        });
+        phone.addEventListener('input',(event) => { if (event.target.matches('[data-chat-form] input')) state.input = event.target.value; if (event.target.matches('.w01-progress')) state.progress = Number(event.target.value); if (event.target.matches('[data-confirm-overlay] input')) event.target.setCustomValidity(''); });
+        phone.addEventListener('change',(event) => { if (event.target.matches('input[type="checkbox"]')) state.voice = event.target.checked; });
+        phone.addEventListener('submit',(event) => { if (!event.target.matches('[data-chat-form]')) return; event.preventDefault(); const text = state.input.trim(); if (!text) return; state.input = ''; if (/听歌|音乐|播放/.test(text)) return navigate('music'); state.notice = '已收到：“' + text + '”。这是布局预览，实际任务由原生助手处理。'; render(); });
+        phone.addEventListener('keydown',(event) => { if (event.key === 'Escape' && state.sheet) closeSheet(); });
+        let gestureStart = null;
+        phone.addEventListener('pointerdown',(event) => { if (state.sheet || event.target.closest('button,input,textarea,select,label,[data-no-swipe]')) return; gestureStart = { x:event.clientX,y:event.clientY }; });
+        phone.addEventListener('pointerup',(event) => { if (!gestureStart) return; const deltaX = event.clientX - gestureStart.x; const deltaY = event.clientY - gestureStart.y; gestureStart = null; if (Math.abs(deltaX) >= 60 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) moveHistory(deltaX < 0 ? 'back' : 'forward'); });
+        phone.addEventListener('pointercancel',() => { gestureStart = null; });
+        controller.restore = (saved) => { if (!saved || state.sheet) return; if (['home','chat','music','settings'].includes(saved.page)) state.page = saved.page; if (Number.isInteger(saved.track) && saved.track >= 0 && saved.track < sampleTracks.length) state.track = saved.track; state.playing = !!saved.playing; state.started = !!saved.started; render(); };
+        render();
+        if (globalThis.Tweak) { const appearanceTweak = new Tweak({ container:phone,onChange:() => { phone.style.setProperty('--w01-radius',appearance.radius + 'px'); phone.style.setProperty('--w01-accent',appearance.accent); const hex = appearance.accent.replace('#',''); const luminance = (parseInt(hex.slice(0,2),16)*.299 + parseInt(hex.slice(2,4),16)*.587 + parseInt(hex.slice(4,6),16)*.114)/255; phone.style.setProperty('--w01-onaccent',luminance > .62 ? '#102139' : '#ffffff'); } }); appearanceTweak.addSlider(appearance,'radius',{label:'卡片圆角',min:12,max:28,unit:'px',reference:'--w01-radius'}); appearanceTweak.addColorPicker(appearance,'accent',{label:'强调色',reference:'--w01-accent'}); }
+      });
+      window.addEventListener('openai:set_globals',(event) => { const updated = event.detail && event.detail.globals && event.detail.globals.widgetState; if (!updated || !updated.privateContent) return; phoneControllers.forEach((controller,key) => controller.restore(updated.privateContent[key])); });
+    })();
+  </script>
+</div>

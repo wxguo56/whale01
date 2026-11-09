@@ -1,0 +1,9 @@
+{
+  "status": "deprecated",
+  "effectiveDate": "2026-11-09",
+  "schemes": ["潮汐", "航线", "汐屿", "星潮", "回声"],
+  "scope": "本批UI视觉、布局、动效和交互方案，不包括业务逻辑与通用设备适配要求",
+  "implementationAllowed": false,
+  "decision": "13_UI方案废弃决定.md",
+  "archive": "design/deprecated-ui-2026-11-09/"
+}

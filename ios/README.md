@@ -1,6 +1,6 @@
 # WhaleAgent 原生 iOS 工程
 
-本目录是代号鲸鱼01的原生 iOS 入口。源码可以在 Windows 编辑，但苹果 SDK 编译、签名和真机安装必须在 macOS 完成。
+本目录是代号鲸鱼01的原生 iOS 入口。源码可以在 Windows 编辑，苹果 SDK 编译在 macOS 完成；正式归档签名可在 macOS 完成，未签名真机 IPA 可由 AltServer／SideStore 用本人 Apple 账号重签，最终安装在 iPhone 上完成。
 
 ## 当前状态
 
