@@ -145,14 +145,7 @@ final class VoiceInputController: ObservableObject {
         }
         guard speechGranted else { return false }
 
-        if #available(iOS 17.0, *) {
-            return await AVAudioApplication.requestRecordPermission()
-        }
-        return await withCheckedContinuation { continuation in
-            AVAudioSession.sharedInstance().requestRecordPermission { granted in
-                continuation.resume(returning: granted)
-            }
-        }
+        return await AVAudioApplication.requestRecordPermission()
     }
 
     private func deactivateSession() {
