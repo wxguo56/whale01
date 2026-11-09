@@ -96,6 +96,43 @@ final class NativeToolRouter {
         }
     }
 
+    func listCalendarEvents(startAt: Date, endAt: Date) throws -> JSONValue {
+        try eventKit.listCalendarEvents(arguments: [
+            "startAt": .string(ToolDate.iso(startAt)),
+            "endAt": .string(ToolDate.iso(endAt)),
+            "calendarIds": .array([])
+        ])
+    }
+
+    func searchMusic(query: String?) async throws -> JSONValue {
+        var arguments: [String: JSONValue] = ["limit": .number(25)]
+        if let query {
+            let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { arguments["query"] = .string(trimmed) }
+        }
+        return try await music.search(arguments: arguments)
+    }
+
+    func playMusic(trackId: String) async throws -> JSONValue {
+        try await music.play(arguments: ["trackId": .string(trackId)])
+    }
+
+    func pauseMusic() async throws -> JSONValue {
+        try await music.pause(arguments: [:])
+    }
+
+    func resumeMusic() async throws -> JSONValue {
+        try await music.resume(arguments: [:])
+    }
+
+    func skipMusic(direction: String) async throws -> JSONValue {
+        try await music.skip(arguments: ["direction": .string(direction)])
+    }
+
+    func playbackState() async throws -> JSONValue {
+        try await music.playbackState(arguments: [:])
+    }
+
     private func route(_ pending: PendingTool) async throws -> JSONValue {
         switch pending.tool {
         case "create_reminder":

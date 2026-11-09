@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 
 enum ChatRole: Equatable {
     case user
@@ -12,6 +13,7 @@ struct ChatMessage: Identifiable, Equatable {
     let role: ChatRole
     let text: String
     var detail: String?
+    let createdAt = Date()
 }
 
 @MainActor
@@ -21,10 +23,27 @@ final class AppModel: ObservableObject {
     @Published private(set) var messages: [ChatMessage] = []
     @Published private(set) var pending: [PendingTool] = []
     @Published private(set) var isBusy = false
-    @Published private(set) var statusLine = "正在检查后端…"
+    @Published private(set) var statusLine = "正在连接服务…"
+    @Published private(set) var backendOnline = false
+    @Published private(set) var lastCheckedAt: Date?
     @Published private(set) var errorText: String?
     @Published private(set) var permissionsSnapshot: [String: String] = [:]
     @Published private(set) var backendExecutionMode = "unknown"
+    @Published private(set) var modelMode = "unknown"
+    @Published private(set) var toolCount = 0
+    @Published var presentedConfirmation: PendingTool?
+
+    @Published private(set) var recentActions: [NativeActionRecord] = []
+    @Published private(set) var upcomingEvents: [CalendarEventPreview] = []
+    @Published private(set) var isDashboardLoading = false
+    @Published private(set) var dashboardError: String?
+
+    @Published var musicQuery = ""
+    @Published private(set) var musicTracks: [MusicTrackItem] = []
+    @Published private(set) var playback = PlaybackSnapshot.idle
+    @Published private(set) var musicError: String?
+    @Published private(set) var isMusicBusy = false
+    @Published private(set) var musicDidLoad = false
 
     let permissions = PermissionCenter()
     private let client = AgentClient()
@@ -33,14 +52,29 @@ final class AppModel: ObservableObject {
     private var activeTurnId: String?
     private var results: [String: ToolResultPayload] = [:]
     private var autoStarted: Set<String> = []
+    private var dashboardLoaded = false
 
     init() {
         backendURL = UserDefaults.standard.string(forKey: BackendConfig.storageKey) ?? BackendConfig.defaultBaseURL
         router = NativeToolRouter(permissions: permissions)
         messages = [
-            ChatMessage(role: .assistant, text: "我是鲸鱼。说一句话，我会在你的 iPhone 上调用真实系统能力执行。")
+            ChatMessage(role: .assistant, text: "你好，我是鲸鱼。告诉我想做什么，我会在获得你的确认后调用 iPhone 上的真实系统能力。")
         ]
         permissionsSnapshot = permissions.snapshot()
+    }
+
+    var versionText: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
+        return "\(version) (\(build))"
+    }
+
+    var bundleIdentifier: String {
+        Bundle.main.bundleIdentifier ?? "—"
+    }
+
+    var grantedPermissionCount: Int {
+        permissionsSnapshot.values.filter { $0 == "granted" }.count
     }
 
     func saveBackendURL() {
@@ -53,15 +87,21 @@ final class AppModel: ObservableObject {
     func health() async {
         do {
             let health = try await client.health()
+            backendOnline = health.status == "ok"
             backendExecutionMode = health.executionMode
-            statusLine = "后端 \(health.status) · 模型 \(health.modelMode) · 执行 \(health.executionMode) · 工具 \(health.tools)"
+            modelMode = health.modelMode
+            toolCount = health.tools
+            lastCheckedAt = Date()
+            statusLine = health.status == "ok" ? "服务已连接" : "服务返回 \(health.status)"
             if health.executionMode == "mock" {
-                errorText = "后端当前是 mock 执行模式；要写真实系统，请用 EXECUTION_MODE=ios 启动。"
-            } else if errorText?.contains("mock 执行模式") == true {
+                errorText = "当前服务仍是演示执行模式，真实系统操作不会在手机上发生。"
+            } else if errorText?.contains("演示执行模式") == true {
                 errorText = nil
             }
         } catch {
-            statusLine = "后端不可达"
+            backendOnline = false
+            lastCheckedAt = Date()
+            statusLine = "服务不可达"
             errorText = error.localizedDescription
         }
     }
@@ -71,16 +111,25 @@ final class AppModel: ObservableObject {
         permissionsSnapshot = permissions.snapshot()
     }
 
+    func preparePrompt(_ text: String) {
+        input = text
+    }
+
     func send() async {
-        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        await send(text: input)
+    }
+
+    func send(text rawText: String) async {
+        let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isBusy else { return }
         input = ""
         errorText = nil
+        presentedConfirmation = nil
         messages.append(ChatMessage(role: .user, text: text))
         isBusy = true
         defer { isBusy = false }
 
-        if backendExecutionMode == "unknown" {
+        if !backendOnline || backendExecutionMode == "unknown" {
             await health()
         }
         refreshPermissions()
@@ -102,21 +151,179 @@ final class AppModel: ObservableObject {
 
     func confirm(_ item: PendingTool) async {
         guard !isBusy else { return }
+        presentedConfirmation = nil
         isBusy = true
         defer { isBusy = false }
         await executeAndCollect(item)
     }
 
     func skip(_ item: PendingTool) async {
-        guard !isBusy else { return }
+        presentedConfirmation = nil
         results[item.toolCallId] = ToolResultPayload(
             toolCallId: item.toolCallId,
             status: "cancelled",
-            error: ToolErrorPayload(code: "user_cancelled", message: "用户跳过了本次操作")
+            error: ToolErrorPayload(code: "user_cancelled", message: "你跳过了本次操作")
         )
         isBusy = true
         defer { isBusy = false }
         await submitIfComplete()
+    }
+
+    func dismissConfirmation() {
+        presentedConfirmation = nil
+    }
+
+    func newConversation() {
+        conversationId = nil
+        activeTurnId = nil
+        pending = []
+        results = [:]
+        autoStarted = []
+        presentedConfirmation = nil
+        errorText = nil
+        messages = [
+            ChatMessage(role: .assistant, text: "新对话已经开始。你可以继续安排提醒、日程、地点、短信或音乐。")
+        ]
+    }
+
+    func refreshDashboard(force: Bool = false) async {
+        guard !isDashboardLoading else { return }
+        guard permissionsSnapshot["calendarRead"] == "granted" else {
+            upcomingEvents = []
+            dashboardLoaded = false
+            return
+        }
+        if dashboardLoaded && !force { return }
+        isDashboardLoading = true
+        dashboardError = nil
+        defer { isDashboardLoading = false }
+
+        let start = Date()
+        let end = Calendar.current.date(byAdding: .day, value: 7, to: start) ?? start.addingTimeInterval(604_800)
+        do {
+            let data = try router.listCalendarEvents(startAt: start, endAt: end)
+            let events = data.objectValue?["events"]?.arrayValue ?? []
+            upcomingEvents = events.compactMap { CalendarEventPreview(json: $0) }.prefix(5).map { $0 }
+            dashboardLoaded = true
+        } catch {
+            dashboardError = error.localizedDescription
+            upcomingEvents = []
+        }
+    }
+
+    func requestPermission(_ permission: String) async {
+        _ = await permissions.request(permission)
+        refreshPermissions()
+        if permission == "calendarRead" {
+            dashboardLoaded = false
+            await refreshDashboard(force: true)
+        }
+        if permission == "music" && permissionsSnapshot["music"] == "granted" {
+            await loadMusicLibrary()
+            await refreshPlayback()
+        }
+    }
+
+    func openSystemSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
+    }
+
+    func musicAppeared() async {
+        refreshPermissions()
+        guard permissionsSnapshot["music"] == "granted" else { return }
+        if !musicDidLoad {
+            await loadMusicLibrary()
+        }
+        await refreshPlayback()
+    }
+
+    func requestMusicAccess() async {
+        await requestPermission("music")
+    }
+
+    func loadMusicLibrary() async {
+        guard !isMusicBusy else { return }
+        refreshPermissions()
+        guard permissionsSnapshot["music"] == "granted" else {
+            musicError = "需要先允许鲸鱼访问你的音乐库。"
+            return
+        }
+        isMusicBusy = true
+        musicError = nil
+        defer { isMusicBusy = false }
+        do {
+            let data = try await router.searchMusic(query: musicQuery)
+            let rows = data.objectValue?["tracks"]?.arrayValue ?? []
+            musicTracks = rows.compactMap { MusicTrackItem(json: $0) }
+            musicDidLoad = true
+            if musicTracks.isEmpty {
+                musicError = musicQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? "音乐库里还没有可播放的曲目。"
+                    : "没有找到匹配的曲目，换一个关键词试试。"
+            }
+        } catch {
+            musicError = error.localizedDescription
+        }
+    }
+
+    func play(_ track: MusicTrackItem) async {
+        guard !isMusicBusy else { return }
+        isMusicBusy = true
+        musicError = nil
+        defer { isMusicBusy = false }
+        do {
+            playback = PlaybackSnapshot(json: try await router.playMusic(trackId: track.trackId))
+        } catch {
+            musicError = error.localizedDescription
+        }
+    }
+
+    func togglePlayback() async {
+        guard !isMusicBusy else { return }
+        isMusicBusy = true
+        musicError = nil
+        defer { isMusicBusy = false }
+        do {
+            if playback.isPlaying {
+                playback = PlaybackSnapshot(json: try await router.pauseMusic())
+            } else if playback.track != nil {
+                playback = PlaybackSnapshot(json: try await router.resumeMusic())
+            } else if let first = musicTracks.first {
+                playback = PlaybackSnapshot(json: try await router.playMusic(trackId: first.trackId))
+            }
+        } catch {
+            musicError = error.localizedDescription
+        }
+    }
+
+    func playNext() async {
+        await skipMusic(direction: "next")
+    }
+
+    func playPrevious() async {
+        await skipMusic(direction: "previous")
+    }
+
+    func refreshPlayback() async {
+        guard !isMusicBusy else { return }
+        do {
+            playback = PlaybackSnapshot(json: try await router.playbackState())
+        } catch {
+            musicError = error.localizedDescription
+        }
+    }
+
+    private func skipMusic(direction: String) async {
+        guard !isMusicBusy else { return }
+        isMusicBusy = true
+        musicError = nil
+        defer { isMusicBusy = false }
+        do {
+            playback = PlaybackSnapshot(json: try await router.skipMusic(direction: direction))
+        } catch {
+            musicError = error.localizedDescription
+        }
     }
 
     private func handle(_ response: AgentTurnResponse) async {
@@ -129,10 +336,12 @@ final class AppModel: ObservableObject {
         case "awaiting_confirmation":
             pending = response.pending
             results = [:]
+            presentedConfirmation = response.pending.first { $0.requiresConfirmation }
         case "completed", "completed_with_limits", "failed", "cancelled", "superseded":
             pending = []
             results = [:]
             autoStarted = []
+            presentedConfirmation = nil
         default:
             pending = response.pending
         }
@@ -151,15 +360,34 @@ final class AppModel: ObservableObject {
         guard results[item.toolCallId] == nil else { return }
         let result = await router.execute(item)
         results[item.toolCallId] = result
-        let detail = result.error?.message ?? result.data?.displayText
+        recordAction(for: item, result: result)
         messages.append(
             ChatMessage(
                 role: .tool,
-                text: "\(ToolCatalog.label(item.tool)) · \(result.status)",
-                detail: detail
+                text: "\(ToolPresentation.title(item.tool)) · \(result.status)",
+                detail: ToolPresentation.resultDetail(status: result.status, data: result.data, error: result.error)
             )
         )
         await submitIfComplete()
+    }
+
+    private func recordAction(for item: PendingTool, result: ToolResultPayload) {
+        let detail = ToolPresentation.resultDetail(status: result.status, data: result.data, error: result.error)
+        recentActions.insert(
+            NativeActionRecord(
+                tool: item.tool,
+                status: result.status,
+                title: ToolPresentation.title(item.tool),
+                detail: detail
+            ),
+            at: 0
+        )
+        if recentActions.count > 12 {
+            recentActions.removeLast(recentActions.count - 12)
+        }
+        if item.tool == "create_calendar_event" || item.tool == "list_calendar_events" {
+            Task { await refreshDashboard(force: true) }
+        }
     }
 
     private func submitIfComplete() async {
@@ -195,6 +423,7 @@ final class AppModel: ObservableObject {
     private func fail(_ error: Error) {
         errorText = error.localizedDescription
         messages.append(ChatMessage(role: .assistant, text: "本轮没有完成：\(error.localizedDescription)"))
+        backendOnline = false
     }
 
     private var defersToDevice: Bool {

@@ -116,6 +116,10 @@ final class PermissionCenter: ObservableObject {
         return nil
     }
 
+    func request(_ permission: String) async -> Bool {
+        await ensurePermission(permission)
+    }
+
     private func ensurePermission(_ permission: String) async -> Bool {
         switch permission {
         case "reminder":
