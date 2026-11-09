@@ -105,3 +105,30 @@ AltStore / SideStore 只用于当前真机验收，不等于正式交付：
 - iOS 26 在锁屏状态下会丢弃 USB HID 触控，无法用脚本代替人工解锁；必须先在手机上输密码或 Face ID。
 - 电脑 IP 变化时同步改深链里的地址；`tools/serve-ipa.mjs` 默认监听 `0.0.0.0:8089`，Windows 防火墙需放行该端口。
 - 免费签名 7 天有效，AltStore 需定期刷新；刷新同样要求手机解锁并连上同一 Wi-Fi。
+## 固定落地目录（每次构建都要做）
+
+每个新构建都必须落到同一个位置，直接覆盖旧文件，避免装错版本：
+
+- `C:\Users\hzwangxiuguo\WhaleAgent-Sideload.ipa`
+- 同名校验文件：`C:\Users\hzwangxiuguo\WhaleAgent-Sideload.ipa.sha256`
+
+一条命令完成“取最新成功构建 → 覆盖落地 → 写校验值 → 打印版本”：
+
+```powershell
+pwsh tools/publish-ipa.ps1
+```
+
+指定某一次 run：
+
+```powershell
+pwsh tools/publish-ipa.ps1 -RunId 42607098202
+```
+
+脚本行为：
+
+1. 从 GitHub Actions 读取 `iOS Sideload IPA` 最近一次成功的 run（或指定 run）。
+2. 下载 artifact `WhaleAgent-Sideload-ipa` 并解压。
+3. 覆盖写入 `%USERPROFILE%\WhaleAgent-Sideload.ipa`，同时重算 SHA256 写入 `.sha256`。
+4. 读取 IPA 内 `Info.plist`，打印 `版本 (Build)`、字节数与哈希。
+
+判断标准：输出的 `version/build` 必须是本次新构建；哈希与 `.sha256` 一致；文件大小与 artifact 一致。

@@ -66,8 +66,8 @@ def touch_x(pixel: float) -> int:
 
 
 def touch_y(pixel: float) -> int:
-    # dtuhidd reports use a bottom-left origin: y = 0 is the bottom edge.
-    return round((HEIGHT - pixel) / HEIGHT * 65535)
+    # CoreDevice normalises Y with 0 at the top edge and 65535 at the bottom.
+    return round(pixel / HEIGHT * 65535)
 
 
 async def press_lock(rsd) -> None:
@@ -93,7 +93,7 @@ async def swipe(service, x1: float, y1: float, x2: float, y2: float, duration: f
         ratio = index / steps
         nx = touch_x(x1 + (x2 - x1) * ratio)
         ny = touch_y(y1 + (y2 - y1) * ratio)
-        await service.send_touchscreen(TOUCHSCREEN_STATE_TOUCHING, nx, ny)
+        await service.send_touchscreen(TOUCHSCREEN_STATE_CONTACT, nx, ny)
         await asyncio.sleep(duration / steps)
     await service.send_touchscreen(TOUCHSCREEN_STATE_RELEASE, nx, ny)
 
@@ -104,11 +104,15 @@ async def type_text(service, text: str) -> None:
         if mapping is None:
             raise SystemExit(f"unsupported character for HID keyboard: {character!r}")
         usage, shifted = mapping
-        keys = [KEY_LEFT_SHIFT, usage] if shifted else [usage]
-        await service.send_keyboard(KEYBOARD_SERVICE_ID, keys)
-        await asyncio.sleep(0.015)
+        if shifted:
+            await service.send_keyboard(KEYBOARD_SERVICE_ID, [KEY_LEFT_SHIFT])
+            await asyncio.sleep(0.02)
+            await service.send_keyboard(KEYBOARD_SERVICE_ID, [KEY_LEFT_SHIFT, usage])
+        else:
+            await service.send_keyboard(KEYBOARD_SERVICE_ID, [usage])
+        await asyncio.sleep(0.02)
         await service.send_keyboard(KEYBOARD_SERVICE_ID, [])
-        await asyncio.sleep(0.015)
+        await asyncio.sleep(0.02)
 
 
 async def key_combo(service, name: str) -> None:
