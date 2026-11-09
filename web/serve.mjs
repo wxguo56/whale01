@@ -1,10 +1,12 @@
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
+import { networkInterfaces } from "node:os";
 import { extname, join, normalize, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = normalize(fileURLToPath(new URL(".", import.meta.url)));
 const port = Number(process.env.PORT ?? 8088);
+const host = process.env.HOST ?? "0.0.0.0";
 const types = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -33,6 +35,13 @@ createServer(async (request, response) => {
   } catch {
     response.writeHead(404, { "content-type": "text/plain; charset=utf-8" }).end("Not found");
   }
-}).listen(port, "127.0.0.1", () => {
+}).listen(port, host, () => {
   console.log(`whale01 web mock: http://127.0.0.1:${port}`);
+  for (const addresses of Object.values(networkInterfaces())) {
+    for (const address of addresses ?? []) {
+      if (address.family === "IPv4" && !address.internal) {
+        console.log(`phone access: http://${address.address}:${port}`);
+      }
+    }
+  }
 });
