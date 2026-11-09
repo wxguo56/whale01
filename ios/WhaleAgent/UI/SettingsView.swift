@@ -63,6 +63,21 @@ struct SettingsView: View {
                     .font(.subheadline.weight(.medium))
                 }
 
+                Section("性能") {
+                    LabeledContent("首轮响应", value: TurnMetricsStore.summary)
+                    LabeledContent("设备操作", value: ToolMetricsStore.summary)
+                    Text("分别记录模型首轮响应与设备执行耗时，不含用户确认等待；完整测量见 Beta 测试报告。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("语音") {
+                    LabeledContent("语音引擎", value: XfyunConfig.statusText)
+                    Text("讯飞未配置时使用系统听写；两种方式都需要麦克风权限，识别结果不会伪造。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("开发") {
                     NavigationLink {
                         DeveloperSettingsView(model: model)

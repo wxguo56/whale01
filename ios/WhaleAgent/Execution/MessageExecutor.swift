@@ -3,6 +3,10 @@ import Foundation
 import MessageUI
 import UIKit
 
+extension Notification.Name {
+    static let whaleComposerFinished = Notification.Name("whale.composer.finished")
+}
+
 @MainActor
 final class MessageExecutor {
     private struct ResolvedRecipient {
@@ -163,6 +167,14 @@ final class SystemComposerPresenter: NSObject, MFMessageComposeViewControllerDel
         Task { @MainActor in
             controller.dismiss(animated: true)
         }
+        let text: String
+        switch result {
+        case .sent: text = "短信已发送"
+        case .cancelled: text = "短信草稿已取消，未发送"
+        case .failed: text = "短信发送失败"
+        @unknown default: text = "短信草稿已关闭"
+        }
+        NotificationCenter.default.post(name: .whaleComposerFinished, object: nil, userInfo: ["text": text])
     }
 
     func mailComposeController(
@@ -173,6 +185,15 @@ final class SystemComposerPresenter: NSObject, MFMessageComposeViewControllerDel
         Task { @MainActor in
             controller.dismiss(animated: true)
         }
+        let text: String
+        switch result {
+        case .sent: text = "邮件已发送"
+        case .saved: text = "邮件已存为草稿，未发送"
+        case .cancelled: text = "邮件草稿已取消，未发送"
+        case .failed: text = error.map { "邮件发送失败：\($0.localizedDescription)" } ?? "邮件发送失败"
+        @unknown default: text = "邮件草稿已关闭"
+        }
+        NotificationCenter.default.post(name: .whaleComposerFinished, object: nil, userInfo: ["text": text])
     }
 
     @MainActor

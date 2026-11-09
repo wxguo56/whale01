@@ -23,6 +23,22 @@ final class EventKitExecutor {
             throw ToolExecutionError(code: "reminder_calendar_missing", message: "没有可写的提醒事项列表")
         }
 
+        if let existingId = await existingReminderId(title: title, dueDate: dueDate, calendar: calendar) {
+            var row: [String: JSONValue] = [
+                "recordId": .string(existingId),
+                "title": .string(title),
+                "dueAt": dueDate.map { JSONValue.string(ToolDate.iso($0)) } ?? .null,
+                "timezone": .string(timezone),
+                "listName": .string(calendar.title),
+                "source": .string("eventkit"),
+                "simulated": .bool(false),
+                "deduplicated": .bool(true),
+                "note": .string("已存在相同提醒，未重复创建")
+            ]
+            row["operationId"] = .string(operationId)
+            return .object(row)
+        }
+
         let reminder = EKReminder(eventStore: store)
         reminder.title = title
         reminder.notes = arguments.optionalString("notes")
@@ -115,6 +131,10 @@ final class EventKitExecutor {
             throw ToolExecutionError(code: "calendar_missing", message: "没有可写的日历")
         }
 
+        let conflicts = store.events(
+            matching: store.predicateForEvents(withStart: start, end: end, calendars: event.calendar.map { [$0] })
+        )
+
         try store.save(event, span: .thisEvent, commit: true)
 
         var row: [String: JSONValue] = [
@@ -127,7 +147,44 @@ final class EventKitExecutor {
             "simulated": .bool(false)
         ]
         row["operationId"] = .string(operationId)
+        row["conflictCount"] = .number(Double(conflicts.count))
+        if !conflicts.isEmpty {
+            row["conflicts"] = .array(conflicts.prefix(5).map { conflict in
+                .object([
+                    "title": .string(conflict.title ?? "(无标题)"),
+                    "startAt": .string(ToolDate.iso(conflict.startDate)),
+                    "endAt": .string(ToolDate.iso(conflict.endDate))
+                ])
+            })
+        }
         return .object(row)
+    }
+
+    private func existingReminderId(title: String, dueDate: Date?, calendar: EKCalendar) async -> String? {
+        let normalized = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let predicate = store.predicateForIncompleteReminders(
+            withDueDateStarting: nil,
+            ending: nil,
+            calendars: [calendar]
+        )
+        return await withCheckedContinuation { continuation in
+            store.fetchReminders(matching: predicate) { reminders in
+                let match = (reminders ?? []).first { reminder in
+                    let candidate = (reminder.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard candidate == normalized else { return false }
+                    switch (dueDate, reminder.dueDateComponents) {
+                    case (nil, nil):
+                        return true
+                    case let (expected?, components?):
+                        guard let existing = Calendar.current.date(from: components) else { return false }
+                        return abs(existing.timeIntervalSince(expected)) < 60
+                    default:
+                        return false
+                    }
+                }
+                continuation.resume(returning: match?.calendarItemIdentifier)
+            }
+        }
     }
 
     private func resolveReminderCalendar(_ listId: String?) -> EKCalendar? {

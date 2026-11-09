@@ -21,6 +21,13 @@ struct ChatView: View {
             .navigationTitle("对话")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 8) {
+                        AgentOrbView(state: activityState, size: 24)
+                        Text("对话")
+                            .font(.headline)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button {
@@ -40,6 +47,14 @@ struct ChatView: View {
                 }
             }
         }
+    }
+
+    private var activityState: AgentActivityState {
+        if voice.isRecording { return .listening }
+        if model.isExecutingTool { return .executing }
+        if model.isBusy { return .thinking }
+        if model.presentedConfirmation != nil { return .waiting }
+        return .idle
     }
 
     private var connectionBanner: some View {

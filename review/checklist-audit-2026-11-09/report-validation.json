@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "tasks": 59,
+  "cases": 76,
+  "scenarios": 3,
+  "safari": 39,
+  "views": 5,
+  "viewportWidths": [
+    1280,
+    434,
+    320
+  ],
+  "searchAndFilters": "passed",
+  "evidenceLinks": "passed",
+  "scriptErrors": [],
+  "scope": "HTML审计报告自身检查，不是项目76项验收通过"
+}

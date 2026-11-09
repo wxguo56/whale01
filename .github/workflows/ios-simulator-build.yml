@@ -55,17 +55,32 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
-            MARKETING_VERSION=0.2.1 \
+            MARKETING_VERSION=0.3.0 \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             build | tee build.log
 
+      - name: Run native unit tests
+        working-directory: ios
+        run: |
+          set -o pipefail
+          DEVICE_ID=$(xcrun simctl list devices available -j | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; c=[x for rt in d.values() for x in rt if x["name"].startswith("iPhone")]; print(c[0]["udid"] if c else "")')
+          test -n "$DEVICE_ID"
+          xcodebuild \
+            -project WhaleAgent.xcodeproj \
+            -scheme WhaleAgent \
+            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+            -derivedDataPath build \
+            test | tee test.log
+
       - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ios-simulator-build-log
-          path: ios/build.log
+          path: |
+            ios/build.log
+            ios/test.log
           if-no-files-found: warn

@@ -124,9 +124,20 @@ async def key_combo(service, name: str) -> None:
     }
     if name not in combos:
         raise SystemExit(f"unknown key: {name}")
-    await service.send_keyboard(KEYBOARD_SERVICE_ID, combos[name])
-    await asyncio.sleep(0.08)
-    await service.send_keyboard(KEYBOARD_SERVICE_ID, [])
+    combo = combos[name]
+    if len(combo) == 2:
+        modifier, usage = combo
+        await service.send_keyboard(KEYBOARD_SERVICE_ID, [modifier])
+        await asyncio.sleep(0.05)
+        await service.send_keyboard(KEYBOARD_SERVICE_ID, [modifier, usage])
+        await asyncio.sleep(0.05)
+        await service.send_keyboard(KEYBOARD_SERVICE_ID, [modifier])
+        await asyncio.sleep(0.05)
+        await service.send_keyboard(KEYBOARD_SERVICE_ID, [])
+    else:
+        await service.send_keyboard(KEYBOARD_SERVICE_ID, combo)
+        await asyncio.sleep(0.08)
+        await service.send_keyboard(KEYBOARD_SERVICE_ID, [])
 
 
 def copy_to_device(text: str) -> None:

@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>代号鲸鱼01｜计划 vs 实际 · 执行审计</title>
+<style>
+:root{--bg:#070d18;--panel:#0f1a2b;--panel2:#142238;--line:rgba(148,163,184,.15);--text:#e8eef7;--muted:#93a3bb;--teal:#2dd4bf;--blue:#60a5fa;--green:#34d399;--amber:#fbbf24;--red:#f87171;--gray:#94a3b8}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:86px}
+body{margin:0;color:var(--text);background:radial-gradient(1100px 620px at 12% -8%,rgba(45,212,191,.13),transparent 60%),radial-gradient(900px 520px at 92% 0%,rgba(96,165,250,.11),transparent 55%),var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.62;-webkit-font-smoothing:antialiased}
+a{color:var(--teal)}
+.topbar{position:sticky;top:0;z-index:50;background:rgba(7,13,24,.8);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:1240px;margin:auto;padding:11px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:9px;font-weight:750;letter-spacing:.05em;font-size:14px}
+.brand i{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 14px var(--teal)}
+.nav{display:flex;gap:2px;margin-left:auto;flex-wrap:wrap}
+.nav a{color:var(--muted);text-decoration:none;font-size:12.5px;padding:7px 10px;border-radius:8px;white-space:nowrap}
+.nav a:hover,.nav a.active{color:var(--text);background:rgba(148,163,184,.1)}
+.print-btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:8px 12px;border-radius:9px;font:inherit;font-size:12.5px;cursor:pointer}
+.print-btn:hover{border-color:rgba(45,212,191,.5)}
+.wrap{max-width:1240px;margin:auto;padding:0 24px 90px}
+.hero{padding:52px 0 8px;display:grid;grid-template-columns:1.3fr .8fr;gap:40px;align-items:start}
+.kicker{font-size:11.5px;letter-spacing:.24em;color:var(--teal);text-transform:uppercase;font-weight:700}
+h1{font-size:clamp(40px,6.2vw,70px);line-height:1.01;letter-spacing:-.045em;margin:10px 0 14px;background:linear-gradient(100deg,#fff 18%,#9ff7e8 58%,#86bcff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-sub{font-size:16.5px;color:var(--muted);max-width:650px;margin:0}
+.hero-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:28px}
+.meta-chip{font-size:12px;color:var(--muted);border:1px solid var(--line);padding:6px 10px;border-radius:999px;background:rgba(15,26,43,.5)}
+.verdict{border:1px solid rgba(251,191,36,.34);background:linear-gradient(145deg,rgba(251,191,36,.13),rgba(251,191,36,.02) 65%);border-radius:18px;padding:24px;position:relative;overflow:hidden}
+.verdict:after{content:"";position:absolute;width:180px;height:180px;right:-70px;top:-90px;background:radial-gradient(circle,rgba(251,191,36,.22),transparent 65%);pointer-events:none}
+.vb{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:750;letter-spacing:.08em;color:#fcd34d;border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.1);padding:6px 11px;border-radius:999px}
+.vb i{width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px var(--amber)}
+.verdict h3{font-size:20px;margin:16px 0 8px;line-height:1.35}
+.verdict p{margin:0;color:#c8d4e5;font-size:14px}
+.verdict p strong{color:#fff}
+.vf{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}
+.vf div{border:1px solid var(--line);background:rgba(7,13,24,.35);border-radius:11px;padding:9px 10px}
+.vf b{display:block;font-size:16px;color:#fff}
+.vf span{font-size:11.5px;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-top:28px}
+.kpi{border:1px solid var(--line);background:linear-gradient(180deg,rgba(20,34,56,.82),rgba(15,26,43,.82));border-radius:15px;padding:16px 17px}
+.kpi b{display:block;font-size:30px;line-height:1.1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+.kpi.g b{color:var(--green)}.kpi.a b{color:var(--amber)}.kpi.n b{color:#cbd5e1}.kpi.r b{color:var(--red)}.kpi.t b{color:var(--teal)}
+.section{margin-top:54px}
+.sec-head{display:flex;align-items:flex-end;gap:15px;margin-bottom:18px}
+.sec-num{font-size:52px;font-weight:850;line-height:.9;color:rgba(148,163,184,.13);letter-spacing:-.05em}
+.sec-head h2{font-size:25px;margin:0;letter-spacing:-.02em}
+.sec-sub{color:var(--muted);font-size:13.5px;margin:4px 0 0}
+.card{border:1px solid var(--line);background:linear-gradient(180deg,rgba(20,34,56,.78),rgba(15,26,43,.86));border-radius:18px;padding:22px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid-3>div{padding-right:16px;border-right:1px solid var(--line)}
+.grid-3>div:last-child{border-right:0;padding-right:0}
+.overview{display:grid;grid-template-columns:280px 1fr;gap:26px;align-items:center}
+.donut{width:196px;height:196px;border-radius:50%;position:relative;margin:auto;background:conic-gradient(var(--green) 0 18.52%,var(--amber) 18.52% 74.07%,#3d4c63 74.07% 100%);filter:drop-shadow(0 0 24px rgba(45,212,191,.12))}
+.donut:before{content:"";position:absolute;inset:24px;border-radius:50%;background:#0c1728;border:1px solid var(--line)}
+.donut-c{position:absolute;inset:0;display:grid;place-content:center;text-align:center;z-index:1}
+.donut-c b{font-size:38px;line-height:1;letter-spacing:-.04em}
+.donut-c span{font-size:12px;color:var(--muted);margin-top:5px}
+.legend{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.legend div{display:flex;align-items:center;gap:9px;font-size:13px;color:#c8d4e5}
+.legend i{width:9px;height:9px;border-radius:3px}
+.legend b{margin-left:auto;font-variant-numeric:tabular-nums}
+.judge{display:flex;flex-direction:column;gap:12px}
+.judge-item{display:grid;grid-template-columns:34px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.judge-item:last-child{border-bottom:0;padding-bottom:0}
+.judge-item em{font-style:normal;width:34px;height:34px;border-radius:10px;display:grid;place-content:center;font-size:12px;font-weight:800;border:1px solid var(--line)}
+.judge-item h4{margin:0 0 3px;font-size:14.5px}
+.judge-item p{margin:0;font-size:13px;color:var(--muted)}
+.lane{display:grid;grid-template-columns:76px 1fr;gap:16px;align-items:center;padding:15px 0;border-bottom:1px dashed var(--line)}
+.lane:last-of-type{border-bottom:0}
+.lane-label{font-size:12px;font-weight:800;letter-spacing:.1em;border-radius:8px;padding:6px 0;text-align:center}
+.lane-label.plan{color:#8ee9dc;background:rgba(45,212,191,.1);border:1px solid rgba(45,212,191,.28)}
+.lane-label.actual{color:#fcd34d;background:rgba(251,191,36,.09);border:1px solid rgba(251,191,36,.28)}
+.steps{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.step{border:1px solid var(--line);background:rgba(7,13,24,.38);border-radius:10px;padding:7px 11px;font-size:12.5px;color:#d5dfec}
+.step b{color:var(--teal);margin-right:5px;font-size:11.5px;letter-spacing:.05em}
+.step.warn{border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.06)}
+.step.gap{border-style:dashed;border-color:rgba(248,113,113,.5);color:#fecaca;background:rgba(248,113,113,.06)}
+.arrow{color:#475569;font-size:12px}
+.route-note{margin-top:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.route-note div{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:rgba(7,13,24,.3)}
+.route-note b{color:#fff}
+.ms-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.ms{border:1px solid var(--line);border-radius:15px;padding:16px;background:linear-gradient(180deg,rgba(20,34,56,.8),rgba(15,26,43,.85))}
+.ms-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ms-top b{font-size:16px;letter-spacing:.03em}
+.ms-badge{font-size:10.5px;padding:3px 7px;border-radius:999px;border:1px solid}
+.ms-badge.pass{color:#6ee7b7;border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.1)}
+.ms-badge.open{color:#fcd34d;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.1)}
+.ms-badge.stop{color:#fca5a5;border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.1)}
+.ms p{font-size:12.5px;color:var(--muted);margin:7px 0 12px;min-height:38px}
+.metric{font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between;margin:9px 0 4px}
+.metric b{color:#dbe6f3;font-variant-numeric:tabular-nums}
+.bar{height:7px;border-radius:999px;background:rgba(148,163,184,.14);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#2dd4bf,#60a5fa)}
+.bar.acc i{background:linear-gradient(90deg,#fbbf24,#f87171)}
+.ms-foot{margin-top:12px;font-size:11.5px;color:#aebdd1;border-top:1px solid var(--line);padding-top:9px}
+.task-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.filters{display:flex;gap:5px;flex-wrap:wrap}
+.filter-btn{border:1px solid var(--line);background:rgba(20,34,56,.6);color:var(--muted);font:inherit;font-size:12.5px;padding:8px 11px;border-radius:9px;cursor:pointer}
+.filter-btn i{font-style:normal;opacity:.7;margin-left:4px;font-variant-numeric:tabular-nums}
+.filter-btn:hover{color:#fff;border-color:rgba(45,212,191,.4)}
+.filter-btn.active{color:#06221f;background:var(--teal);border-color:var(--teal);font-weight:750}
+.filter-btn.active i{opacity:.8}
+select,input[type=search]{border:1px solid var(--line);background:rgba(20,34,56,.6);color:var(--text);font:inherit;font-size:12.5px;padding:8px 10px;border-radius:9px;outline:none}
+select:focus,input[type=search]:focus{border-color:rgba(45,212,191,.55)}
+input[type=search]{width:220px}
+.check{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);cursor:pointer;user-select:none}
+.check input{accent-color:var(--teal)}
+.table-count{font-size:12px;color:var(--muted);margin:4px 0 8px}
+.table-wrap{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:rgba(10,18,31,.6)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:#0d1829;text-align:left;font-size:11px;letter-spacing:.06em;color:#8fa2bb;font-weight:700;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody td{padding:12px;border-bottom:1px solid rgba(148,163,184,.09);vertical-align:top}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:rgba(45,212,191,.035)}
+tbody tr.done td:first-child{box-shadow:inset 3px 0 0 var(--green)}
+tbody tr.partial td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+tbody tr.none td:first-child{box-shadow:inset 3px 0 0 #64748b}
+.tid{display:block;font-size:11px;color:#7f93ad;letter-spacing:.03em;font-variant-numeric:tabular-nums}
+td strong{display:block;font-size:13.5px;margin-top:2px;color:#fff;font-weight:650}
+.ms-pill{display:inline-block;font-size:10.5px;color:#a7f3e9;border:1px solid rgba(45,212,191,.25);background:rgba(45,212,191,.07);padding:2px 6px;border-radius:6px}
+.plan-cell{color:#aebdd1;font-size:12.5px;min-width:210px}
+.pill{display:inline-block;font-size:11px;font-weight:750;padding:3px 8px;border-radius:999px;border:1px solid;white-space:nowrap}
+.pill.done{color:#6ee7b7;border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.1)}
+.pill.partial{color:#fcd34d;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.1)}
+.pill.none{color:#cbd5e1;border-color:rgba(148,163,184,.35);background:rgba(148,163,184,.1)}
+.ev{font-size:12px;color:#9fb0c6;margin-top:6px;line-height:1.55}
+.gap{font-size:12px;color:#c7d3e3;margin-top:5px;line-height:1.55}
+.devtag{display:inline-block;font-size:10px;font-weight:750;padding:2px 6px;border-radius:5px;border:1px solid;letter-spacing:.03em}
+.devtag.ok{color:#6ee7b7;border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.07)}
+.devtag.verify{color:#fcd34d;border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.08)}
+.devtag.free{color:#fca5a5;border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.08)}
+.devtag.plan{color:#d8b4fe;border-color:rgba(192,132,252,.35);background:rgba(192,132,252,.08)}
+.devtag.scope{color:#93c5fd;border-color:rgba(96,165,250,.35);background:rgba(96,165,250,.08)}
+.devtag.env{color:#cbd5e1;border-color:rgba(148,163,184,.35);background:rgba(148,163,184,.08)}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+.specials{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+.spec{border:1px solid var(--line);border-radius:15px;padding:17px;background:linear-gradient(180deg,rgba(20,34,56,.78),rgba(15,26,43,.85))}
+.spec-top{display:flex;align-items:center;gap:10px}
+.spec-key{width:34px;height:34px;border-radius:9px;display:grid;place-content:center;font-size:11px;font-weight:850;letter-spacing:.03em;border:1px solid var(--line);background:var(--teal);color:#06221f}
+.spec h4{margin:0;font-size:14.5px}
+.spec-top span{margin-left:auto;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.spec .bar{margin:12px 0 10px}
+.spec ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.spec li{font-size:12px;color:#aebdd1;padding-left:12px;position:relative;line-height:1.5}
+.spec li:before{content:"";position:absolute;left:0;top:7px;width:4px;height:4px;border-radius:50%;background:#64748b}
+.spec.good .spec-key{background:var(--green);color:#052e22}
+.spec.warn .spec-key{background:var(--amber);color:#2a1c02}
+.spec.bad .spec-key{background:var(--red);color:#2a0a0a}
+.spec.neutral .spec-key{background:var(--gray);color:#0b1220}
+.spec.good .bar i{background:linear-gradient(90deg,#34d399,#2dd4bf)}
+.spec.warn .bar i{background:linear-gradient(90deg,#fbbf24,#f59e0b)}
+.spec.bad .bar i{background:linear-gradient(90deg,#f87171,#ef4444)}
+.spec.neutral .bar i{background:linear-gradient(90deg,#94a3b8,#64748b)}
+.devs{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.dev{border:1px solid var(--line);border-radius:15px;padding:18px;background:linear-gradient(180deg,rgba(20,34,56,.75),rgba(15,26,43,.85))}
+.dev-head{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.dev-no{font-size:11px;font-weight:850;color:#06221f;background:var(--amber);border-radius:6px;padding:2px 6px}
+.dev h4{margin:0;font-size:14.5px}
+.dev-type{margin-left:auto;font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 7px}
+.dev dl{margin:0;display:grid;grid-template-columns:62px 1fr;gap:6px 9px;font-size:12.2px}
+.dev dt{color:#7f93ad}
+.dev dd{margin:0;color:#c3d0e0}
+.dev .verdict-line{grid-column:1 / -1;margin-top:7px;font-size:12px;color:#fde68a;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.18);border-radius:8px;padding:7px 9px}
+.evidence{display:grid;grid-template-columns:.95fr 1.05fr;gap:16px}
+.timeline{position:relative;padding-left:19px}
+.timeline:before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:1px;background:linear-gradient(var(--teal),rgba(45,212,191,.05))}
+.tl-item{position:relative;padding:0 0 15px}
+.tl-item:before{content:"";position:absolute;left:-18px;top:6px;width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px rgba(45,212,191,.6)}
+.tl-item b{font-size:12.8px;color:#e9f0fa}
+.tl-item span{display:block;font-size:11px;color:#7f93ad;font-variant-numeric:tabular-nums;margin-top:1px}
+.tl-item p{margin:3px 0 0;font-size:12px;color:#a9b8cb}
+.artifacts{overflow:hidden;border:1px solid var(--line);border-radius:13px}
+.artifacts div{display:grid;grid-template-columns:110px 1fr;gap:10px;padding:9px 12px;border-bottom:1px solid rgba(148,163,184,.09);font-size:12.2px}
+.artifacts div:last-child{border-bottom:0}
+.artifacts span{color:#7f93ad}
+.artifacts b{font-weight:600;color:#d6e1ef;word-break:break-all}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px}
+.risks{display:flex;flex-direction:column;gap:8px}
+.risk{display:grid;grid-template-columns:52px 1fr auto;gap:11px;align-items:center;border:1px solid var(--line);border-radius:11px;padding:10px 13px;background:rgba(15,26,43,.55)}
+.risk .sev{font-size:10.5px;font-weight:800;text-align:center;border-radius:6px;padding:3px 0}
+.risk .sev.h{color:#fecaca;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.35)}
+.risk .sev.m{color:#fde68a;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3)}
+.risk p{margin:0;font-size:12.7px;color:#c6d2e2}
+.risk small{font-size:11px;color:#7f93ad;white-space:nowrap}
+.next-table td{font-size:12.3px}
+.next-table .pr{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:999px;border:1px solid}
+.pr.p0{color:#fecaca;border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.08)}
+.pr.p1{color:#fde68a;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+footer{margin-top:60px;border-top:1px solid var(--line);padding-top:20px;color:#7f93ad;font-size:12px}
+footer b{color:#b8c7da}
+footer ul{margin:9px 0 0;padding-left:18px}
+footer li{margin:3px 0}
+.note{border-left:2px solid var(--teal);padding:2px 0 2px 13px;color:#9fb0c6;font-size:12.5px;margin-top:14px}
+@media(max-width:1080px){.kpis{grid-template-columns:repeat(3,1fr)}.ms-grid{grid-template-columns:repeat(3,1fr)}.specials{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.hero{grid-template-columns:1fr;gap:24px}.overview{grid-template-columns:1fr}.grid-2,.grid-3,.evidence,.devs{grid-template-columns:1fr}.grid-3>div{border-right:0;padding-right:0}.route-note{grid-template-columns:1fr}}
+@media(max-width:760px){
+html{scroll-padding-top:122px}
+.wrap{padding:0 14px 70px}.topbar-in{padding:10px 14px}.nav{order:3;width:100%;margin-left:0;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}
+h1{font-size:44px}.hero{padding-top:34px}.kpis{grid-template-columns:repeat(2,1fr)}.ms-grid{grid-template-columns:1fr 1fr}.specials{grid-template-columns:1fr}
+.sec-num{font-size:38px}.sec-head{align-items:center}.sec-head h2{font-size:21px}
+.lane{grid-template-columns:1fr;gap:8px}.lane-label{width:76px}
+.table-wrap{border:0;background:transparent;overflow:visible}table,tbody,tr,td{display:block;width:100%}
+thead{display:none}tbody tr{border:1px solid var(--line);border-radius:13px;margin-bottom:10px;background:rgba(15,26,43,.72);overflow:hidden}
+tbody td{border:0;padding:9px 13px}tbody td:before{content:attr(data-label);display:block;font-size:10px;letter-spacing:.06em;color:#71869f;margin-bottom:3px}
+.plan-cell{min-width:0}input[type=search]{width:100%}.task-toolbar{gap:8px}.filters{width:100%}
+.devs{grid-template-columns:1fr}.risk{grid-template-columns:46px 1fr}.risk small{grid-column:2}
+}
+@media print{
+:root{--bg:#fff;--panel:#fff;--panel2:#fff;--text:#111;--muted:#555;--line:#d8dde6}
+body{background:#fff;color:#111}.topbar,.print-btn,.task-toolbar,.table-count{display:none}
+.card,.kpi,.ms,.spec,.dev,.risk,.table-wrap,.artifacts{background:#fff!important;box-shadow:none!important}
+.sec-num{color:#e6e9ef}h1{color:#111;-webkit-text-fill-color:#111}thead th{background:#f4f6f9;color:#333;position:static}
+tbody tr{break-inside:avoid}.section{break-inside:avoid;margin-top:28px}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><i></i>WHALE-01 · 执行审计</div>
+    <nav class="nav">
+      <a href="#overview" class="active">总览</a>
+      <a href="#route">路线对比</a>
+      <a href="#milestones">里程碑</a>
+      <a href="#tasks">任务全表</a>
+      <a href="#specials">专项线</a>
+      <a href="#deviations">偏差</a>
+      <a href="#evidence">证据</a>
+      <a href="#next">下一步</a>
+    </nav>
+    <button class="print-btn" onclick="window.print()">打印 / PDF</button>
+  </div>
+</header>
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <div class="kicker">Plan vs Actual · Execution Audit</div>
+      <h1>计划 vs 实际</h1>
+      <p class="hero-sub">对照《02_执行任务清单》的 27 项任务，逐项核对代码、云端编译、真机与交付证据：哪些按计划做了，哪些被重排，哪些还没开始。</p>
+      <div class="hero-meta">
+        <span class="meta-chip">计划基线 02 v0.6</span>
+        <span class="meta-chip">代码截至 39af3b8</span>
+        <span class="meta-chip">构建 0.2.1 (5)</span>
+        <span class="meta-chip">iPhone 16 Pro · iOS 26.5.2</span>
+      </div>
+    </div>
+    <aside class="verdict">
+      <div class="vb"><i></i>结论 · 部分符合</div>
+      <h3>没有完全按规划顺序执行；代码面覆盖大半，验收面明显滞后。</h3>
+      <p>M0 已完成；M1、M2 的<strong>代码与云编译</strong>基本齐备，但 <strong>0.2.x 真机闭环为 0</strong>；M3 大量未做；M4 的真机回归、性能与 Beta 包尚未启动。实际顺序被重排为「HTML 模拟 → 后端 / DeepSeek → 原生壳 → 原生业务 UI」。</p>
+      <div class="vf">
+        <div><b>20 / 27</b><span>有代码或文档落地</span></div>
+        <div><b>0 / 21</b><span>依赖真机的任务已验收</span></div>
+        <div><b>0 / 39</b><span>验收用例在 0.2.x 执行</span></div>
+      </div>
+    </aside>
+  </section>
+  <section class="kpis">
+    <div class="kpi t"><b>27</b><span>计划任务（M0–M4）</span></div>
+    <div class="kpi g"><b>5</b><span>已完成，有可重复证据</span></div>
+    <div class="kpi a"><b>15</b><span>部分完成，缺真机验证</span></div>
+    <div class="kpi n"><b>7</b><span>未开始</span></div>
+    <div class="kpi r"><b>0 / 39</b><span>验收用例已正式执行</span></div>
+  </section>
+  <section class="section" id="overview">
+    <div class="sec-head">
+      <div class="sec-num">01</div>
+      <div>
+        <h2>总览：代码做了大半，验收还没开始</h2>
+        <div class="sec-sub">状态口径：已完成＝有可重复证据；部分完成＝代码或契约已落地但缺真实环境验证；未开始＝尚未动工。</div>
+      </div>
+    </div>
+    <div class="card overview">
+      <div>
+        <div class="donut"><div class="donut-c"><b>27</b><span>计划任务</span></div></div>
+        <div class="legend">
+          <div><i style="background:#34d399"></i>已完成 <b>5</b></div>
+          <div><i style="background:#fbbf24"></i>部分完成 <b>15</b></div>
+          <div><i style="background:#64748b"></i>未开始 <b>7</b></div>
+        </div>
+      </div>
+      <div class="judge">
+        <div class="judge-item">
+          <em style="color:#2dd4bf;background:rgba(45,212,191,.08)">01</em>
+          <div><h4>能编译 ≠ 能用</h4><p>26 个 Swift 文件、2 条最新 CI 绿灯、IPA 已产出；但 0.2.x 在真机上没有一条完整闭环验收记录。</p></div>
+        </div>
+        <div class="judge-item">
+          <em style="color:#fbbf24;background:rgba(251,191,36,.08)">02</em>
+          <div><h4>顺序被重排，不是照单执行</h4><p>计划强调「先原生工具可靠，再接模型」；实际先做 HTML 模拟与 DeepSeek，再补原生壳与业务 UI。</p></div>
+        </div>
+        <div class="judge-item">
+          <em style="color:#93c5fd;background:rgba(96,165,250,.08)">03</em>
+          <div><h4>交付雏形已有，Beta 包未成</h4><p>免费签名、IPA 固定落地、局域网分发已跑通；TestFlight、能力表、已知问题与测试报告仍缺。</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="section" id="route">
+    <div class="sec-head">
+      <div class="sec-num">02</div>
+      <div>
+        <h2>路线：计划一条线，实际另一条线</h2>
+        <div class="sec-sub">计划要求按 M0 → M1 → M2 → M3 → M4 推进；实际是「先演示、再模型、后原生、验收最后」。</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="lane">
+        <div class="lane-label plan">计划</div>
+        <div class="steps">
+          <div class="step"><b>M0</b>盘点 + 契约</div><span class="arrow">→</span>
+          <div class="step"><b>M1</b>提醒闭环（原生优先）</div><span class="arrow">→</span>
+          <div class="step"><b>M2</b>统一原有能力 + 出行</div><span class="arrow">→</span>
+          <div class="step"><b>M3</b>Beta 体验</div><span class="arrow">→</span>
+          <div class="step"><b>M4</b>回归 + 交付</div>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-label actual">实际</div>
+        <div class="steps">
+          <div class="step warn"><b>M0</b>契约 + HTML 模拟</div><span class="arrow">→</span>
+          <div class="step warn"><b>DS</b>DeepSeek 流式</div><span class="arrow">→</span>
+          <div class="step"><b>IOS</b>原生最小壳 + CI</div><span class="arrow">→</span>
+          <div class="step"><b>UI</b>原生业务界面</div><span class="arrow">→</span>
+          <div class="step"><b>0.2.1</b>语音 / 键盘修复</div><span class="arrow">→</span>
+          <div class="step gap"><b>M4</b>真机验收（未开始）</div>
+        </div>
+      </div>
+      <div class="route-note">
+        <div><b>重排 1</b><br>HTML 模拟与 DeepSeek 先于原生工具闭环，和“先原生工具可靠”相反。</div>
+        <div><b>重排 2</b><br>原生业务 UI 在 M2 代码写完后才替换验证壳，M3 的分享 / 讯飞 / Intent 被跳过。</div>
+        <div><b>后置</b><br>真机验收留到最后，0.2.x 尚未开始；这是当前最大缺口。</div>
+      </div>
+      <div class="note">计划原文：M1 合流后“先用真实模型与真机验证，再扩大功能”。实际在 M2 代码全部铺开后才回到验收，顺序与计划不一致。</div>
+    </div>
+  </section>
+  <section class="section" id="milestones">
+    <div class="sec-head">
+      <div class="sec-num">03</div>
+      <div>
+        <h2>里程碑：M0 通过，M1 / M2 卡在验收</h2>
+        <div class="sec-sub">每张卡同时看两条进度：代码是否落地、真机是否验收。两条都满才算里程碑完成。</div>
+      </div>
+    </div>
+    <div class="ms-grid">
+      <div class="ms">
+        <div class="ms-top"><b>M0</b><span class="ms-badge pass">通过</span></div>
+        <p>盘点、工具契约、Skill 策略与云端编译基线。</p>
+        <div class="metric"><span>代码 / 文档</span><b>100%</b></div><div class="bar"><i style="width:100%"></i></div>
+        <div class="metric"><span>门槛验收</span><b>100%</b></div><div class="bar acc"><i style="width:100%"></i></div>
+        <div class="ms-foot">4 / 4 完成；契约测试可重复。</div>
+      </div>
+      <div class="ms">
+        <div class="ms-top"><b>M1</b><span class="ms-badge open">待验收</span></div>
+        <p>提醒、授权、幂等、DeepSeek 与闭环 UI。</p>
+        <div class="metric"><span>代码落地</span><b>100%</b></div><div class="bar"><i style="width:100%"></i></div>
+        <div class="metric"><span>真机验收</span><b>0%</b></div><div class="bar acc"><i style="width:0"></i></div>
+        <div class="ms-foot">1 完成 · 5 部分；仅 0.1.0 有 1 条写入证据。</div>
+      </div>
+      <div class="ms">
+        <div class="ms-top"><b>M2</b><span class="ms-badge open">待验收</span></div>
+        <p>天气、日历、运动、地点、导航、多步与恢复。</p>
+        <div class="metric"><span>代码落地</span><b>100%</b></div><div class="bar"><i style="width:100%"></i></div>
+        <div class="metric"><span>真机验收</span><b>0%</b></div><div class="bar acc"><i style="width:0"></i></div>
+        <div class="ms-foot">0 完成 · 8 部分；免费版天气 / 运动不可用。</div>
+      </div>
+      <div class="ms">
+        <div class="ms-top"><b>M3</b><span class="ms-badge stop">未达门</span></div>
+        <p>分享扩展、短信邮件、讯飞语音、角色、App Intent。</p>
+        <div class="metric"><span>代码落地</span><b>40%</b></div><div class="bar"><i style="width:40%"></i></div>
+        <div class="metric"><span>真机验收</span><b>0%</b></div><div class="bar acc"><i style="width:0"></i></div>
+        <div class="ms-foot">0 完成 · 1 部分 · 4 未开始；语音改系统 Speech。</div>
+      </div>
+      <div class="ms">
+        <div class="ms-top"><b>M4</b><span class="ms-badge stop">未启动</span></div>
+        <p>契约 / 原生测试、真机回归、性能、Beta 交付包。</p>
+        <div class="metric"><span>测试 / 交付</span><b>25%</b></div><div class="bar"><i style="width:25%"></i></div>
+        <div class="metric"><span>真机验收</span><b>0%</b></div><div class="bar acc"><i style="width:0"></i></div>
+        <div class="ms-foot">0 完成 · 1 部分 · 3 未开始；后端 47/47 通过。</div>
+      </div>
+    </div>
+    <div class="note">门槛按《02_执行任务清单》：M1 需真实模型 + 真机提醒闭环；M2 需 P0 核心旅程与验收用例通过；M3 需明确 P1 交付范围；M4 需 39 条用例、p50/p95 与 Beta 包。</div>
+  </section>
+  <section class="section" id="tasks">
+    <div class="sec-head">
+      <div class="sec-num">04</div>
+      <div>
+        <h2>27 项任务逐项对照</h2>
+        <div class="sec-sub">左列是计划交付，中间是当前状态与证据，右列是缺口或偏差。状态不把“编译通过”算作“真机通过”。</div>
+      </div>
+    </div>
+    <div class="task-toolbar">
+      <div class="filters" role="group" aria-label="按状态筛选">
+        <button class="filter-btn active" data-status="all">全部 <i>27</i></button>
+        <button class="filter-btn" data-status="done">已完成 <i>5</i></button>
+        <button class="filter-btn" data-status="partial">部分完成 <i>15</i></button>
+        <button class="filter-btn" data-status="none">未开始 <i>7</i></button>
+      </div>
+      <select id="msFilter" aria-label="按里程碑筛选">
+        <option value="all">全部里程碑</option>
+        <option value="M0">M0 · 盘点与契约</option>
+        <option value="M1">M1 · 提醒闭环</option>
+        <option value="M2">M2 · 能力统一</option>
+        <option value="M3">M3 · Beta</option>
+        <option value="M4">M4 · 回归交付</option>
+      </select>
+      <input type="search" id="search" placeholder="搜索任务 / 证据 / 缺口" aria-label="搜索任务">
+      <label class="check"><input type="checkbox" id="onlyDev"> 只看有偏差</label>
+    </div>
+    <div class="table-count" id="tableCount">显示 27 / 27 项</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:15%">任务</th>
+            <th style="width:7%">里程碑</th>
+            <th style="width:25%">计划交付</th>
+            <th style="width:27%">实际状态与证据</th>
+            <th style="width:26%">缺口 / 偏差</th>
+          </tr>
+        </thead>
+        <tbody id="taskBody"></tbody>
+      </table>
+    </div>
+    <div class="note">数据来源：<span class="mono">02_执行任务清单.md</span>、<span class="mono">00_执行看板.md</span>、<span class="mono">review/2026-11-09-phase2/3</span>、Git 记录与 GitHub Actions。部分任务的证据来自 0.1.0，不能直接迁移到 0.2.x。</div>
+  </section>
+  <section class="section" id="specials">
+    <div class="sec-head">
+      <div class="sec-num">05</div>
+      <div>
+        <h2>专项线：DeepSeek 领先，讯飞与验收掉队</h2>
+        <div class="sec-sub">除 27 项主任务外，清单还有 DS / XF / NL / MU / NAV / UI / IOS / 真机 / 发布九条专项线。</div>
+      </div>
+    </div>
+    <div class="specials">
+      <article class="spec good">
+        <div class="spec-top"><div class="spec-key">DS</div><h4>DeepSeek</h4><span>5 / 6</span></div>
+        <div class="bar"><i style="width:83%"></i></div>
+        <ul>
+          <li>真实接入；<span class="mono">/healthz</span> 返回 <span class="mono">modelMode=deepseek</span></li>
+          <li>服务端与上游 SSE 流式，分片 tool_calls 参数正确拼接</li>
+          <li>30 组真实模型基准 30/30；断流恢复实测 3/3</li>
+          <li>缺口：DS-06 性能测量未开始</li>
+        </ul>
+      </article>
+      <article class="spec good">
+        <div class="spec-top"><div class="spec-key">NL</div><h4>自然对话</h4><span>7 / 8</span></div>
+        <div class="bar"><i style="width:88%"></i></div>
+        <ul>
+          <li>跨轮消息、活动任务、指代、缺项、改话题与取消可恢复</li>
+          <li>能力表区分 available / needs_authorization / not_implemented</li>
+          <li>模型失败显示错误与重试，不静默回退冒充在线</li>
+          <li>NL-08 讯飞语音仍待外部条件</li>
+        </ul>
+      </article>
+      <article class="spec bad">
+        <div class="spec-top"><div class="spec-key">XF</div><h4>讯飞语音</h4><span>0 / 6</span></div>
+        <div class="bar"><i style="width:0"></i></div>
+        <ul>
+          <li>讯飞产品与凭据未配置，ASR / TTS 代码未接入</li>
+          <li>实际改用 iOS 系统 Speech（zh-CN）+ AVAudioEngine</li>
+          <li>W01-021 的验收口径需要负责人重新确认</li>
+          <li>播报、打断、音频会话未按讯飞方案实现</li>
+        </ul>
+      </article>
+      <article class="spec warn">
+        <div class="spec-top"><div class="spec-key">MU</div><h4>音乐</h4><span>HTML 100% · 真机 0%</span></div>
+        <div class="bar"><i style="width:50%"></i></div>
+        <ul>
+          <li>HTML 演示支持选曲、暂停、继续、上一首 / 下一首</li>
+          <li>MusicKit 执行器已编译：搜索 / 播放 / 暂停 / 恢复 / 切歌 / 状态</li>
+          <li>免费签名与真机曲库未验收</li>
+        </ul>
+      </article>
+      <article class="spec good">
+        <div class="spec-top"><div class="spec-key">NAV</div><h4>历史手势</h4><span>2.5 / 3</span></div>
+        <div class="bar"><i style="width:83%"></i></div>
+        <ul>
+          <li>NAV-01 back / current / forward 历史，切换保留消息与选曲</li>
+          <li>NAV-02 左滑返回、右滑前进，输入区与 sheet 不误触</li>
+          <li>NAV-03 HTML 自测 G06–G12；真机 G01–G05 未做</li>
+        </ul>
+      </article>
+      <article class="spec neutral">
+        <div class="spec-top"><div class="spec-key">UI</div><h4>UI 方案</h4><span>旧案废弃</span></div>
+        <div class="bar"><i style="width:100%"></i></div>
+        <ul>
+          <li>UI-02～UI-05 依赖旧稿的工作取消，旧演示入口关闭</li>
+          <li>原生业务 UI 直接实现：首页 / 对话 / 音乐 / 设置四 Tab</li>
+          <li>新视觉方向仍待负责人明确</li>
+        </ul>
+      </article>
+      <article class="spec good">
+        <div class="spec-top"><div class="spec-key">IOS</div><h4>原生工程与 CI</h4><span>3 / 4</span></div>
+        <div class="bar"><i style="width:75%"></i></div>
+        <ul>
+          <li>26 个 Swift 文件；XcodeGen；iOS 17+；11 条权限说明</li>
+          <li>最新 CI：模拟器构建 + IPA 归档均 success</li>
+          <li>IOS-04 正式签名未做；免费签名路线已跑通</li>
+        </ul>
+      </article>
+      <article class="spec bad">
+        <div class="spec-top"><div class="spec-key">DEV</div><h4>真机验收</h4><span>0 / 39</span></div>
+        <div class="bar"><i style="width:0"></i></div>
+        <ul>
+          <li>0.2.x 没有正式验收记录</li>
+          <li>仅 0.1.0 有 1 条提醒写入证据（取快递）</li>
+          <li>39 条 A / B / G 用例待执行，H01–H39 为旧编号</li>
+        </ul>
+      </article>
+      <article class="spec warn">
+        <div class="spec-top"><div class="spec-key">REL</div><h4>发布与打包</h4><span>部分</span></div>
+        <div class="bar"><i style="width:60%"></i></div>
+        <ul>
+          <li>私有仓库 <span class="mono">wxguo56/whale01</span>；GitHub Actions 可用</li>
+          <li>IPA 已产出并固定落地到用户目录</li>
+          <li>GitHub Pages 受私有仓库套餐限制；TestFlight 未开始</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+  <section class="section" id="deviations">
+    <div class="sec-head">
+      <div class="sec-num">06</div>
+      <div>
+        <h2>六处关键偏差：哪些是合理重排，哪些必须补</h2>
+        <div class="sec-sub">偏差本身不等于错误；问题在于偏差之后有没有补验收、有没有同步产品口径。</div>
+      </div>
+    </div>
+    <div class="devs">
+      <article class="dev">
+        <div class="dev-head"><span class="dev-no">D1</span><h4>开发顺序：演示 / 模型先行，原生后补</h4><span class="dev-type">顺序</span></div>
+        <dl>
+          <dt>原计划</dt><dd>先原生工具可靠，再接真实模型；M1 合流后先真机验证再扩功能。</dd>
+          <dt>实际</dt><dd><span class="mono">bb0fa75</span> 先做 HTML 模拟 + 契约 + 后端；DeepSeek 流式早于 EventKit 真机验证；业务 UI 在 M2 后才补。</dd>
+          <dt>影响</dt><dd>早期无法验证系统写入；0.1.0 仅一条证据，0.2.x 又回到未验收状态。</dd>
+          <div class="verdict-line">判定：可接受的重排，但必须用真机验收把顺序债补回来。</div>
+        </dl>
+      </article>
+      <article class="dev">
+        <div class="dev-head"><span class="dev-no">D2</span><h4>语音：讯飞方案替换为系统 Speech</h4><span class="dev-type">方案</span></div>
+        <dl>
+          <dt>原计划</dt><dd>W01-021 复用讯飞 ASR / TTS，补齐最终听写、播报、打断与音频会话。</dd>
+          <dt>实际</dt><dd>使用 Speech + AVAudioEngine（zh-CN）；0.2.1 修复麦克风与语音识别权限，新增键盘收起。</dd>
+          <dt>影响</dt><dd>输入体验可用，但讯飞产品、凭据、播报与打断链路均未落地。</dd>
+          <div class="verdict-line">判定：需产品负责人确认替代方案；未确认前不能标“讯飞已接入”。</div>
+        </dl>
+      </article>
+      <article class="dev">
+        <div class="dev-head"><span class="dev-no">D3</span><h4>UI：整批视觉方案废弃</h4><span class="dev-type">范围</span></div>
+        <dl>
+          <dt>原计划</dt><dd>UI-02～UI-05 依赖丹青约香蕉稿，按选定方案还原与细化。</dd>
+          <dt>实际</dt><dd>《13_UI方案废弃决定》生效；旧演示关闭，原生直接实现四 Tab 业务界面。</dd>
+          <dt>影响</dt><dd>避免继续在旧稿上返工；但新视觉方向尚未明确。</dd>
+          <div class="verdict-line">判定：已按负责人决定执行，不计为开发失败；后续需新设计授权。</div>
+        </dl>
+      </article>
+      <article class="dev">
+        <div class="dev-head"><span class="dev-no">D4</span><h4>免费签名：天气 / 运动能力不可用</h4><span class="dev-type">边界</span></div>
+        <dl>
+          <dt>原计划</dt><dd>WeatherKit 与 HealthKit 全能力接入，按真实数据验收。</dd>
+          <dt>实际</dt><dd>免费签名 target 不申请受限能力；<span class="mono">get_weather</span> / <span class="mono">get_activity_summary</span> 返回 <span class="mono">unavailable_in_free_build</span>。</dd>
+          <dt>影响</dt><dd>W01-011 / 014 在免费版无法按原口径验收，必须另测正式签名构建。</dd>
+          <div class="verdict-line">判定：能力边界要在产品说明中明示，不能把“不可用”说成“已支持”。</div>
+        </dl>
+      </article>
+      <article class="dev">
+        <div class="dev-head"><span class="dev-no">D5</span><h4>真机验收：被留到最后且尚未开始</h4><span class="dev-type">风险</span></div>
+        <dl>
+          <dt>原计划</dt><dd>M1 演示四条路径，M2 过 P0 门槛，M4 执行 39 条矩阵。</dd>
+          <dt>实际</dt><dd>功能一路写到 M2，0.2.x 未执行任何正式用例；仅 0.1.0 有 1 条提醒写入。</dd>
+          <dt>影响</dt><dd>M1 / M2 不能判定完成；权限、时区、幂等与恢复缺陷可能集中暴露。</dd>
+          <div class="verdict-line">判定：最高优先级补课，先做提醒闭环与语音 / 键盘回归。</div>
+        </dl>
+      </article>
+      <article class="dev">
+        <div class="dev-head"><span class="dev-no">D6</span><h4>计划外：AltStore / SideStore 与设备工具链</h4><span class="dev-type">新增</span></div>
+        <dl>
+          <dt>原计划</dt><dd>未包含免费签名安装、HID 自动化与固定 IPA 落地脚本。</dd>
+          <dt>实际</dt><dd>新增 SideStore 路线、<span class="mono">phone_hid.py</span>、<span class="mono">serve-ipa.mjs</span>、<span class="mono">publish-ipa.ps1</span>。</dd>
+          <dt>影响</dt><dd>提升真机安装与分发效率，但不计入产品功能完成度。</dd>
+          <div class="verdict-line">判定：保留为交付支撑；汇报时与产品进度分开统计。</div>
+        </dl>
+      </article>
+    </div>
+  </section>
+  <section class="section" id="evidence">
+    <div class="sec-head">
+      <div class="sec-num">07</div>
+      <div>
+        <h2>证据链：哪些是真的跑过</h2>
+        <div class="sec-sub">只列可核对内容：提交、CI run、测试输出、IPA 指纹。界面截图与编译日志不作为系统写入证据。</div>
+      </div>
+    </div>
+    <div class="evidence">
+      <div class="card">
+        <h3 style="font-size:15px;margin:0 0 13px">关键提交（实际开发顺序）</h3>
+        <div class="timeline">
+          <div class="tl-item"><b>HTML 模拟 + M0 契约 + 后端骨架</b><span>bb0fa75</span><p>先交付可点击演示，同时沉淀 contracts/v1。</p></div>
+          <div class="tl-item"><b>原生最小工程 + 首次云端编译</b><span>fb78c29 · d30b702</span><p>GitHub macOS runner 输出 BUILD SUCCEEDED。</p></div>
+          <div class="tl-item"><b>设备延迟执行</b><span>42f8253</span><p>手机工具挂起，交 App 执行后回传结果。</p></div>
+          <div class="tl-item"><b>免费签名 Sideload + IPA 工作流</b><span>fbefdff</span><p>不依赖付费账号的安装路线。</p></div>
+          <div class="tl-item"><b>SSE 流式 + 断流恢复</b><span>4ffd578</span><p>assistant.delta 分段下发，按 turnId 恢复。</p></div>
+          <div class="tl-item"><b>原生业务 UI</b><span>bc890ee</span><p>四 Tab 替换验证壳，接 EventKit / MusicKit。</p></div>
+          <div class="tl-item"><b>系统语音输入 + 键盘收起</b><span>72a28f9 · 648b21d</span><p>真机反馈修复，进入 0.2.1。</p></div>
+          <div class="tl-item"><b>固定 IPA 落地路径</b><span>39af3b8</span><p>每次构建写到用户指定目录并附 SHA256。</p></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:15px;margin:0 0 13px">可核对产物</h3>
+        <div class="artifacts">
+          <div><span>构建版本</span><b>0.2.1 (5)</b></div>
+          <div><span>Bundle ID</span><b class="mono">com.whale01.whaleagent.alt</b></div>
+          <div><span>IPA 体积</span><b>352,375 字节</b></div>
+          <div><span>SHA256</span><b class="mono">c64fa6bd78c9e172040e94a5dcef51c96ad3a4f8f9ed48fd156855e7762bd3a9</b></div>
+          <div><span>最新 CI</span><b><span class="mono">42607098187</span> 模拟器 · <span class="mono">42607098202</span> IPA，均 success</b></div>
+          <div><span>后端测试</span><b>47 / 47 通过</b></div>
+          <div><span>契约</span><b class="mono">contracts/v1/</b></div>
+          <div><span>原生代码</span><b>26 个 Swift 文件；11 条权限说明</b></div>
+          <div><span>真机验收</span><b style="color:#fca5a5">0 / 39（待执行）</b></div>
+        </div>
+        <div class="note">CI 绿灯只证明工程能编译；真机写入、授权、时区、幂等与恢复必须由设备证据确认。</div>
+      </div>
+    </div>
+  </section>
+  <section class="section" id="risks">
+    <div class="sec-head">
+      <div class="sec-num">08</div>
+      <div>
+        <h2>风险：先补验收，再谈扩功能</h2>
+        <div class="sec-sub">按影响排序；前两项会直接改变“里程碑是否完成”的结论。</div>
+      </div>
+    </div>
+    <div class="risks">
+      <div class="risk"><span class="sev h">高</span><p>0.2.x 真机验收为零：M1 / M2 的“代码完成”无法升级为“里程碑完成”。</p><small>先做提醒闭环 5 条路径</small></div>
+      <div class="risk"><span class="sev h">高</span><p>免费签名缺少 WeatherKit / HealthKit：天气与运动摘要无法按原口径验收。</p><small>能力表标注 + 正式签名另测</small></div>
+      <div class="risk"><span class="sev m">中高</span><p>讯飞语音被系统 Speech 替代：产品要求与验收口径未重新确认。</p><small>负责人书面决定</small></div>
+      <div class="risk"><span class="sev m">中</span><p>原生切后台恢复、断网重连与结果重发尚未实现，W01-018 只完成网页端。</p><small>补实现 + 真机断网测试</small></div>
+      <div class="risk"><span class="sev m">中</span><p>没有原生测试 target：W01-024 只有后端 / 契约覆盖，回归依赖手工。</p><small>补 XCTest 与用例表</small></div>
+      <div class="risk"><span class="sev m">中</span><p>后端依赖局域网 HTTP：手机需与电脑同网段，换网或离线即断；正式版需 HTTPS。</p><small>配置化 + HTTPS</small></div>
+      <div class="risk"><span class="sev m">中</span><p>M3 分享扩展与 App Intent 未做，Beta 功能面不完整。</p><small>明确是否纳入本轮</small></div>
+    </div>
+  </section>
+  <section class="section" id="next">
+    <div class="sec-head">
+      <div class="sec-num">09</div>
+      <div>
+        <h2>下一步：把“代码完成”换成“真机通过”</h2>
+        <div class="sec-sub">顺序不可再倒置：先安装与提醒闭环，再语音 / 键盘，再全能力回归，最后才是性能与 Beta 包。</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="next-table">
+        <thead>
+          <tr><th style="width:4%">#</th><th style="width:36%">动作</th><th style="width:9%">负责</th><th style="width:43%">完成标准</th><th style="width:8%">优先级</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><strong>安装 0.2.1 (5)</strong> 并确认版本号<br><span style="font-size:11.5px;color:#7f93ad">手机当前为 0.2.0 (3)；安装后设置页应显示 0.2.1 (5)</span></td><td>用户</td><td>设置页显示 0.2.1 (5)；保留安装截图</td><td><span class="pr p0">P0</span></td></tr>
+          <tr><td>2</td><td><strong>提醒闭环真机回归</strong>：允许 / 拒绝 / 缺时间 / 重复 / 取消</td><td>执行者</td><td>5 条路径均有记录；回复与系统提醒一致；重复请求不重复写入</td><td><span class="pr p0">P0</span></td></tr>
+          <tr><td>3</td><td><strong>语音输入与键盘收起</strong>：权限、zh-CN 识别、停止与四种收起</td><td>执行者</td><td>麦克风 / 识别权限正常；识别结果进入输入框；键盘可稳定收起</td><td><span class="pr p0">P0</span></td></tr>
+          <tr><td>4</td><td><strong>四 Tab 与系统能力</strong>：日历读写、地点导航、短信草稿、音乐库</td><td>执行者</td><td>每项有真实系统结果截图；免费版不可用项明确标注</td><td><span class="pr p0">P0</span></td></tr>
+          <tr><td>5</td><td><strong>异常与恢复</strong>：断网、切后台、重复请求、未知执行状态</td><td>执行者</td><td>恢复后不重复创建记录；未知状态可查询，不盲目重试</td><td><span class="pr p0">P0</span></td></tr>
+          <tr><td>6</td><td><strong>原生测试 target + 39 条用例执行表</strong></td><td>执行者</td><td>XCTest 可重复运行；A / B / G 用例逐条记录设备、版本、证据</td><td><span class="pr p1">P1</span></td></tr>
+          <tr><td>7</td><td><strong>明确 M3 范围</strong>：分享扩展、App Intent、讯飞语音是否纳入本轮</td><td>负责人</td><td>书面决定并更新任务清单；不再默认跳过</td><td><span class="pr p1">P1</span></td></tr>
+          <tr><td>8</td><td><strong>性能与 Beta 交付包</strong>：p50 / p95、能力表、已知问题、测试报告</td><td>执行者</td><td>报告含样本量与限制；包可直接交给测试；TestFlight 另行授权</td><td><span class="pr p1">P1</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">建议判定：在完成第 1–3 项之前，里程碑状态保持“部分完成”，不对外宣称 M1 / M2 已交付。</div>
+    <div class="card" style="margin-top:14px">
+      <div class="grid-3">
+        <div>
+          <div class="metric" style="margin:0 0 6px"><span>计划内容</span><b style="color:#fbbf24">部分完成</b></div>
+          <p style="margin:0;font-size:12.5px;color:#aebdd1">M0 通过；M1 / M2 代码完成但未验收；M3 未达门；M4 未启动。</p>
+        </div>
+        <div>
+          <div class="metric" style="margin:0 0 6px"><span>开发顺序</span><b style="color:#fbbf24">部分符合</b></div>
+          <p style="margin:0;font-size:12.5px;color:#aebdd1">三处重排：演示与模型先行、业务 UI 后补、真机验收后置。</p>
+        </div>
+        <div>
+          <div class="metric" style="margin:0 0 6px"><span>验收口径</span><b style="color:#f87171">不符合</b></div>
+          <p style="margin:0;font-size:12.5px;color:#aebdd1">0.2.x 真机 0 / 39；当前不能对外宣称 M1 / M2 已交付。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer class="wrap" style="padding-top:0">
+  <b>数据口径与来源</b>
+  <ul>
+    <li>计划基线：<span class="mono">02_执行任务清单.md</span> v0.6（27 项任务 + DS / XF / NL / MU / NAV / UI / IOS 专项）。</li>
+    <li>状态基线：<span class="mono">00_执行看板.md</span> 与 2026-11-09 云编译后的状态校正。</li>
+    <li>代码基线：<span class="mono">39af3b8</span>；构建 <span class="mono">0.2.1 (5)</span>；后端测试 47/47。</li>
+    <li>证据：<span class="mono">contracts/v1/</span>、<span class="mono">backend/test/</span>、<span class="mono">review/2026-11-09-phase2/</span>、<span class="mono">review/2026-11-09-phase3/</span>、GitHub Actions。</li>
+    <li>设备：iPhone 16 Pro，iOS 26.5.2 (23F84)，UDID <span class="mono">00008140-001429613442801C</span>。</li>
+  </ul>
+  <p style="margin-top:12px">本页不把编译通过、HTML 演示或 Mock 结果等同于真机验收；所有“已完成”均要求可重复证据。生成日期：2026-11-09。</p>
+</footer>
+<script>
+const TASKS = [
+  {id:'W01-001',ms:'M0',name:'工程与环境盘点',plan:'记录工程、UI、最低 iOS、Mac / Xcode、真机、签名、后端；核实模型与讯飞现状',status:'done',evidence:'盘点报告已出；GitHub macOS 编译通过（Xcode 16.4 / iOS 18.5 SDK）；Actions 绿灯。',gap:'本机无 Xcode，编译改由云端 runner 完成（已通过）。',tag:'env'},
+  {id:'W01-002',ms:'M0',name:'现有三项能力盘点',plan:'逐项列入口、接口、授权、真实 / Mock、数据时区、失败处理；确认可复用位置',status:'done',evidence:'15 个契约工具与 14 个设备执行器逐项映射；摘要工具明确留在后端。',gap:'无阻塞。',tag:null},
+  {id:'W01-003',ms:'M0',name:'工具与事件契约',plan:'冻结 ToolDefinition、ToolCall、ToolResult、流式事件与样例；两端可解码',status:'done',evidence:'contracts/v1/ 的 Schema 与样例齐全；未知字段与版本处理已定义；契约测试可重复。',gap:'无阻塞。',tag:null},
+  {id:'W01-004',ms:'M0',name:'Skill 与执行策略',plan:'内置能力组、工具归属、确认策略；本地执行策略不由模型覆盖',status:'done',evidence:'工具目录固定归属、授权与确认策略；本地策略不被模型覆盖。',gap:'无阻塞。',tag:null},
+
+  {id:'W01-005',ms:'M1',name:'原生工具注册与路由',plan:'白名单、schema 校验、参数范围、超时、结果映射；未知工具不执行',status:'partial',evidence:'Swift NativeToolRouter 覆盖 14 个设备工具，未知工具返回 unsupported_tool；服务端白名单、schema 与批次上限已实现；源码已编译。',gap:'原生侧未实现调用超时；缺真机非法参数、未知工具与结果映射实测。',tag:'verify'},
+  {id:'W01-006',ms:'M1',name:'授权与确认基础',plan:'EventKit 授权、拒绝说明、原生确认事件；不启动即索取全部权限',status:'partial',evidence:'PermissionCenter 按工具申请 EventKit 权限；拒绝态有说明；确认卡已接入。',gap:'缺真机允许 / 拒绝 / 运行中撤回三条路径。',tag:'verify'},
+  {id:'W01-007',ms:'M1',name:'create_reminder',plan:'标题、日期、时区与目标列表；保存真实提醒；处理拒绝与保存失败',status:'partial',evidence:'EventKitExecutor 写入 EKReminder 与到期闹钟；0.1.0 曾有“取快递”真实写入证据（recordId 3A4A797A…）。',gap:'0.2.x 未复验；旧证据不能判定当前构建。',tag:'verify'},
+  {id:'W01-008',ms:'M1',name:'操作日志与幂等',plan:'operationId 去重、恢复状态、执行未知处理；重复请求不盲目再写',status:'partial',evidence:'服务端 operationId 去重 + 本地 OperationLedger 持久化；重试返回 deduplicated。',gap:'缺真机重复请求、断网重发与 execution_unknown 实测。',tag:'verify'},
+  {id:'W01-009',ms:'M1',name:'DeepSeek 服务与单 Agent',plan:'服务端鉴权、DeepSeekAdapter、真实工具能力、完整流式、调用上限、结果回传；密钥不入 App',status:'done',evidence:'真实密钥仅存后端 .env；SSE 流式；分片 tool_calls 参数正确拼接；/healthz 返回 modelMode=deepseek。',gap:'无阻塞；性能测量归 DS-06。',tag:null},
+  {id:'W01-010',ms:'M1',name:'提醒闭环 UI',plan:'输入、执行卡片、追问、成功 / 失败 / 取消；系统记录与回复一致',status:'partial',evidence:'原生输入、确认卡、成功 / 失败展示已编译；0.2.1 补齐系统语音输入与键盘收起。',gap:'缺真机端到端与拒绝 / 缺时 / 重复 / 取消四条路径。',tag:'verify'},
+
+  {id:'W01-011',ms:'M2',name:'天气工具化',plan:'接现有服务；地名歧义、时间范围、供应商失败不编造数据',status:'partial',evidence:'WeatherKit + CLGeocoder 执行器已编译；供应商失败直接报错，不编造预报。',gap:'地名歧义未做候选；FREE_SIGNING 下返回 unavailable_in_free_build；真机未验收。',tag:'free'},
+  {id:'W01-012',ms:'M2',name:'日历查询工具化',plan:'查询指定区间；处理完整读取权限、全天事件与时区',status:'partial',evidence:'EventKit 读取；calendarIds=[] 视为全部日历；事件区间与 isAllDay 已输出。',gap:'未显式处理时区参数；缺真机完整读取权限与跨时区验收。',tag:'verify'},
+  {id:'W01-013',ms:'M2',name:'创建日历事件',plan:'显式处理起止时间、日历、冲突和确认；不擅自覆盖已有事件',status:'partial',evidence:'EventKit 新建事件；起止校验、目标日历选择；只新建，不覆盖已有事件。',gap:'未实现冲突检测 / 确认；缺真机实际写入。',tag:'verify'},
+  {id:'W01-014',ms:'M2',name:'运动摘要工具化',plan:'复用数据；记录统计时间范围；无数据与授权限制反馈准确',status:'partial',evidence:'HealthKit 步数、活动能量、锻炼时间、距离摘要。',gap:'免费签名不可用；真机未验收。',tag:'free'},
+  {id:'W01-015',ms:'M2',name:'地点搜索',plan:'使用期间定位，手动地区降级，结果选择；定位失败可恢复',status:'partial',evidence:'MapKit MKLocalSearch；支持 region 地理编码与 near 坐标两种输入。',gap:'未读取设备当前定位；定位拒绝降级与候选选择未真机验收。',tag:'verify'},
+  {id:'W01-016',ms:'M2',name:'地图导航交接',plan:'校验选中地点并打开地图；ToolResult 为 opened_external_app',status:'partial',evidence:'MKMapItem.openInMaps；校验会话内地点 ID；返回 handoff=opened_map。',gap:'与计划命名 opened_external_app 不一致；真机外部交接未验收。',tag:'verify'},
+  {id:'W01-017',ms:'M2',name:'多步与取消',plan:'步骤依赖、待选择暂停、调用上限、部分完成、取消、结果过期',status:'partial',evidence:'后端多步依赖、确认暂停、调用上限、部分完成、取消均有测试。',gap:'原生 UI 未跑多步 / 取消；真机为零。',tag:'verify'},
+  {id:'W01-018',ms:'M2',name:'会话恢复与网络异常',plan:'eventId 去重、断网恢复、切后台回来、查询状态；不重放未知写动作',status:'partial',evidence:'网页端断流按 turnId 轮询快照恢复，实测 3 次成功；eventId 去重。',gap:'原生切后台恢复、重连、结果重发未实现。',tag:'scope'},
+  {id:'W01-019',ms:'M3',name:'分享扩展与内容总结',plan:'文本经 App Group 等方式交接；主 App 总结；只有 URL 或正文不完整时准确说明',status:'none',evidence:'无 Share Extension、App Group 与内容交接。',gap:'未启动；M3 范围待负责人确认。',tag:'scope'},
+  {id:'W01-020',ms:'M3',name:'短信 / 邮件草稿',plan:'手动或本地联系人选择、草稿预览、设备支持检查、MessageUI 回调',status:'partial',evidence:'MessageUI 短信 / 邮件草稿执行器已编译；Contacts 解析收件人。',gap:'缺真机发送 / 取消回调与设备支持检查。',tag:'verify'},
+  {id:'W01-021',ms:'M3',name:'讯飞基础语音',plan:'复用讯飞接入；补最终听写提交、播报、打断、音频会话及文字降级',status:'none',evidence:'实际改为系统 Speech + AVAudioEngine（zh-CN）；0.2.1 修复麦克风与识别权限。',gap:'讯飞产品 / 凭据未接入；W01-021 验收口径需重定义。',tag:'plan'},
+  {id:'W01-022',ms:'M3',name:'角色状态',plan:'TaskState 驱动动画；等待选择时保留可操作界面；已有资源优先',status:'none',evidence:'无 TaskState 驱动的角色动画。',gap:'依赖 021；旧 UI 方案已整体废弃。',tag:'plan'},
+  {id:'W01-023',ms:'M3',name:'一个 App Intent',plan:'创建提醒或打开助手入口；真机快捷指令验证；复用策略与执行器',status:'none',evidence:'无 App Intent / 快捷指令入口。',gap:'未启动。',tag:'scope'},
+
+  {id:'W01-024',ms:'M4',name:'契约、编排及原生测试',plan:'非法参数、状态转换、去重、确认失效、模型循环等有可重复测试证据',status:'partial',evidence:'后端 + 契约测试 47/47；非法参数、状态转换、去重、模型循环有覆盖。',gap:'无原生测试 target；设备侧回归未开始。',tag:'scope'},
+  {id:'W01-025',ms:'M4',name:'真机端到端回归',plan:'执行验收矩阵；记录设备 / 系统 / 网络；Mock 与真实结果分开',status:'none',evidence:'0.1.0 仅 1 条提醒写入证据；0.2.x 无验收记录。',gap:'39 条验收用例 0 条正式执行。',tag:'verify'},
+  {id:'W01-026',ms:'M4',name:'耗时与稳定性测量',plan:'独立记录模型、服务、原生及 UI 耗时；给出样本量、p50 / p95 和限制',status:'none',evidence:'无 p50 / p95 样本；未分离模型 / 服务 / 原生 / UI 耗时。',gap:'依赖 W01-025。',tag:'verify'},
+  {id:'W01-027',ms:'M4',name:'Beta 交付包',plan:'构建说明、配置模板、能力表、已知问题、测试报告、TestFlight 准备；发布单独授权',status:'none',evidence:'已有未签名 IPA 与安装文档，但未形成 Beta 交付包。',gap:'缺构建说明、能力表、已知问题、测试报告与 TestFlight 准备。',tag:'scope'}
+];
+
+const STATUS = {done:'已完成',partial:'部分完成',none:'未开始'};
+const TAGS = {verify:{label:'验收缺口',cls:'verify'},free:{label:'免费版边界',cls:'free'},plan:{label:'方案偏离',cls:'plan'},scope:{label:'范围缺口',cls:'scope'},env:{label:'环境替换',cls:'env'}};
+const state = {status:'all', ms:'all', q:'', onlyDev:false};
+const tbody = document.getElementById('taskBody');
+const countEl = document.getElementById('tableCount');
+
+function esc(s){return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function matches(t){
+  if(state.status !== 'all' && t.status !== state.status) return false;
+  if(state.ms !== 'all' && t.ms !== state.ms) return false;
+  if(state.onlyDev && !t.tag) return false;
+  if(state.q){
+    const hay = [t.id,t.name,t.plan,t.evidence,t.gap,t.ms].join(' ').toLowerCase();
+    if(!hay.includes(state.q)) return false;
+  }
+  return true;
+}
+
+function render(){
+  const rows = TASKS.filter(matches);
+  countEl.textContent = `显示 ${rows.length} / ${TASKS.length} 项`;
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">没有匹配项，试试清空搜索或切换筛选。</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(t => {
+    const tag = t.tag ? `<span class="devtag ${TAGS[t.tag].cls}">${TAGS[t.tag].label}</span>` : `<span class="devtag ok">无阻塞</span>`;
+    return `<tr class="${t.status}">
+      <td data-label="任务"><span class="tid">${t.id}</span><strong>${esc(t.name)}</strong></td>
+      <td data-label="里程碑"><span class="ms-pill">${t.ms}</span></td>
+      <td class="plan-cell" data-label="计划交付">${esc(t.plan)}</td>
+      <td data-label="实际状态"><span class="pill ${t.status}">${STATUS[t.status]}</span><div class="ev">${esc(t.evidence)}</div></td>
+      <td data-label="缺口 / 偏差">${tag}<div class="gap">${esc(t.gap)}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.status = btn.dataset.status;
+    render();
+  });
+});
+document.getElementById('msFilter').addEventListener('change', e => { state.ms = e.target.value; render(); });
+document.getElementById('search').addEventListener('input', e => { state.q = e.target.value.trim().toLowerCase(); render(); });
+document.getElementById('onlyDev').addEventListener('change', e => { state.onlyDev = e.target.checked; render(); });
+render();
+
+const sections = [...document.querySelectorAll('main section[id]')];
+const links = [...document.querySelectorAll('.nav a')];
+const io = new IntersectionObserver(entries => {
+  entries.forEach(en => {
+    if(en.isIntersecting){
+      links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + en.target.id));
+    }
+  });
+}, {rootMargin:'-20% 0px -70% 0px'});
+sections.forEach(s => io.observe(s));
+</script>
+</body>
+</html>

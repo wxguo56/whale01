@@ -15,6 +15,8 @@ final class NativeToolRouter {
     private let weather: WeatherExecutor
     private let ledger: OperationLedger
 
+    private static let executionTimeout: Double = 20
+
     init(permissions: PermissionCenter) {
         self.permissions = permissions
         eventKit = EventKitExecutor()
@@ -63,11 +65,14 @@ final class NativeToolRouter {
         }
 
         do {
-            let data = try await route(pending)
+            let data = try await withTimeout(seconds: Self.executionTimeout) {
+                try await self.route(pending)
+            }
             let result = ToolResultPayload(
                 toolCallId: pending.toolCallId,
                 status: "success",
-                data: data
+                data: data,
+                deduplicated: data.objectValue?.optionalBool("deduplicated") ?? false
             )
             await ledger.record(
                 operationId: pending.operationId,
@@ -93,6 +98,34 @@ final class NativeToolRouter {
                     message: error.localizedDescription
                 )
             )
+        }
+    }
+
+    /// Stops waiting for a system operation instead of leaving the turn stuck forever.
+    /// A timed-out write is reported as `execution_unknown`: the system may already
+    /// have applied it, so the caller must verify before retrying.
+    private func withTimeout<T: Sendable>(
+        seconds: Double,
+        operation: @escaping @Sendable () async throws -> T
+    ) async throws -> T {
+        let box = TimeoutBox<T>()
+        return try await withCheckedThrowingContinuation { continuation in
+            box.attach(continuation)
+            Task {
+                do {
+                    let value = try await operation()
+                    box.finish(.success(value))
+                } catch {
+                    box.finish(.failure(error))
+                }
+            }
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                box.finish(.failure(ToolExecutionError(
+                    code: "execution_unknown",
+                    message: "设备操作超过 \(Int(seconds)) 秒仍未返回，已停止等待。结果可能已经生效，请先到系统 App 中核对，不要直接重试。"
+                )))
+            }
         }
     }
 
@@ -169,5 +202,30 @@ final class NativeToolRouter {
                 message: "手机执行器不支持 \(pending.tool)；该工具应由后端处理"
             )
         }
+    }
+}
+
+/// Resumes exactly one continuation: either the system operation or the timeout wins.
+private final class TimeoutBox<T: Sendable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<T, Error>?
+    private var finished = false
+
+    func attach(_ continuation: CheckedContinuation<T, Error>) {
+        lock.lock()
+        self.continuation = continuation
+        lock.unlock()
+    }
+
+    func finish(_ result: Result<T, Error>) {
+        lock.lock()
+        guard !finished, let continuation else {
+            lock.unlock()
+            return
+        }
+        finished = true
+        self.continuation = nil
+        lock.unlock()
+        continuation.resume(with: result)
     }
 }

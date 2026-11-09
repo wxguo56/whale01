@@ -17,6 +17,9 @@ struct ToolExecutionError: Error, LocalizedError {
         if code == "needs_authorization" || code == "permission_denied" {
             return "needs_authorization"
         }
+        if code == "execution_unknown" {
+            return "execution_unknown"
+        }
         return "failed"
     }
 }

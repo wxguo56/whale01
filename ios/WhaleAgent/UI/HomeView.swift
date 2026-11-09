@@ -60,9 +60,17 @@ struct HomeView: View {
                 .offset(x: 270, y: 70)
 
             VStack(alignment: .leading, spacing: 12) {
-                Label("你的 iPhone 助手", systemImage: "waveform")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.78))
+                HStack(spacing: 8) {
+                    Label("你的 iPhone 助手", systemImage: "waveform")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.78))
+                    Spacer()
+                    AgentOrbView(
+                        state: model.isBusy ? .thinking : .idle,
+                        size: 26,
+                        tintOverride: .white
+                    )
+                }
 
                 Text("说一句，\n剩下交给鲸鱼。")
                     .font(.system(size: 31, weight: .bold, design: .rounded))

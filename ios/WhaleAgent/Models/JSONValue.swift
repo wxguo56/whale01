@@ -160,6 +160,10 @@ extension [String: JSONValue] {
         self[key]?.intValue
     }
 
+    func optionalBool(_ key: String) -> Bool? {
+        self[key]?.boolValue
+    }
+
     func optionalObject(_ key: String) -> [String: JSONValue]? {
         self[key]?.objectValue
     }

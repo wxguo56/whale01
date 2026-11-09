@@ -1,9 +1,11 @@
+import Combine
 import SwiftUI
 
 @MainActor
 struct RootView: View {
     @StateObject private var model = AppModel()
     @State private var selectedTab: AppTab = .home
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -31,6 +33,17 @@ struct RootView: View {
             await model.health()
             model.refreshPermissions()
             await model.refreshDashboard(force: true)
+            await model.drainSharedInbox()
+        }
+        .onOpenURL { url in
+            Task { await model.handleSharedURL(url) }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await model.drainSharedInbox() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .whaleOpenChat)) { _ in
+            selectedTab = .chat
         }
     }
 }

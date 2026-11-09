@@ -22,6 +22,8 @@ final class VoiceInputController: ObservableObject {
 
     private let audioEngine = AVAudioEngine()
     private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "zh-CN"))
+    private var xfyun: XfyunASRClient?
+    let engineName: String = XfyunConfig.isConfigured ? "讯飞语音" : "系统听写"
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private var isStopping = false
@@ -40,6 +42,11 @@ final class VoiceInputController: ObservableObject {
         guard !isRecording else { return }
         errorText = nil
         transcript = ""
+
+        if XfyunConfig.isConfigured {
+            await startXfyun()
+            return
+        }
 
         guard await ensurePermissions() else {
             permission = .denied
@@ -107,6 +114,12 @@ final class VoiceInputController: ObservableObject {
 
     func stop() {
         guard isRecording else { return }
+        if let xfyun {
+            xfyun.stop()
+            self.xfyun = nil
+            isRecording = false
+            return
+        }
         isStopping = true
         audioEngine.stop()
         audioEngine.inputNode.removeTap(onBus: 0)
@@ -123,6 +136,39 @@ final class VoiceInputController: ObservableObject {
         stop()
         transcript = ""
         errorText = nil
+    }
+
+    private func startXfyun() async {
+        let microphoneGranted = await AVAudioApplication.requestRecordPermission()
+        guard microphoneGranted else {
+            permission = .denied
+            errorText = "语音输入需要麦克风权限，请到 设置 → Whale Agent 中开启后再试。"
+            return
+        }
+        permission = .granted
+
+        guard let client = XfyunASRClient() else {
+            errorText = "讯飞语音配置不完整，请检查 XFYUN_APP_ID / API_KEY / API_SECRET。"
+            return
+        }
+        client.onPartial = { [weak self] text in
+            self?.transcript = text
+        }
+        client.onFinal = { [weak self] text in
+            self?.transcript = text
+            self?.isRecording = false
+        }
+        client.onError = { [weak self] message in
+            self?.errorText = message
+            self?.isRecording = false
+        }
+        do {
+            try client.start()
+            xfyun = client
+            isRecording = true
+        } catch {
+            errorText = "讯飞语音启动失败：\(error.localizedDescription)"
+        }
     }
 
     private func handle(result: SFSpeechRecognitionResult?, error: Error?) {

@@ -209,20 +209,34 @@ enum ToolPresentation {
         }
     }
 
-    static func resultDetail(status: String, data: JSONValue?, error: ToolErrorPayload?) -> String {
+    static func resultDetail(tool: String, status: String, data: JSONValue?, error: ToolErrorPayload?) -> String {
         if let error { return error.message }
         guard let object = data?.objectValue else { return status == "success" ? "已完成" : status }
-        switch object.optionalString("source") {
-        case "eventkit":
-            if let due = object.optionalString("dueAt") {
-                return "已写入系统 · \(formatDateTime(due) ?? due)"
-            }
-            if let start = object.optionalString("startAt") {
-                return "已写入系统 · \(formatDateTime(start) ?? start)"
-            }
-            return "已写入系统"
-        case "mapkit":
+
+        switch tool {
+        case "list_calendar_events":
+            let count = object.optionalInt("count") ?? 0
+            return count == 0 ? "已读取系统日历 · 这段时间没有安排" : "已读取系统日历 · \(count) 项"
+        case "search_places":
+            let count = object.optionalInt("count") ?? 0
+            return count == 0 ? "没有找到候选地点 · 未打开地图" : "找到 \(count) 个候选地点 · 未打开地图"
+        case "open_navigation":
             return object.optionalString("note") ?? "已交给系统地图"
+        case "create_reminder":
+            let time = formatDateTime(object.optionalString("dueAt")).map { " · \($0)" } ?? ""
+            if object.optionalBool("deduplicated") == true {
+                return "已存在相同提醒，未重复创建\(time)"
+            }
+            return "已写入提醒事项\(time)"
+        case "create_calendar_event":
+            let time = formatDateTime(object.optionalString("startAt")).map { " · \($0)" } ?? ""
+            let conflicts = object.optionalInt("conflictCount") ?? 0
+            return conflicts > 0 ? "已写入系统日历\(time) · 与 \(conflicts) 个日程重叠" : "已写入系统日历\(time)"
+        default:
+            break
+        }
+
+        switch object.optionalString("source") {
         case "messageui":
             return object.optionalString("note") ?? "已打开系统草稿"
         case "musickit":
