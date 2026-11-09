@@ -41,7 +41,7 @@ node serve.mjs
 
 ### GitHub Pages
 
-仓库内已提供 `.github/workflows/pages.yml`，推送 `web/` 变更即可部署静态演示。但当前 `wxguo56/whale01` 是私有仓库，GitHub 返回「当前套餐不支持私有仓库 Pages」；需将仓库公开或升级套餐后再启用。仅静态页面时只能验本地规则，真实模型仍需可访问的后端。
+仓库内已提供 `.github/workflows/pages.yml`，启用 Pages 后可在 Actions 页手动运行部署静态演示。当前 `wxguo56/whale01` 是私有仓库，GitHub 返回「当前套餐不支持私有仓库 Pages」；需将仓库公开或升级套餐后再启用。仅静态页面时只能验本地规则，真实模型仍需可访问的后端。
 
 服务器默认监听 `0.0.0.0`，启动时会打印可用的 `phone access` 局域网地址。只在本机查看时可用：
 
