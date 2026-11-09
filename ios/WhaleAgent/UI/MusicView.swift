@@ -1,17 +1,18 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct MusicView: View {
     @ObservedObject var model: AppModel
+    @State private var showImporter = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    if model.permissionsSnapshot["music"] == "granted" {
-                        nowPlaying
-                        searchArea
-                        library
-                    } else {
+                    nowPlaying
+                    searchArea
+                    library
+                    if model.permissionsSnapshot["music"] != "granted" {
                         permissionView
                     }
                 }
@@ -24,16 +25,26 @@ struct MusicView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    WhaleStatusPill(
-                        text: model.permissionsSnapshot["music"] == "granted" ? "音乐库" : "未授权",
-                        color: model.permissionsSnapshot["music"] == "granted" ? .green : .orange
-                    )
+                    Button {
+                        showImporter = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.down")
+                    }
+                    .accessibilityLabel("导入音乐文件")
                 }
             }
             .task { await model.musicAppeared() }
             .refreshable {
                 model.refreshPermissions()
                 await model.refreshPlayback()
+            }
+            .fileImporter(
+                isPresented: $showImporter,
+                allowedContentTypes: [.audio],
+                allowsMultipleSelection: true
+            ) { result in
+                guard case .success(let urls) = result else { return }
+                Task { await model.importLocalMusic(from: urls) }
             }
         }
     }
@@ -48,13 +59,13 @@ struct MusicView: View {
                     .offset(x: 210, y: 8)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Label("真实音乐库", systemImage: "checkmark.seal.fill")
+                    Label("系统音乐库", systemImage: "checkmark.seal.fill")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.78))
-                    Text("播放你真正\n拥有的音乐。")
+                    Text("读取系统\n「音乐」App。")
                         .font(.system(size: 30, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
-                    Text("鲸鱼通过 MusicKit 读取本机音乐库并控制播放，不会伪造曲目或音源。")
+                    Text("汽水音乐等第三方 App 下载的歌曲在各自沙盒里，iOS 不允许其他 App 读取。这类歌曲请用「导入音乐文件」，不需要授权。")
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.82))
                         .fixedSize(horizontal: false, vertical: true)
@@ -65,9 +76,9 @@ struct MusicView: View {
             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
 
             VStack(alignment: .leading, spacing: 14) {
-                Label("需要音乐库权限", systemImage: "lock.shield")
+                Label("授权读取系统音乐库", systemImage: "lock.shield")
                     .font(.headline)
-                Text("授权后，你可以搜索本机曲目、播放、暂停、继续和切换歌曲。鲸鱼不会上传你的音乐。")
+                Text("授权后可读取系统「音乐」App 里的曲目。导入的本机文件不依赖这个权限，鲸鱼也不会上传你的音乐。")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
@@ -225,7 +236,7 @@ struct MusicView: View {
     private var library: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("你的音乐库")
+                Text("你的音乐")
                     .font(.headline)
                 Spacer()
                 if model.isMusicBusy {
@@ -236,31 +247,55 @@ struct MusicView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                Button {
+                    showImporter = true
+                } label: {
+                    Label("导入", systemImage: "plus")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(WhaleTheme.accent)
             }
 
             if let error = model.musicError, !error.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    Label(error, systemImage: "music.note")
+                    Label(error, systemImage: "info.circle")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Button("重新读取音乐库") {
-                        Task { await model.loadMusicLibrary() }
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 14) {
+                        Button("导入音乐文件") { showImporter = true }
+                        Button("重新读取") { Task { await model.loadMusicLibrary() } }
                     }
                     .font(.caption.weight(.semibold))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .whaleCard()
             } else if model.musicTracks.isEmpty {
-                VStack(spacing: 10) {
+                VStack(spacing: 12) {
                     Image(systemName: "music.note.list")
                         .font(.title2)
                         .foregroundStyle(.secondary)
-                    Text(model.musicDidLoad ? "没有可显示的曲目" : "正在读取音乐库…")
-                        .font(.subheadline)
+                    Text(model.musicDidLoad ? "这里还没有歌" : "正在读取音乐库…")
+                        .font(.subheadline.weight(.medium))
+                    Text("用「导入音乐文件」选择手机或 iCloud 里的 mp3、m4a、wav，导入后就能直接播放。系统「音乐」App 里的曲目在授权后也会显示。")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button {
+                        showImporter = true
+                    } label: {
+                        Label("导入音乐文件", systemImage: "square.and.arrow.down")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(WhaleTheme.accent)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 26)
+                .padding(.vertical, 24)
+                .padding(.horizontal, 14)
                 .whaleCard()
             } else {
                 VStack(spacing: 0) {
@@ -275,10 +310,20 @@ struct MusicView: View {
                                         .font(.subheadline.weight(.medium))
                                         .foregroundStyle(.primary)
                                         .lineLimit(1)
-                                    Text(track.artist)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
+                                    HStack(spacing: 6) {
+                                        if track.isLocal {
+                                            Text("本机")
+                                                .font(.system(size: 9, weight: .semibold))
+                                                .padding(.horizontal, 5)
+                                                .padding(.vertical, 1)
+                                                .background(WhaleTheme.accent.opacity(0.12), in: Capsule())
+                                                .foregroundStyle(WhaleTheme.accent)
+                                        }
+                                        Text(track.artist)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                    }
                                 }
                                 Spacer()
                                 Text(track.durationText)
@@ -292,6 +337,15 @@ struct MusicView: View {
                             .padding(.vertical, 10)
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            if track.isLocal {
+                                Button(role: .destructive) {
+                                    Task { await model.deleteLocalTrack(track) }
+                                } label: {
+                                    Label("从鲸鱼删除", systemImage: "trash")
+                                }
+                            }
+                        }
                         if track.id != model.musicTracks.last?.id {
                             Divider().padding(.leading, 58)
                         }

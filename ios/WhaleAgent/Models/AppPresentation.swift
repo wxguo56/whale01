@@ -67,8 +67,11 @@ struct MusicTrackItem: Identifiable, Equatable {
     let album: String
     let durationSec: Double
     let artworkURL: URL?
+    let source: String
 
     var id: String { trackId }
+
+    var isLocal: Bool { source == "local" }
 
     init?(json: JSONValue) {
         guard let object = json.objectValue else { return nil }
@@ -81,6 +84,7 @@ struct MusicTrackItem: Identifiable, Equatable {
         self.album = object.optionalString("album") ?? ""
         self.durationSec = object.optionalDouble("durationSec") ?? 0
         self.artworkURL = object.optionalString("artworkURL").flatMap(URL.init(string:))
+        self.source = object.optionalString("source") ?? "musickit"
     }
 
     var durationText: String {

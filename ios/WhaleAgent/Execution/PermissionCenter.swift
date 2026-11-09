@@ -117,6 +117,13 @@ final class PermissionCenter: ObservableObject {
             required = needsLocation ? ["location"] : []
         } else if tool == "open_navigation" {
             required = []
+        } else if tool == "search_music_library" {
+            required = []
+        } else if tool == "play_music", (arguments.optionalString("trackId") ?? "").hasPrefix("local:") {
+            required = []
+        } else if ["pause_music", "resume_music", "skip_music_track", "get_playback_state"].contains(tool),
+                  LocalMusicLibrary.shared.hasActivePlayback {
+            required = []
         } else {
             required = Self.toolPermissions[tool] ?? []
         }

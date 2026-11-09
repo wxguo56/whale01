@@ -50,6 +50,10 @@
   </array>
   <key>NSRemindersFullAccessUsageDescription</key>
   <string>用于把你说的事项写入系统提醒事项，并在到点提醒你。</string>
+  <key>UIFileSharingEnabled</key>
+  <true/>
+  <key>LSSupportsOpeningDocumentsInPlace</key>
+  <true/>
   <key>NSRemindersUsageDescription</key>
   <string>用于把你说的事项写入系统提醒事项。</string>
   <key>NSCalendarsFullAccessUsageDescription</key>

@@ -387,7 +387,7 @@ final class AppModel: ObservableObject {
 
     func musicAppeared() async {
         refreshPermissions()
-        guard permissionsSnapshot["music"] == "granted" else { return }
+        LocalMusicLibrary.shared.bootstrap()
         if !musicDidLoad {
             await loadMusicLibrary()
         }
@@ -401,8 +401,9 @@ final class AppModel: ObservableObject {
     func loadMusicLibrary() async {
         guard !isMusicBusy else { return }
         refreshPermissions()
-        guard permissionsSnapshot["music"] == "granted" else {
-            musicError = "需要先允许鲸鱼访问你的音乐库。"
+        if permissionsSnapshot["music"] != "granted" && LocalMusicLibrary.shared.tracks.isEmpty {
+            musicDidLoad = true
+            musicError = nil
             return
         }
         isMusicBusy = true
@@ -414,13 +415,43 @@ final class AppModel: ObservableObject {
             musicTracks = rows.compactMap { MusicTrackItem(json: $0) }
             musicDidLoad = true
             if musicTracks.isEmpty {
-                musicError = musicQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    ? "音乐库里还没有可播放的曲目。"
-                    : "没有找到匹配的曲目，换一个关键词试试。"
+                if !musicQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    musicError = "没有找到匹配的曲目，换一个关键词试试。"
+                } else if permissionsSnapshot["music"] == "granted" {
+                    musicError = "系统音乐库为空。汽水音乐等第三方 App 的离线歌曲无法被读取，请点“导入音乐文件”。"
+                } else {
+                    musicError = nil
+                }
             }
         } catch {
             musicError = error.localizedDescription
         }
+    }
+
+    func importLocalMusic(from urls: [URL]) async {
+        guard !urls.isEmpty else { return }
+        isMusicBusy = true
+        musicError = nil
+        let result = await LocalMusicLibrary.shared.importFiles(urls)
+        isMusicBusy = false
+        musicDidLoad = true
+        if !result.failures.isEmpty {
+            musicError = "\(result.failures.count) 个文件未导入：\(result.failures.prefix(2).joined(separator: "；"))"
+        } else if result.imported == 0 {
+            musicError = "没有导入任何文件。"
+        }
+        await loadMusicLibrary()
+        if result.imported > 0, let first = musicTracks.first(where: { $0.isLocal }) {
+            await play(first)
+        }
+    }
+
+    func deleteLocalTrack(_ track: MusicTrackItem) async {
+        LocalMusicLibrary.shared.delete(id: track.trackId)
+        if playback.track?.trackId == track.trackId {
+            playback = .idle
+        }
+        await loadMusicLibrary()
     }
 
     func play(_ track: MusicTrackItem) async {
