@@ -27,8 +27,11 @@ enum SharedInbox {
         UserDefaults(suiteName: appGroup)
     }
 
+    /// Test hook so unit tests never touch the real App Group container.
+    static var testDefaults: UserDefaults?
+
     private static var store: UserDefaults {
-        sharedDefaults ?? .standard
+        testDefaults ?? sharedDefaults ?? .standard
     }
 
     static func save(_ item: SharedItem) {

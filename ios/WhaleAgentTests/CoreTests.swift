@@ -28,6 +28,13 @@ final class CoreTests: XCTestCase {
     }
 
     func testSharedInboxRoundTrip() {
+        let suite = "whale.tests.\(UUID().uuidString)"
+        SharedInbox.testDefaults = UserDefaults(suiteName: suite)
+        defer {
+            SharedInbox.clear()
+            SharedInbox.testDefaults = nil
+            UserDefaults().removePersistentDomain(forName: suite)
+        }
         let item = SharedItem(
             id: "share-\(UUID().uuidString)",
             text: "这是一段用于测试的分享正文，长度足够。",

@@ -135,6 +135,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.whale01.agent.tests
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_VERSION: "5.0"
+        TEST_TARGET_NAME: WhaleAgent
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/WhaleAgent.app/WhaleAgent"
+        BUNDLE_LOADER: "$(TEST_HOST)"
 schemes:
   WhaleAgent:
     build:
