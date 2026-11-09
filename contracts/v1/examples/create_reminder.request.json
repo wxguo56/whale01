@@ -1,0 +1,14 @@
+{
+  "contractVersion": "1.0",
+  "turnId": "turn_01J9Z6A8K4T3M2N1P0Q",
+  "toolCallId": "call_0f3a9c",
+  "operationId": "op_01J9Z6A8K4T3M2N1P0Q_A",
+  "tool": "create_reminder",
+  "arguments": {
+    "title": "取快递",
+    "dueAt": "2026-11-10T15:00:00+08:00",
+    "timezone": "Asia/Shanghai",
+    "listId": null,
+    "notes": null
+  }
+}

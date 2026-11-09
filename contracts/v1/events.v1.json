@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whale01.local/contracts/v1/events.v1.json",
+  "title": "TurnEvent",
+  "type": "object",
+  "required": ["contractVersion", "eventId", "turnId", "seq", "type", "at", "payload"],
+  "additionalProperties": true,
+  "properties": {
+    "contractVersion": { "type": "string", "enum": ["1.0"] },
+    "eventId": { "type": "string", "minLength": 8, "maxLength": 128 },
+    "turnId": { "type": "string", "minLength": 8, "maxLength": 128 },
+    "seq": { "type": "integer", "minimum": 1 },
+    "type": {
+      "type": "string",
+      "enum": [
+        "turn.started",
+        "assistant.delta",
+        "tool.requested",
+        "tool.confirmation_required",
+        "tool.result",
+        "tool.rejected",
+        "turn.completed",
+        "turn.limit_reached",
+        "turn.failed"
+      ]
+    },
+    "at": { "type": "string", "format": "date-time" },
+    "payload": { "type": "object" }
+  }
+}

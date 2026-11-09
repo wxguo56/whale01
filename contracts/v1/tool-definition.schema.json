@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whale01.local/contracts/v1/tool-definition.schema.json",
+  "title": "ToolDefinition",
+  "type": "object",
+  "required": ["name", "version", "skill", "description", "requiresConfirmation", "requiresAuthorization", "inputSchema"],
+  "additionalProperties": false,
+  "properties": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$" },
+    "version": { "type": "string", "pattern": "^1\\.[0-9]+$" },
+    "skill": { "type": "string", "enum": ["schedule", "travel", "health", "content", "communication"] },
+    "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "requiresConfirmation": { "type": "boolean" },
+    "requiresAuthorization": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["eventkit", "location", "healthkit", "contacts", "messages"] },
+      "uniqueItems": true
+    },
+    "inputSchema": { "type": "object" }
+  }
+}

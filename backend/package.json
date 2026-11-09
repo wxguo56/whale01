@@ -1,0 +1,13 @@
+{
+  "name": "whale01-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "代号鲸鱼01 服务端契约演练与 Agent 编排骨架（零第三方依赖）",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "demo": "node scripts/demo.mjs",
+    "test": "node --test"
+  }
+}
