@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="代号鲸鱼01完成三批开发后的技能、任务与能力范围，一页看明白。">
+  <title>代号鲸鱼01 · 完成后的能力说明</title>
+  <style>
+    :root{--bg:#f4f7f6;--paper:#fff;--ink:#19322f;--muted:#586c68;--line:#dce6e2;--accent:#176f61;--soft:#e9f3ef;--warm:#fff4e0;--warm-ink:#76531b;--radius:18px}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}
+    button,input,a{font:inherit}button,a{-webkit-tap-highlight-color:transparent}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #34977f;outline-offset:3px}
+    a{color:var(--accent)}[hidden]{display:none!important}.wrap{width:min(1140px,calc(100% - 64px));margin:auto}.topbar{border-bottom:1px solid var(--line);background:rgba(255,255,255,.85)}
+    .topbar-inner{min-height:78px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:12px}.brand-mark{width:42px;height:42px;color:var(--accent);background:var(--soft);border-radius:13px;display:grid;place-items:center}
+    .brand strong{display:block;font-size:17px;letter-spacing:.04em}.brand small{display:block;color:var(--muted);font-size:12px}.actions{display:flex;gap:10px;align-items:center}.quiet-button{border:1px solid var(--line);border-radius:10px;padding:8px 13px;background:var(--paper);color:var(--ink);text-decoration:none;font-size:13px}
+    .hero{padding:46px 0 28px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:30px}.eyebrow{font-size:12px;letter-spacing:.1em;color:var(--accent);font-weight:700;margin:0 0 12px}
+    h1{font-size:clamp(28px,3.5vw,40px);line-height:1.35;letter-spacing:-.03em;margin:0 0 14px;font-weight:750}.lead{max-width:680px;margin:0;color:var(--muted);font-size:16px}.stats{display:flex;gap:26px;padding:22px 26px;border:1px solid var(--line);background:var(--paper);border-radius:var(--radius)}
+    .stat strong{display:block;font-size:29px;line-height:1.3;color:var(--accent)}.stat span{font-size:12px;color:var(--muted);white-space:nowrap}.notice{display:flex;gap:11px;align-items:flex-start;background:var(--warm);color:var(--warm-ink);border:1px solid #ecdcb9;border-radius:12px;padding:13px 17px;font-size:13px;margin-bottom:25px}.notice svg{flex:0 0 17px;margin-top:3px}
+    .tabs{display:flex;gap:7px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px}.tab{border:0;background:transparent;color:var(--muted);padding:10px 18px;border-radius:10px;font-size:15px;font-weight:600}.tab[aria-selected="true"]{background:var(--accent);color:white}.tab:hover:not([aria-selected="true"]){background:var(--soft)}
+    .panel{padding:26px 0 36px}.panel-heading{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:18px}.panel-heading h2{font-size:21px;margin:0}.panel-heading p{font-size:13px;color:var(--muted);margin:0}
+    .controls{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap}.filters{display:flex;gap:7px;flex-wrap:wrap}.filter{border:1px solid var(--line);background:white;color:var(--muted);padding:6px 13px;border-radius:30px;font-size:13px}.filter[aria-pressed="true"]{background:var(--soft);border-color:#a6cbbc;color:var(--accent);font-weight:600}
+    .search{display:flex;gap:9px;align-items:center;background:white;border:1px solid var(--line);border-radius:11px;padding:9px 12px;min-width:230px}.search svg{width:17px;height:17px;color:var(--muted);flex-shrink:0}.search input{border:0;outline:0;min-width:0;width:100%;background:transparent;color:var(--ink);font-size:13px}.search:focus-within{outline:2px solid #34977f;outline-offset:2px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+    .skill-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.skill-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:21px;display:flex;flex-direction:column}.card-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}.number{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}.badge{font-size:11px;padding:3px 8px;border-radius:6px;background:var(--soft);color:var(--accent);white-space:nowrap}.badge.conditional{background:var(--warm);color:var(--warm-ink)}
+    .skill-card h3{font-size:18px;line-height:1.45;margin:0 0 8px}.description{margin:0 0 16px;color:var(--muted);font-size:14px}.example{background:#f6f8f7;border-radius:11px;padding:11px 13px;font-size:13px;margin-top:auto}.example small{display:block;color:var(--muted);font-size:11px;margin-bottom:3px}.example p{margin:0;color:var(--ink)}.result{font-size:12px;margin:13px 0 0;color:var(--muted)}.result strong{color:var(--accent);font-weight:600}
+    details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px;font-size:12px;color:var(--muted)}summary{cursor:pointer;color:var(--accent);width:fit-content}details p{margin:8px 0 0}.empty{background:white;border:1px dashed var(--line);padding:36px;text-align:center;border-radius:var(--radius);color:var(--muted)}.count{margin:15px 0 0;font-size:12px;color:var(--muted)}
+    .task-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.task-card{padding:21px 23px;background:white;border:1px solid var(--line);border-radius:var(--radius)}.task-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}.task-card h3{font-size:16px;margin:0 0 11px;font-weight:650}.kind{font-size:10px;color:var(--accent);background:var(--soft);padding:3px 8px;border-radius:5px;white-space:nowrap}
+    .task-flow{font-size:12px;color:var(--muted);margin:0 0 12px}.task-end{font-size:13px;margin:0;padding-top:12px;border-top:1px solid var(--line)}.task-end strong{color:var(--accent)}.task-note{font-size:12px;color:var(--muted);margin:8px 0 0}
+    .rule-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.rule{padding:23px;background:white;border:1px solid var(--line);border-radius:var(--radius)}.rule h3{font-size:17px;margin:0 0 9px}.rule p{font-size:14px;color:var(--muted);margin:0}.rule.wide{grid-column:1/-1;background:#fbf7ee;border-color:#ecdcb9}.rule.wide h3{color:var(--warm-ink)}
+    .future{background:white;border:1px solid var(--line);border-radius:var(--radius);padding:24px;margin-top:20px}.future h3{font-size:17px;margin:0 0 10px}.future p{font-size:13px;color:var(--muted);margin:0 0 13px}.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{font-size:12px;background:#f4f6f5;border:1px solid var(--line);padding:5px 10px;border-radius:7px}
+    .future-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:6px}.future-card{border:1px solid var(--line);border-radius:13px;padding:14px 16px;background:#fbfcfc}.future-card h4{margin:0 0 8px;font-size:15px;display:flex;align-items:center;gap:8px;justify-content:space-between}.future-card h4 span{font-size:11px;padding:2px 7px;border-radius:6px;background:var(--soft);color:var(--accent);font-weight:600;white-space:nowrap}.future-card p{margin:0 0 7px;font-size:13px;line-height:1.65}.future-card b{color:var(--ink)}.future-card .limits{color:var(--warm-ink);background:var(--warm);border-radius:8px;padding:7px 9px;font-size:12px;margin:8px 0 0}@media(max-width:760px){.future-grid{grid-template-columns:1fr}}
+    .phases{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:24px 0 0}.phase{padding:18px 20px;background:var(--soft);border-radius:13px}.phase small{display:block;color:var(--accent);font-size:11px}.phase h3{font-size:16px;margin:3px 0 7px}.phase p{margin:0;font-size:12px;color:var(--muted)}
+    footer{border-top:1px solid var(--line);padding:23px 0 30px;color:var(--muted);font-size:12px}.footer-inner{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}footer p{margin:0}.footer-inner strong{font-weight:600;color:var(--ink)}
+    @media(max-width:1000px){.hero{grid-template-columns:1fr}.stats{justify-self:start;gap:35px}.skill-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:600px){.wrap{width:calc(100% - 32px)}.topbar-inner{min-height:70px}.brand strong{font-size:15px}.brand small{font-size:10px}.actions .download{display:none}.quiet-button{padding:7px 10px;font-size:12px}.hero{padding:29px 0 22px;gap:20px}.lead{font-size:14px}.stats{width:100%;justify-content:space-between;padding:16px 21px;gap:12px}.stat strong{font-size:26px}.notice{padding:12px 13px;font-size:12px}.tab{font-size:13px;padding:9px 12px}.tabs{gap:4px}.panel-heading{display:block}.panel-heading p{margin-top:4px}.controls{gap:12px}.search{width:100%;min-width:0}.filters{gap:6px}.filter{padding:5px 10px;font-size:12px}.skill-grid,.task-grid,.rule-grid,.phases{grid-template-columns:1fr}.skill-card{padding:19px}.skill-card h3{font-size:17px}.description{margin-bottom:13px}.rule.wide{grid-column:auto}.task-card{padding:19px}.kind{font-size:10px}.footer-inner{gap:9px}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+    @media print{body{background:white;font-size:11pt}.wrap{width:100%}.actions,.tabs,.controls,.count,.empty{display:none!important}.topbar-inner{min-height:55px}.hero{padding:18px 0;grid-template-columns:1fr auto}.stats{padding:12px 18px;gap:20px}.stat strong{font-size:22px}h1{font-size:24px}.notice{margin-bottom:10px}.panel,.panel[hidden]{display:block!important;padding:18px 0}.skill-card[hidden]{display:flex!important}.skill-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.skill-card,.task-card,.rule,.phase{break-inside:avoid;box-shadow:none}.skill-card{padding:14px}.description{margin-bottom:10px}.example{padding:8px}.task-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rule-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.phases{grid-template-columns:repeat(3,minmax(0,1fr))}details{display:none}footer{padding:14px 0}@page{margin:14mm}}
+    .future-entry{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 18px;padding:16px 20px;border:1px solid #d7e6df;border-left:4px solid var(--accent);border-radius:12px;background:linear-gradient(180deg,#f6fbf9,#f1f8f5)}
+    .future-entry strong{display:block;font-size:15px;margin-bottom:5px}
+    .future-entry p{margin:0;font-size:13px;color:var(--muted);line-height:1.65}
+    .future-entry button{border:1px solid var(--accent);background:white;color:var(--accent);font-weight:650;font-size:13px;padding:10px 16px;border-radius:10px;white-space:nowrap}
+    .future-entry button:hover{background:var(--accent);color:white}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 32 32" fill="none"><path d="M4 15c0-5 4-8 10-8 6 0 9 4 9 8 3 0 4-2 5-3 1 6-3 11-11 11-8 0-13-2-13-8Z" fill="currentColor"/><circle cx="10" cy="13" r="1.4" fill="white"/><path d="M17 5V2m-3 3-1-2m7 2 1-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5 27c3-2 5 2 8 0s5 2 8 0 4 0 6 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><div><strong>代号鲸鱼01</strong><small>完成后的能力说明 · 目标版本</small></div></div>
+      <div class="actions"><a class="quiet-button download" href="index.html" download="代号鲸鱼01-完整技能说明.html">保存 HTML</a><button class="quiet-button" id="printButton" type="button">打印 / 存为 PDF</button></div>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="hero" aria-labelledby="pageTitle">
+      <div><p class="eyebrow">YOUR EVERYDAY ASSISTANT</p><h1 id="pageTitle">做完之后，它能帮你做什么？</h1><p class="lead">能交流、能查资料、能处理手机上的日常事项，<br>还能记住你的偏好，把可靠的流程重复做好。</p></div>
+      <div class="stats" aria-label="目标版本概况"><div class="stat"><strong id="skillTotal">18</strong><span>类产品能力</span></div><div class="stat"><strong id="taskTotal">13</strong><span>个任务示例</span></div><div class="stat"><strong>3</strong><span>批推进计划</span></div><div class="stat"><strong>8</strong><span>项待拓展</span></div></div>
+    </section>
+    <div class="notice"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.6"/><path d="M10 9v5m0-8v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span><strong>这是全部计划完成后的目标能力。</strong> 当前安装版是否支持，要以实际实现与真机验收为准；天气、健康等还需要相应条件。</span></div>
+    <div class="future-entry"><div><strong>另外 8 项能力需要另行拓展</strong><p>本地音乐导入 · 系统闹钟 · 小组件与灵动岛 · 邮箱 · 智能家居 · 生图/视频/3D · 订餐订位购票 · 云端多 Bot</p></div><button type="button" id="futureEntry">看拓展方案 →</button></div>
+    <div class="tabs" role="tablist" aria-label="能力说明视图">
+      <button class="tab" id="tab-skills" role="tab" aria-selected="true" aria-controls="panel-skills" tabindex="0" data-tab="skills">① 所有技能</button>
+      <button class="tab" id="tab-tasks" role="tab" aria-selected="false" aria-controls="panel-tasks" tabindex="-1" data-tab="tasks">② 能完成的任务</button>
+      <button class="tab" id="tab-scope" role="tab" aria-selected="false" aria-controls="panel-scope" tabindex="-1" data-tab="scope">③ 条件与范围</button>
+    </div>
+    <section class="panel" id="panel-skills" role="tabpanel" aria-labelledby="tab-skills">
+      <div class="panel-heading"><h2>技能总览</h2><p>每项都写清用途、说法和结果。</p></div>
+      <div class="controls"><div class="filters" role="group" aria-label="筛选技能类别"><button class="filter" aria-pressed="true" data-category="all">全部</button><button class="filter" aria-pressed="false" data-category="交流">交流与理解</button><button class="filter" aria-pressed="false" data-category="日常">日常办事</button><button class="filter" aria-pressed="false" data-category="资料">资料处理</button><button class="filter" aria-pressed="false" data-category="服务">记忆与服务</button></div><label class="search"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/><path d="m13 13 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span class="sr-only">搜索技能、示例或说明</span><input type="search" id="skillSearch" placeholder="搜索：听歌、改期、PDF…" autocomplete="off"></label></div>
+      <div class="skill-grid" id="skillGrid"></div><p class="empty" id="emptyState" hidden>没有匹配的技能，试试其他关键词或选择“全部”。</p><p class="count" id="skillCount" role="status" aria-live="polite"></p>
+    </section>
+    <section class="panel" id="panel-tasks" role="tabpanel" aria-labelledby="tab-tasks" hidden>
+      <div class="panel-heading"><h2>这样说，可以做到这一步</h2><p>完成指真实结果；缺条件时说明已完成和待补部分。</p></div>
+      <div class="task-grid" id="taskGrid"></div>
+    </section>
+    <section class="panel" id="panel-scope" role="tabpanel" aria-labelledby="tab-scope" hidden>
+      <div class="panel-heading"><h2>哪些能直接做，哪些有条件？</h2><p>把使用范围看清楚，避免期待落空。</p></div>
+      <div class="rule-grid">
+        <article class="rule"><h3>需要你按需授权</h3><p>日历、提醒、定位、音乐、麦克风、联系人等按功能申请。拒绝某项权限，只影响相应功能；能用手动地区或文字输入时提供替代方式。</p></article>
+        <article class="rule"><h3>价格与资料必须有来源</h3><p>查不到价格就标未知，套餐不当人均。只有链接时先尝试取正文，未取得就不假装读过全文。范围搜索返回可取得的候选，不保证覆盖每一家店。</p></article>
+        <article class="rule"><h3>导航和发送有完成边界</h3><p>导航完成指已打开地图，不代表已经抵达。短信／邮件由你在系统界面发送，结果依据系统回调；已发送不等于对方已读。</p></article>
+        <article class="rule"><h3>周期任务依赖可用数据</h3><p>云端可运行已经配置的流程。手机关闭或后台时，不能保证随时读取最新手机日历和定位；通知也不保证精确到秒。语音主要是主动开启的前台会话。</p></article>
+        <article class="rule wide"><h3>天气、健康还要解决版本条件</h3><p>此前核查的免费签名版禁用了 WeatherKit／HealthKit 路径。需要满足相应签名条件，或为天气接通并验收其他合法来源；健康还依赖实际授权和数据。三批任务完成，不会自动解除这些限制。</p></article>
+      </div>
+      <div class="future"><h3>这些需要另行拓展</h3><p>以下功能没有自动包含在本次完成范围内。每一项都写清目标、最小可交付和边界，不把“能跳转”说成“已打通”。</p>
+        <div class="future-grid">
+          <article class="future-card"><h4>其他音乐 App <span>P1 · 当前问题</span></h4>
+            <p><b>现状：</b>系统“音乐”资料库为空；手机里的歌曲在「汽水音乐」等第三方 App 的沙盒中，iOS 不允许鲸鱼直接读取。</p>
+            <p><b>最小可交付：</b>① 从“文件”导入 mp3/m4a/wav 并用鲸鱼自己的播放器播放；② 系统音乐库有歌时用 MediaPlayer 读取；③ 对开放 URL scheme 的 App 只做播放/暂停/下一首，不列歌单。</p>
+            <p class="limits">边界：不读其他 App 私有缓存，不绕过 DRM；第三方 App 的完整曲库无法获得。</p></article>
+          <article class="future-card"><h4>系统闹钟 / 计时器 <span>P1</span></h4>
+            <p><b>目标：</b>创建一次性/重复闹钟和倒计时，到点由系统响铃。</p>
+            <p><b>最小可交付：</b>iOS 26 使用 AlarmKit；创建、列出、取消本 App 的闹钟；锁定屏幕后仍能响。</p>
+            <p class="limits">边界：不改系统“就寝”计划；静音/专注模式下的响铃受系统设置影响，不冒充绝对保证。</p></article>
+          <article class="future-card"><h4>小组件 / 灵动岛 <span>P2</span></h4>
+            <p><b>目标：</b>桌面小组件显示今日提醒/最近任务；灵动岛显示进行中任务或播放。</p>
+            <p><b>最小可交付：</b>先做只读小组件，再做一次任务从开始到结束的短时 Live Activity。</p>
+            <p class="limits">边界：刷新由系统调度，不保证秒级；免费签名版 App Group 受限，可能只能做静态占位。</p></article>
+          <article class="future-card"><h4>邮箱收件箱与外部账号 <span>P2</span></h4>
+            <p><b>目标：</b>读取最近邮件、摘要、起草回复。</p>
+            <p><b>最小可交付：</b>先接一个邮箱（Gmail 或 Microsoft），只读最近 20 封；回复只进草稿，不自动发送。</p>
+            <p class="limits">边界：不保存邮箱密码；Token 加密存储；不绕过验证码/风控；不读取未授权文件夹。</p></article>
+          <article class="future-card"><h4>Home 智能家居 <span>P2</span></h4>
+            <p><b>目标：</b>控制 HomeKit 灯、开关、场景，读取温湿度/门锁状态。</p>
+            <p><b>最小可交付：</b>列出家庭/房间/设备，执行开关与场景；温控与传感器后置。</p>
+            <p class="limits">边界：需要 HomeKit capability 和正式签名；免费签名大概率不可用；非 HomeKit 品牌需厂商云 API。</p></article>
+          <article class="future-card"><h4>运行时生图 / 视频 / 3D <span>P2</span></h4>
+            <p><b>目标：</b>对话中生成图片、短视频、3D 角色预览。</p>
+            <p><b>最小可交付：</b>先接文生图 + 结果卡片 + 保存到相册；视频/3D 后置。</p>
+            <p class="limits">边界：需要生成服务账号与额度；内容需审核；不承诺实时；费用单独计算。</p></article>
+          <article class="future-card"><h4>订餐 / 订位 / 购票 / 支付 <span>P3</span></h4>
+            <p><b>目标：</b>找店、跳转订位/购票、整理订单信息。</p>
+            <p><b>最小可交付：</b>信息整理 + 深链跳转 + 复制订单信息；有公开 API 的平台再接订位。</p>
+            <p class="limits">边界：不代付、不抢票、不存支付凭证、不绕过验证码；多数平台需要合作接口。</p></article>
+          <article class="future-card"><h4>云端电脑与多 Bot <span>P3</span></h4>
+            <p><b>目标：</b>云端长任务、多角色协作、跨设备继续。</p>
+            <p><b>最小可交付：</b>单 Bot 任务队列 + 沙箱 + 结果回传 + 失败重试；多 Bot 只做显式编排。</p>
+            <p class="limits">边界：不在手机端跑多 Agent；不承诺手机关机后仍控制本机 App；成本与权限隔离先行。</p></article>
+        </div>
+        <p style="margin-top:16px;margin-bottom:0"><b>建议顺序：</b>本地音乐导入 → 系统闹钟 → 小组件 → 邮箱 → 智能家居 → 生图 → 订餐支付 → 云端多 Bot。</p>
+        <p style="margin-top:10px;margin-bottom:0">不作通用承诺：任意读取微信私有聊天、静默代发消息、全天后台唤醒、手机关闭后任意控制其他 App。</p></div>
+      <div class="phases"><article class="phase"><small>第一批</small><h3>办事可靠</h3><p>真定位、范围搜索、目标跟踪、身份校验、断网恢复、统一快捷入口。</p></article><article class="phase"><small>第二批</small><h3>能查、能说、能组合</h3><p>公开检索、网页与价格、语音播报和打断、音乐协同、分享及组合场景。</p></article><article class="phase"><small>第三批</small><h3>记住习惯、持续服务</h3><p>偏好记忆、已有事项管理、图片／PDF、流程复用、周期服务和新交互。</p></article></div>
+    </section>
+    <noscript><p class="notice">请启用 JavaScript 查看完整技能与任务列表。能力条件仍可通过打印查看。</p></noscript>
+  </main>
+  <footer><div class="wrap footer-inner"><p><strong>代号鲸鱼01</strong> · iPhone 原生 · DeepSeek＋讯飞</p><p>依据《18 下一步推进事项》《19 完整技能与任务目录》 · 2026-11-09</p></div></footer>
+  <script>
+    "use strict";
+    const skills = [
+      {title:"自然聊天与表达",category:"交流",stage:"基础能力",desc:"聊天、解释、比较方案、整理思路、改写和翻译。",example:"把这段话说得自然一点。",result:"得到贴合问题的回答或文字稿。",note:"能力询问、否定和闲聊不会自动变成系统操作；当前事实需实际检索。"},
+      {title:"多轮任务与指代",category:"交流",stage:"第1批",desc:"保留目标和条件，理解“第二家”“刚才那首”，能修改和取消。",example:"改成后天……算了，取消。",result:"正确继续或停止任务，列明未完成部分。",note:"取消未执行步骤；已完成的动作仍说明事实。不能因一句回复就判定目标全部完成。"},
+      {title:"语音交流与打断",category:"交流",stage:"第2批",desc:"语音输入、回复播报，插话时停止旧回复并处理新问题。",example:"先停一下，我换个问题。",result:"自然完成一轮语音交流，旧回复不混播。",note:"用户主动开启的前台会话；语音与文字共享上下文。不是全天后台唤醒保证。"},
+      {title:"日历与空闲时间",category:"日常",stage:"第3批补齐",desc:"查行程、找空档、创建日程、改期和取消选定的普通事件。",example:"周五找一小时空档安排健身。",result:"得到可见空档，或真实保存／修改日程。",note:"需要相应日历权限；未记录的安排不可见。重复事件系列、邀请等复杂规则另行验证。"},
+      {title:"提醒与待办",category:"日常",stage:"第3批补齐",desc:"创建、查询、改时间、标记完成，处理已支持的事项取消。",example:"明天下午3点提醒取快递。",result:"对应系统事项真实保存、修改或完成。",note:"不能另建一条假装修改；删除已有事项须有对应工具和确认。保存成功不保证通知一定有声音。"},
+      {title:"天气与出门建议",category:"日常",stage:"有条件",desc:"查实际天气，结合请求回答带伞、穿衣和户外注意事项。",example:"杭州明天需要带伞吗？",result:"返回带来源和预报时间的天气建议。",note:"需可用天气来源及版本条件。当前免费签名版的 WeatherKit 限制要单独解决，不超出供应商预报范围。"},
+      {title:"运动与健康摘要",category:"日常",stage:"有条件",desc:"读取支持的步数、活动能量、运动时长和距离，按区间总结。",example:"今天走了多少步？",result:"得到真实统计，或明确说明缺少数据。",note:"依赖 HealthKit 能力、授权和设备数据；此前免费签名目标禁用此工具。数据摘要不等于医疗诊断。"},
+      {title:"附近地点与范围搜索",category:"日常",stage:"第1批",desc:"取当前位置，按范围找店；也能使用你指定的地区搜索。",example:"找我附近两公里的咖啡店。",result:"返回符合范围的候选和直线距离。",note:"有效定位或明确中心是前提。先过滤、排序再取结果；步行距离、营业状态需另有数据。"},
+      {title:"商户价格与预算比较",category:"日常",stage:"第2批",desc:"查具体分店的公开菜单、套餐或人均，只比较有来源价格。",example:"这几家哪家人均100以内？",result:"有证据的价格比较，未知项单独标记。",note:"区分单品、套餐和人均，标明时间；不保证每家有价格、是实时成交价或可以下单。"},
+      {title:"地图导航交接",category:"日常",stage:"保留能力",desc:"把选中的有效地点交给地图，选择支持的出行方式。",example:"带我去第一家，走路过去。",result:"实际打开地图并交接选中的地点。",note:"打开地图不等于已开始路线、已到店或已订位；地点引用过期时重新选择。"},
+      {title:"iPhone 音乐库控制",category:"日常",stage:"第2批完善",desc:"查歌、选歌、播放、暂停、继续、切歌并反馈真实播放状态。",example:"放第二首……暂停……继续。",result:"可用曲目实际播放，控制与播放器一致。",note:"依赖授权和曲目可用性，部分歌曲受账号／订阅／网络限制；不自动控制其他音乐 App。"},
+      {title:"公开信息检索",category:"资料",stage:"第2批",desc:"搜索当前公开信息，打开可取得来源，整理并比较结果。",example:"查一下这款产品最新的公开信息。",result:"得到带来源的结果和不确定项说明。",note:"不保证读到登录墙、私有资料或封闭平台数据；搜索失败不假装已经查到。"},
+      {title:"分享、网页与文本",category:"资料",stage:"第2批",desc:"接收文章或链接，摘要、翻译、提取日期与待办，再衔接办事。",example:"总结这篇通知，把要办的事列出来。",result:"实际正文的摘要，以及经选择的提醒／日程。",note:"只有链接先尝试取正文，失败就说明；资料里的指令不是你的操作授权。"},
+      {title:"截图、照片与 PDF",category:"资料",stage:"第3批",desc:"读选定图片和文件，识别文字、总结内容、提取关键字段。",example:"这张通知的截止时间是什么？",result:"可读内容的解释或摘要，关键时间核对后写入。",note:"视觉模型要实际接通；受页数、大小和清晰度限制。只处理你选定的内容，不自动扫描整个相册。"},
+      {title:"短信与邮件草稿",category:"日常",stage:"保留＋验收",desc:"本地选择收件人，起草或修改内容，在系统界面由你发送。",example:"给张三准备短信，说我晚10分钟到。",result:"正确草稿，及系统发送／取消回调。",note:"重名或多号码时选对象；已发送不代表对方已读。不包含微信代发或邮箱收件箱读取。"},
+      {title:"可编辑偏好记忆",category:"服务",stage:"第3批",desc:"记住明确偏好，新会话按需使用；你可以查看、修改和删除。",example:"记住我不吃辣，回答简短一点。",result:"偏好跨会话可用，删除后不再使用。",note:"记忆不会保存一切；实时价格、位置和权限以新观察为准，偏好不等于自动操作授权。"},
+      {title:"流程复用与周期服务",category:"服务",stage:"第3批",desc:"把成功流程保存，设置时间、试跑、暂停、修改和删除。",example:"每天早上8点，有雨提醒我带伞。",result:"建立可试跑的流程，每次运行有结果记录。",note:"依赖可用数据与通知；不能在手机关闭后保证随时读取手机新资料，推送不保证精确到秒。"},
+      {title:"快捷入口与角色交互",category:"服务",stage:"第1／3批",desc:"提醒快捷指令、系统分享、页面历史导航与真实状态动效。",example:"快捷指令创建提醒，再返回原会话。",result:"入口行为一致，切页面不重做任务、不丢状态。",note:"左滑返回、右滑前进按既有要求处理手势冲突；只承诺交付的入口，小组件和复杂3D另行拓展。"}
+    ];
+    const tasks = [
+      {ask:"明天下午3点提醒我取快递",kind:"系统写入",flow:"解析时间 → 必要授权／确认 → 保存 → 核对",end:"系统里有真实提醒，标题和时间正确。",note:"通知到达仍受系统设置影响。"},
+      {ask:"把那条提醒改到后天下午3点",kind:"修改已有",flow:"找原事项 → 确定对象 → 修改 → 核对",end:"原事项被改期，不重复新建。",note:"对象不明确时只问必要的选择。"},
+      {ask:"周五找一小时空档安排健身",kind:"组合办事",flow:"查询日历 → 找空档 → 选择 → 创建",end:"可见空档明确，所选日程真实保存。",note:"没有空档或无权限时说明，不假报成功。"},
+      {ask:"附近2km烧烤，人均100以内",kind:"信息比较",flow:"取定位 → 范围搜索 → 查询价格 → 比较",end:"列出有来源的合格候选，以及未知价格项。",note:"价格缺失可能只能部分完成，不自动换成导航。"},
+      {ask:"带我去选中的店",kind:"外部交接",flow:"校验候选 → 打开地图",end:"选定地点已经交给地图。",note:"不包含订位、到店证明或替你完成导航。"},
+      {ask:"播放音乐库里的歌，再换下一首",kind:"播放控制",flow:"查曲库 → 选择 → 播放 → 切歌 → 查状态",end:"可用曲目实际播放，状态与控制一致。",note:"没有权限、曲目或队列时准确说明。"},
+      {ask:"先停一下，我换个问题",kind:"语音交流",flow:"停止旧播报 → 接收新问题 → 处理 → 回复",end:"新轮正常进行，旧回复不继续混播。",note:"停止播报不撤销已经完成的系统动作。"},
+      {ask:"把分享通知里的事项安排一下",kind:"资料转任务",flow:"取得正文 → 提取日期／事项 → 核对 → 保存",end:"得到摘要和你选定的系统记录。",note:"未选择的事项不自动全部写入。"},
+      {ask:"比较这两份 PDF 有什么不同",kind:"文件理解",flow:"读取可读内容 → 提取／OCR → 比较",end:"得到基于实际读取部分的比较。",note:"缺页、超限、加密或识别不清时说明范围。"},
+      {ask:"给张三准备一条短信",kind:"通讯草稿",flow:"选择收件人 → 起草 → 系统界面 → 回调",end:"草稿正确；你发送或取消后展示系统结果。",note:"不静默代发，不保证送达或已读。"},
+      {ask:"我今天出门要注意什么",kind:"组合简报",flow:"日程＋可用天气＋提醒 → 整理",end:"得到有依据的日程与出门简报。",note:"缺天气／权限时只提供可取得部分。"},
+      {ask:"记住我不吃辣，下次参考",kind:"偏好记忆",flow:"保存偏好 → 新会话读取 → 结合实际信息",end:"记忆可复用，也可查、改、删。",note:"商户辣度没有来源时，仍不保证符合偏好。"},
+      {ask:"每天早上有雨提醒我带伞",kind:"周期服务",flow:"一次查询成功 → 保存时间与流程 → 试跑 → 调度",end:"有可管理的周期流程和逐次结果。",note:"需可用天气及通知，不能保证手机精确到秒收到。"}
+    ];
+    const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+    document.querySelector("#skillGrid").innerHTML = skills.map((s,i) => `<article class="skill-card" data-skill-index="${i}"><div class="card-head"><span class="number">${String(i+1).padStart(2,"0")} · ${escapeHtml(s.category)}</span><span class="badge ${s.stage==="有条件"?"conditional":""}">${escapeHtml(s.stage)}</span></div><h3>${escapeHtml(s.title)}</h3><p class="description">${escapeHtml(s.desc)}</p><div class="example"><small>你可以说</small><p>“${escapeHtml(s.example)}”</p></div><p class="result"><strong>可完成：</strong>${escapeHtml(s.result)}</p><details><summary>条件与说明</summary><p>${escapeHtml(s.note)}</p></details></article>`).join("");
+    document.querySelector("#taskGrid").innerHTML = tasks.map(t => `<article class="task-card"><div class="task-head"><h3>“${escapeHtml(t.ask)}”</h3><span class="kind">${escapeHtml(t.kind)}</span></div><p class="task-flow">${escapeHtml(t.flow)}</p><p class="task-end"><strong>做到这一步：</strong>${escapeHtml(t.end)}</p><p class="task-note">${escapeHtml(t.note)}</p></article>`).join("");
+    document.querySelector("#skillTotal").textContent = skills.length;
+    document.querySelector("#taskTotal").textContent = tasks.length;
+    let activeCategory = "all";
+    function filterSkills(){
+      const query = document.querySelector("#skillSearch").value.trim().toLocaleLowerCase();
+      let count = 0;
+      document.querySelectorAll(".skill-card").forEach(card => {
+        const s = skills[Number(card.dataset.skillIndex)];
+        const visible = (activeCategory==="all" || s.category===activeCategory) && Object.values(s).join(" ").toLocaleLowerCase().includes(query);
+        card.hidden = !visible;if(visible) count++;
+      });
+      document.querySelector("#emptyState").hidden = count!==0;
+      document.querySelector("#skillCount").textContent = `显示 ${count} / ${skills.length} 类产品能力 · 标签表示交付阶段或使用条件，不表示当前已完成。`;
+    }
+    document.querySelectorAll(".filter").forEach(button => button.addEventListener("click",()=>{activeCategory=button.dataset.category;document.querySelectorAll(".filter").forEach(b=>b.setAttribute("aria-pressed",String(b===button)));filterSkills();}));
+    document.querySelector("#skillSearch").addEventListener("input",filterSkills);
+    const tabButtons = [...document.querySelectorAll(".tab")];
+    document.querySelector("#futureEntry").addEventListener("click",()=>{
+      selectTab(document.querySelector("#tab-scope"));
+      document.querySelector(".future").scrollIntoView({behavior:"smooth",block:"start"});
+    });
+    function selectTab(button){
+      tabButtons.forEach(b=>{const selected=b===button;b.setAttribute("aria-selected",String(selected));b.tabIndex=selected?0:-1;document.querySelector(`#panel-${b.dataset.tab}`).hidden=!selected;});
+    }
+    tabButtons.forEach((button,index)=>{
+      button.addEventListener("click",()=>selectTab(button));
+      button.addEventListener("keydown",event=>{
+        let next;if(event.key==="ArrowRight") next=(index+1)%tabButtons.length;else if(event.key==="ArrowLeft") next=(index+tabButtons.length-1)%tabButtons.length;else if(event.key==="Home") next=0;else if(event.key==="End") next=tabButtons.length-1;else return;
+        event.preventDefault();selectTab(tabButtons[next]);tabButtons[next].focus();
+      });
+    });
+    document.querySelector("#printButton").addEventListener("click",()=>window.print());
+    filterSkills();
+  </script>
+</body>
+</html>
