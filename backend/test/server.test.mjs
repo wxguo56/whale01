@@ -168,3 +168,98 @@ test("配置 WHALE_AUTH_TOKEN 后 /v1 要求 Bearer，healthz 保持公开", asy
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test("多身份 Token：B 不能读取、确认或提交 A 的任务，也不能重置 A 的会话", async () => {
+  const runtime = await createTestRuntime(
+    {},
+    { EXECUTION_MODE: "ios", WHALE_AUTH_TOKENS: "token-a,token-b" }
+  );
+  const server = await startServer(runtime, { port: 0 });
+  const { port } = server.address();
+  const base = `http://127.0.0.1:${port}`;
+  const asA = {
+    "content-type": "application/json",
+    authorization: "Bearer token-a"
+  };
+  const asB = {
+    "content-type": "application/json",
+    authorization: "Bearer token-b"
+  };
+
+  try {
+    const started = await (
+      await fetch(`${base}/v1/turns`, {
+        method: "POST",
+        headers: asA,
+        body: JSON.stringify({
+          text: "明天下午三点提醒我取快递",
+          now: FIXED_NOW,
+          timezone: TIMEZONE,
+          deferExecution: true,
+          conversationId: "conv_owner_a1"
+        })
+      })
+    ).json();
+    assert.equal(started.status, "awaiting_tool_results");
+
+    const deniedSnapshot = await fetch(`${base}/v1/turns/${started.turnId}`, { headers: asB });
+    assert.equal(deniedSnapshot.status, 403);
+    assert.equal((await deniedSnapshot.json()).error.code, "forbidden_turn");
+
+    const pending = started.pending[0];
+    const deniedResults = await fetch(`${base}/v1/turns/${started.turnId}/tool-results`, {
+      method: "POST",
+      headers: asB,
+      body: JSON.stringify({ results: [{ toolCallId: pending.toolCallId, status: "success", data: {} }] })
+    });
+    assert.equal(deniedResults.status, 403);
+
+    const deniedConversation = await fetch(`${base}/v1/conversations/conv_owner_a1`, { headers: asB });
+    assert.equal(deniedConversation.status, 403);
+    const deniedReset = await fetch(`${base}/v1/conversations/conv_owner_a1`, {
+      method: "DELETE",
+      headers: asB
+    });
+    assert.equal(deniedReset.status, 403);
+
+    const ownedSnapshot = await fetch(`${base}/v1/turns/${started.turnId}`, { headers: asA });
+    assert.equal(ownedSnapshot.status, 200);
+    assert.equal((await ownedSnapshot.json()).turnId, started.turnId);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("多身份 Token：B 不能确认 A 的待确认操作", async () => {
+  const runtime = await createTestRuntime({}, { WHALE_AUTH_TOKENS: "token-a,token-b" });
+  const server = await startServer(runtime, { port: 0 });
+  const { port } = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  try {
+    const started = await (
+      await fetch(`${base}/v1/turns`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer token-a" },
+        body: JSON.stringify({
+          text: "明天下午三点提醒我取快递",
+          now: FIXED_NOW,
+          timezone: TIMEZONE,
+          autoConfirm: false
+        })
+      })
+    ).json();
+    assert.equal(started.status, "awaiting_confirmation");
+    const operationId = started.pending[0].operationId;
+
+    const denied = await fetch(`${base}/v1/turns/${started.turnId}/confirm`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: "Bearer token-b" },
+      body: JSON.stringify({ operationId, confirmed: true })
+    });
+    assert.equal(denied.status, 403);
+    assert.equal((await denied.json()).error.code, "forbidden_turn");
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

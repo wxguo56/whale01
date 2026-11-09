@@ -20,6 +20,7 @@ struct ChatMessage: Identifiable, Equatable {
 @MainActor
 final class AppModel: ObservableObject {
     @Published var backendURL: String
+    @Published var apiToken: String
     @Published var input = ""
     @Published private(set) var messages: [ChatMessage] = []
     @Published private(set) var pending: [PendingTool] = []
@@ -32,6 +33,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var backendExecutionMode = "unknown"
     @Published private(set) var modelMode = "unknown"
     @Published private(set) var toolCount = 0
+    @Published private(set) var authRequired = false
     @Published var presentedConfirmation: PendingTool?
 
     @Published private(set) var recentActions: [NativeActionRecord] = []
@@ -64,6 +66,7 @@ final class AppModel: ObservableObject {
 
     init() {
         backendURL = UserDefaults.standard.string(forKey: BackendConfig.storageKey) ?? BackendConfig.defaultBaseURL
+        apiToken = BackendConfig.authToken
         conversationId = UserDefaults.standard.string(forKey: Self.conversationKey)
         router = NativeToolRouter(permissions: permissions)
         messages = [
@@ -99,6 +102,16 @@ final class AppModel: ObservableObject {
         Task { await health() }
     }
 
+    func saveAPIToken() {
+        let trimmed = apiToken.trimmingCharacters(in: .whitespacesAndNewlines)
+        UserDefaults.standard.set(trimmed, forKey: BackendConfig.apiTokenKey)
+        apiToken = trimmed
+        if errorText?.contains("访问") == true {
+            errorText = nil
+        }
+        Task { await health() }
+    }
+
     func health() async {
         do {
             let health = try await client.health()
@@ -106,6 +119,7 @@ final class AppModel: ObservableObject {
             backendExecutionMode = health.executionMode
             modelMode = health.modelMode
             toolCount = health.tools
+            authRequired = health.authRequired ?? false
             lastCheckedAt = Date()
             statusLine = health.status == "ok" ? "服务已连接" : "服务返回 \(health.status)"
             if health.executionMode == "mock" {
@@ -577,8 +591,22 @@ final class AppModel: ObservableObject {
     }
 
     private func fail(_ error: Error) {
-        errorText = error.localizedDescription
-        messages.append(ChatMessage(role: .assistant, text: "本轮没有完成：\(error.localizedDescription)"))
+        let message: String
+        if case AgentClientError.http(401, _) = error {
+            message = "后端要求访问码：请在「设置 → 后端访问码」填写并保存后重试。"
+        } else if case AgentClientError.http(403, let body) = error, body.contains("forbidden_conversation") {
+            conversationId = nil
+            UserDefaults.standard.removeObject(forKey: Self.conversationKey)
+            clearActiveTurn()
+            message = "当前访问码与旧会话归属不一致，已开启新会话，请重新发起。"
+        } else if case AgentClientError.http(403, let body) = error, body.contains("forbidden_turn") {
+            clearActiveTurn()
+            message = "该任务属于其他身份，已停止继续操作。"
+        } else {
+            message = error.localizedDescription
+        }
+        errorText = message
+        messages.append(ChatMessage(role: .assistant, text: "本轮没有完成：\(message)"))
         backendOnline = false
     }
 

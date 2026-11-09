@@ -79,6 +79,7 @@ struct HealthResponse: Codable, Sendable {
     let adapterConfigured: Bool
     let tools: Int
     let requiresDeferExecution: Bool?
+    let authRequired: Bool?
 }
 
 struct CachedToolOutcome: Codable, Sendable {

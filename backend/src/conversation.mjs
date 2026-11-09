@@ -18,9 +18,10 @@ export class ConversationStore {
     this.conversations = new Map();
   }
 
-  create() {
+  create(ownerId = "owner_local") {
     const conversation = {
       id: `conv_${randomUUID()}`,
+      ownerId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       messages: [],
@@ -32,17 +33,23 @@ export class ConversationStore {
     return conversation;
   }
 
-  ensure(conversationId) {
+  ensure(conversationId, ownerId = "owner_local") {
     if (conversationId === undefined || conversationId === null || conversationId === "") {
-      return { conversation: this.create(), created: true };
+      return { conversation: this.create(ownerId), created: true };
     }
     if (typeof conversationId !== "string" || !ID_PATTERN.test(conversationId)) {
       throw new ConversationError("conversationId 格式非法", "invalid_conversation_id");
     }
     const existing = this.conversations.get(conversationId);
-    if (existing) return { conversation: existing, created: false };
+    if (existing) {
+      if ((existing.ownerId ?? "owner_local") !== ownerId) {
+        throw new ConversationError("无权访问该会话", "forbidden_conversation");
+      }
+      return { conversation: existing, created: false };
+    }
     const conversation = {
       id: conversationId,
+      ownerId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       messages: [],
@@ -110,9 +117,12 @@ export class ConversationStore {
     conversation.updatedAt = new Date().toISOString();
   }
 
-  summary(conversationId) {
+  summary(conversationId, ownerId) {
     const conversation = this.conversations.get(conversationId);
     if (!conversation) return null;
+    if (ownerId && (conversation.ownerId ?? "owner_local") !== ownerId) {
+      throw new ConversationError("无权访问该会话", "forbidden_conversation");
+    }
     return {
       id: conversation.id,
       createdAt: conversation.createdAt,
@@ -123,7 +133,11 @@ export class ConversationStore {
     };
   }
 
-  reset(conversationId) {
+  reset(conversationId, ownerId) {
+    const conversation = this.conversations.get(conversationId);
+    if (conversation && ownerId && (conversation.ownerId ?? "owner_local") !== ownerId) {
+      throw new ConversationError("无权访问该会话", "forbidden_conversation");
+    }
     return this.conversations.delete(conversationId);
   }
 

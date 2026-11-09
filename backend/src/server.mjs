@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { AgentError } from "./agent.mjs";
 import { ConversationError } from "./conversation.mjs";
@@ -32,18 +32,22 @@ export function createHttpServer(runtime) {
           adapterConfigured: runtime.config.modelMode === "deepseek" ? Boolean(runtime.config.deepseek.apiKey) : true,
           tools: runtime.registry.names().length,
           contractVersion: runtime.config.contractVersion,
-          authRequired: Boolean(runtime.config.authToken),
+          authRequired: runtime.config.authTokens.length > 0,
           caps: runtime.config.caps
         });
         return;
       }
 
-      if (url.pathname.startsWith("/v1/") && !isAuthorized(request, runtime.config.authToken)) {
+      const identity = url.pathname.startsWith("/v1/")
+        ? resolveIdentity(request, runtime.config.authTokens)
+        : null;
+      if (url.pathname.startsWith("/v1/") && (!identity || !identity.authorized)) {
         sendJson(response, 401, {
           error: { code: "unauthorized", message: "缺少或无效的访问令牌" }
         });
         return;
       }
+      const ownerId = identity?.ownerId ?? "owner_local";
 
       if (request.method === "GET" && url.pathname === "/v1/capabilities") {
         sendJson(response, 200, {
@@ -74,7 +78,7 @@ export function createHttpServer(runtime) {
             closed = true;
           });
           const result = await runtime.agent.start(
-            { text, now, timezone, autoConfirm, deferExecution, conversationId, permissions },
+            { text, now, timezone, autoConfirm, deferExecution, conversationId, permissions, ownerId },
             {
               onEvent: (event) => {
                 if (!closed) response.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
@@ -95,7 +99,8 @@ export function createHttpServer(runtime) {
           autoConfirm,
           deferExecution,
           conversationId,
-          permissions
+          permissions,
+          ownerId
         });
         sendJson(response, 200, result);
         return;
@@ -105,7 +110,7 @@ export function createHttpServer(runtime) {
       if (conversationMatch) {
         const conversationId = decodeURIComponent(conversationMatch[1]);
         if (request.method === "GET") {
-          const summary = runtime.conversations?.summary(conversationId);
+          const summary = runtime.conversations?.summary(conversationId, ownerId);
           if (!summary) {
             sendJson(response, 404, { error: { code: "unknown_conversation", message: "未知会话" } });
             return;
@@ -114,7 +119,7 @@ export function createHttpServer(runtime) {
           return;
         }
         if (request.method === "DELETE") {
-          runtime.conversations?.reset(conversationId);
+          runtime.conversations?.reset(conversationId, ownerId);
           sendJson(response, 200, { status: "reset", conversationId });
           return;
         }
@@ -126,7 +131,8 @@ export function createHttpServer(runtime) {
         const result = await runtime.agent.confirm(
           decodeURIComponent(confirmMatch[1]),
           body.operationId,
-          body.confirmed === true
+          body.confirmed === true,
+          ownerId
         );
         sendJson(response, 200, result);
         return;
@@ -137,7 +143,8 @@ export function createHttpServer(runtime) {
         const body = await readJson(request);
         const result = await runtime.agent.submitToolResults(
           decodeURIComponent(toolResultsMatch[1]),
-          body.results ?? []
+          body.results ?? [],
+          ownerId
         );
         sendJson(response, 200, result);
         return;
@@ -145,7 +152,7 @@ export function createHttpServer(runtime) {
 
       const turnMatch = /^\/v1\/turns\/([^/]+)$/.exec(url.pathname);
       if (request.method === "GET" && turnMatch) {
-        sendJson(response, 200, runtime.agent.snapshot(decodeURIComponent(turnMatch[1])));
+        sendJson(response, 200, runtime.agent.snapshot(decodeURIComponent(turnMatch[1]), ownerId));
         return;
       }
 
@@ -162,7 +169,11 @@ export function createHttpServer(runtime) {
         response.end();
         return;
       }
-      const status = error instanceof AgentError || error instanceof ConversationError ? 400 : 500;
+      const status = String(error.code ?? "").startsWith("forbidden")
+        ? 403
+        : error instanceof AgentError || error instanceof ConversationError
+          ? 400
+          : 500;
       sendJson(response, status, {
         error: { code: error.code ?? "internal_error", message: error.message }
       });
@@ -183,11 +194,28 @@ function acceptsEventStream(request) {
   return (request.headers.accept ?? "").includes("text/event-stream");
 }
 
-function isAuthorized(request, token) {
-  if (!token) return true;
-  const header = Buffer.from(request.headers.authorization ?? "");
-  const expected = Buffer.from(`Bearer ${token}`);
-  return header.length === expected.length && timingSafeEqual(header, expected);
+function resolveIdentity(request, tokens) {
+  if (!tokens.length) return { authorized: true, ownerId: "owner_local" };
+  const header = request.headers.authorization ?? "";
+  const match = /^Bearer\s+(.+)$/i.exec(header);
+  if (!match) return { authorized: false, ownerId: null };
+  const candidate = match[1].trim();
+  for (const token of tokens) {
+    if (sameSecret(candidate, token)) {
+      return { authorized: true, ownerId: ownerIdFor(token) };
+    }
+  }
+  return { authorized: false, ownerId: null };
+}
+
+function sameSecret(candidate, expected) {
+  const left = Buffer.from(candidate);
+  const right = Buffer.from(expected);
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
+function ownerIdFor(token) {
+  return `owner_${createHash("sha256").update(token).digest("hex").slice(0, 16)}`;
 }
 
 function readJson(request) {

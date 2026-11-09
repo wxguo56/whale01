@@ -78,7 +78,8 @@ export class Agent {
       deferExecution = false,
       conversationId,
       permissions = {},
-      sharedContent = null
+      sharedContent = null,
+      ownerId = "owner_local"
     },
     { onEvent } = {}
   ) {
@@ -87,7 +88,7 @@ export class Agent {
     const nowIso = now ?? new Date().toISOString();
     if (Number.isNaN(Date.parse(nowIso))) throw new AgentError("now 必须是 ISO 8601 时间", "invalid_input");
 
-    const { conversation } = this.conversations.ensure(conversationId);
+    const { conversation } = this.conversations.ensure(conversationId, ownerId);
     if (this.executionMode !== "mock" && !deferExecution) {
       throw new AgentError(
         "真实设备执行模式必须由 App 设置 deferExecution=true，避免后端伪造系统写入",
@@ -120,6 +121,7 @@ export class Agent {
     const state = {
       turnId,
       conversationId: conversation.id,
+      ownerId,
       text: text.trim(),
       now: nowIso,
       timezone,
@@ -163,8 +165,8 @@ export class Agent {
     return this.snapshot(turnId);
   }
 
-  async confirm(turnId, operationId, confirmed) {
-    const state = this.#turn(turnId);
+  async confirm(turnId, operationId, confirmed, ownerId) {
+    const state = this.#turn(turnId, ownerId);
     if (state.status !== "awaiting_confirmation") {
       throw new AgentError(`任务当前状态为 ${state.status}，不能确认`, "invalid_state");
     }
@@ -226,8 +228,8 @@ export class Agent {
     return this.snapshot(turnId);
   }
 
-  async submitToolResults(turnId, results) {
-    const state = this.#turn(turnId);
+  async submitToolResults(turnId, results, ownerId) {
+    const state = this.#turn(turnId, ownerId);
     if (state.status !== "awaiting_tool_results") {
       throw new AgentError(`任务当前状态为 ${state.status}，不等待工具结果`, "invalid_state");
     }
@@ -278,11 +280,17 @@ export class Agent {
     return this.snapshot(turnId);
   }
 
-  snapshot(turnId) {
+  snapshot(turnId, ownerId) {
     const state = this.turns.get(turnId);
-    if (state) return this.#snapshotFromState(state);
+    if (state) {
+      this.#assertOwner(state, ownerId);
+      return this.#snapshotFromState(state);
+    }
     const archived = this.turnStore?.get(turnId);
-    if (archived) return archived;
+    if (archived) {
+      this.#assertArchivedOwner(archived, ownerId);
+      return archived;
+    }
     throw new AgentError(`未知 turnId ${turnId}`, "unknown_turn");
   }
 
@@ -291,6 +299,7 @@ export class Agent {
       contractVersion: this.contractVersion,
       turnId: state.turnId,
       conversationId: state.conversationId,
+      ownerId: state.ownerId,
       status: state.status,
       reply: state.reply,
       modelMode: this.modelMode,
@@ -899,10 +908,25 @@ export class Agent {
     }
   }
 
-  #turn(turnId) {
+  #turn(turnId, ownerId) {
     const state = this.turns.get(turnId);
     if (!state) throw new AgentError(`未知 turnId ${turnId}`, "unknown_turn");
+    this.#assertOwner(state, ownerId);
     return state;
+  }
+
+  #assertOwner(state, ownerId) {
+    if (!ownerId) return;
+    if ((state.ownerId ?? "owner_local") !== ownerId) {
+      throw new AgentError("无权访问该任务", "forbidden_turn");
+    }
+  }
+
+  #assertArchivedOwner(record, ownerId) {
+    if (!ownerId) return;
+    if ((record.ownerId ?? "owner_anonymous") !== ownerId) {
+      throw new AgentError("无权访问该任务", "forbidden_turn");
+    }
   }
 }
 

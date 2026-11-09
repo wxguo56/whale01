@@ -84,16 +84,12 @@ final class LocationExecutor {
             "count": .number(Double(places.count)),
             "candidatePoolCount": .number(Double(candidates.count)),
             "locationMode": .string(mode),
-            "searchCenter": .object([
-                "latitude": .number(center.coordinate.latitude),
-                "longitude": .number(center.coordinate.longitude)
-            ]),
             "radiusMeters": explicitRadius.map { JSONValue.number(Double($0)) } ?? .null,
             "radiusApplied": .bool(explicitRadius != nil),
             "distanceType": .string("straight_line"),
             "source": .string("mapkit"),
             "simulated": .bool(false),
-            "note": .string("distanceMeters 为搜索中心到候选的直线距离；radiusApplied=true 时已按半径过滤并排序。")
+            "note": .string("搜索中心只在本机使用，不回传原始坐标；distanceMeters 为搜索中心到候选的直线距离；radiusApplied=true 时已按半径过滤并排序。")
         ])
     }
 

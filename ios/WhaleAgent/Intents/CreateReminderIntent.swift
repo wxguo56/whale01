@@ -1,17 +1,16 @@
 import AppIntents
-import EventKit
 import Foundation
 
 enum WhaleIntentError: LocalizedError {
     case reminderAccessDenied
-    case noReminderList
+    case writeFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .reminderAccessDenied:
             return "没有提醒事项权限，请先在设置中允许鲸鱼访问提醒事项。"
-        case .noReminderList:
-            return "设备上没有可写入的提醒事项列表。"
+        case .writeFailed(let message):
+            return message
         }
     }
 }
@@ -34,24 +33,32 @@ struct CreateReminderIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let store = EKEventStore()
-        let granted = try await store.requestFullAccessToReminders()
-        guard granted else { throw WhaleIntentError.reminderAccessDenied }
-        guard let calendar = store.defaultCalendarForNewReminders() else {
-            throw WhaleIntentError.noReminderList
-        }
-
-        let reminder = EKReminder(eventStore: store)
-        reminder.title = title
-        reminder.calendar = calendar
+        let operationId = "intent_\(UUID().uuidString.lowercased())"
+        var arguments: [String: JSONValue] = [
+            "title": .string(title),
+            "timezone": .string(TimeZone.current.identifier)
+        ]
         if let dueDate {
-            reminder.dueDateComponents = Calendar.current.dateComponents(
-                [.year, .month, .day, .hour, .minute],
-                from: dueDate
-            )
-            reminder.addAlarm(EKAlarm(absoluteDate: dueDate))
+            arguments["dueAt"] = .string(ToolDate.iso(dueDate))
         }
-        try store.save(reminder, commit: true)
+        let pending = PendingTool(
+            tool: "create_reminder",
+            toolCallId: operationId,
+            operationId: operationId,
+            arguments: arguments,
+            requiresConfirmation: false
+        )
+        let result = await execute(pending)
+        switch result.status {
+        case "success":
+            break
+        case "needs_authorization":
+            throw WhaleIntentError.reminderAccessDenied
+        default:
+            throw WhaleIntentError.writeFailed(
+                result.error?.message ?? "提醒写入失败，请在鲸鱼 App 内查看诊断"
+            )
+        }
 
         if let dueDate {
             let formatter = DateFormatter()
@@ -60,6 +67,12 @@ struct CreateReminderIntent: AppIntent {
             return .result(dialog: "已创建提醒：\(title)，\(formatter.string(from: dueDate))")
         }
         return .result(dialog: "已创建提醒：\(title)")
+    }
+
+    @MainActor
+    private func execute(_ pending: PendingTool) async -> ToolResultPayload {
+        let router = NativeToolRouter(permissions: PermissionCenter())
+        return await router.execute(pending)
     }
 }
 

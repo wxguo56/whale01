@@ -46,6 +46,29 @@ struct SettingsView: View {
                     .padding(.vertical, 6)
                 }
 
+                Section("后端访问码") {
+                    SecureField("粘贴后端 WHALE_AUTH_TOKENS 中的一个访问码", text: $model.apiToken)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    Button("保存访问码") {
+                        model.saveAPIToken()
+                    }
+                    .font(.subheadline.weight(.medium))
+                    if model.authRequired && model.apiToken.isEmpty {
+                        Label("后端已开启鉴权，填写访问码后才能对话", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    } else if model.authRequired {
+                        Text("已填写；若提示 401，请向后端管理员核对访问码。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("当前后端未启用鉴权。启用后每个安装身份使用独立访问码。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Section("系统权限") {
                     ForEach(permissionRows) { row in
                         PermissionSettingsRow(
@@ -191,6 +214,7 @@ private struct DeveloperSettingsView: View {
                 LabeledContent("模型", value: model.modelMode)
                 LabeledContent("执行模式", value: model.backendExecutionMode)
                 LabeledContent("工具数量", value: "\(model.toolCount)")
+                LabeledContent("鉴权", value: model.authRequired ? "已开启" : "未开启")
                 LabeledContent("构建", value: model.versionText)
                 LabeledContent("Bundle ID", value: model.bundleIdentifier)
                 Button("重新检查服务") {

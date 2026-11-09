@@ -32,6 +32,16 @@ PORT=8787
 
 启动时会自动读取 `backend/.env`。也支持用系统环境变量覆盖。`GET /healthz` 只返回是否已配置，不返回密钥。
 
+## 访问码与身份归属
+
+在 `backend/.env` 配置 `WHALE_AUTH_TOKENS`（英文逗号分隔）后，所有 `/v1/*` 请求都必须带 `Authorization: Bearer <token>`，`/healthz` 保持公开。每个 Token 对应一个独立 owner；会话、任务快照、确认和工具结果都会校验 owner，另一个 Token 不能读取、确认或提交不属于它的任务。
+
+```dotenv
+WHALE_AUTH_TOKENS=phone-token,test-token
+```
+
+App 端在「设置 → 后端访问码」填写对应 Token。Token 轮换后旧会话会返回 403，App 会自动开启新会话。
+
 ## 启动 HTTP 服务
 
 ```powershell
