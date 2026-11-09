@@ -107,8 +107,20 @@ final class PermissionCenter: ObservableObject {
         statuses = next
     }
 
-    func ensure(tool: String) async -> String? {
-        for permission in Self.toolPermissions[tool] ?? [] {
+    func ensure(tool: String, arguments: [String: JSONValue] = [:]) async -> String? {
+        let required: [String]
+        if tool == "search_places" {
+            let mode = arguments.optionalString("locationMode")
+            let hasRegion = !(arguments.optionalString("region") ?? "").isEmpty
+            let hasNear = arguments.optionalObject("near") != nil
+            let needsLocation = mode == "current" || (mode == nil && !hasRegion && !hasNear)
+            required = needsLocation ? ["location"] : []
+        } else if tool == "open_navigation" {
+            required = []
+        } else {
+            required = Self.toolPermissions[tool] ?? []
+        }
+        for permission in required {
             if !(await ensurePermission(permission)) {
                 return permission
             }

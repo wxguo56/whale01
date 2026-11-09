@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { timingSafeEqual } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { AgentError } from "./agent.mjs";
 import { ConversationError } from "./conversation.mjs";
@@ -14,7 +15,7 @@ export function createHttpServer(runtime) {
     try {
       const url = new URL(request.url ?? "/", "http://localhost");
       response.setHeader("access-control-allow-origin", "*");
-      response.setHeader("access-control-allow-headers", "content-type, accept");
+      response.setHeader("access-control-allow-headers", "content-type, accept, authorization");
       response.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
 
       if (request.method === "OPTIONS") {
@@ -31,7 +32,15 @@ export function createHttpServer(runtime) {
           adapterConfigured: runtime.config.modelMode === "deepseek" ? Boolean(runtime.config.deepseek.apiKey) : true,
           tools: runtime.registry.names().length,
           contractVersion: runtime.config.contractVersion,
+          authRequired: Boolean(runtime.config.authToken),
           caps: runtime.config.caps
+        });
+        return;
+      }
+
+      if (url.pathname.startsWith("/v1/") && !isAuthorized(request, runtime.config.authToken)) {
+        sendJson(response, 401, {
+          error: { code: "unauthorized", message: "缺少或无效的访问令牌" }
         });
         return;
       }
@@ -172,6 +181,13 @@ export async function startServer(runtime, { port = runtime.config.port, host = 
 
 function acceptsEventStream(request) {
   return (request.headers.accept ?? "").includes("text/event-stream");
+}
+
+function isAuthorized(request, token) {
+  if (!token) return true;
+  const header = Buffer.from(request.headers.authorization ?? "");
+  const expected = Buffer.from(`Bearer ${token}`);
+  return header.length === expected.length && timingSafeEqual(header, expected);
 }
 
 function readJson(request) {

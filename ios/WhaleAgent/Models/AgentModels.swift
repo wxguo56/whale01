@@ -10,6 +10,7 @@ struct AgentTurnResponse: Codable, Sendable {
     let executionMode: String
     let events: [AgentEvent]
     let pending: [PendingTool]
+    let task: JSONValue?
 }
 
 struct AgentEvent: Codable, Sendable {

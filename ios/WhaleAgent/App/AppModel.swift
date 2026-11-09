@@ -56,10 +56,15 @@ final class AppModel: ObservableObject {
     private var autoStarted: Set<String> = []
     private var ingestedShareIds: Set<String> = []
     private var dashboardLoaded = false
+    private var didAttemptResume = false
     private var composerObserver: AnyCancellable?
+
+    private static let activeTurnKey = "whale.activeTurnId"
+    private static let conversationKey = "whale.conversationId"
 
     init() {
         backendURL = UserDefaults.standard.string(forKey: BackendConfig.storageKey) ?? BackendConfig.defaultBaseURL
+        conversationId = UserDefaults.standard.string(forKey: Self.conversationKey)
         router = NativeToolRouter(permissions: permissions)
         messages = [
             ChatMessage(role: .assistant, text: "你好，我是鲸鱼。告诉我想做什么，我会在获得你的确认后调用 iPhone 上的真实系统能力。")
@@ -116,6 +121,52 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func resumeActiveTurnIfNeeded() async {
+        guard !didAttemptResume else { return }
+        didAttemptResume = true
+        guard let storedTurn = UserDefaults.standard.string(forKey: Self.activeTurnKey), !storedTurn.isEmpty else {
+            return
+        }
+
+        do {
+            var response = try await client.turnSnapshot(turnId: storedTurn)
+            if response.status == "interrupted" {
+                clearActiveTurn()
+                messages.append(
+                    ChatMessage(
+                        role: .tool,
+                        text: "上一轮已中断",
+                        detail: "服务重启时这一轮尚未结束；记录已保留，请重新发起。"
+                    )
+                )
+                return
+            }
+
+            if ["running", "awaiting_tool_results"].contains(response.status) {
+                for _ in 0..<8 {
+                    try? await Task.sleep(nanoseconds: 1_500_000_000)
+                    response = try await client.turnSnapshot(turnId: storedTurn)
+                    if !["running", "awaiting_tool_results"].contains(response.status) { break }
+                }
+            }
+
+            conversationId = response.conversationId
+            activeTurnId = response.turnId
+            persistActiveTurn()
+            appendReplyIfNeeded(response)
+            await handle(response)
+        } catch {
+            // 后端暂时不可达时保留 turnId，下次启动再试。
+        }
+    }
+
+    func reconcileUnknownWrites() async {
+        let notes = await router.reconcileUnknownWrites()
+        for note in notes {
+            messages.append(ChatMessage(role: .tool, text: "未知写入核对", detail: note))
+        }
+    }
+
     func refreshPermissions() {
         permissions.refresh()
         permissionsSnapshot = permissions.snapshot()
@@ -154,6 +205,7 @@ final class AppModel: ObservableObject {
             TurnMetricsStore.record(seconds: Date().timeIntervalSince(startedAt))
             conversationId = response.conversationId
             activeTurnId = response.turnId
+            persistActiveTurn()
             appendReplyIfNeeded(response)
             await handle(response)
         } catch {
@@ -246,6 +298,8 @@ final class AppModel: ObservableObject {
     func newConversation() {
         conversationId = nil
         activeTurnId = nil
+        clearActiveTurn()
+        UserDefaults.standard.removeObject(forKey: Self.conversationKey)
         pending = []
         results = [:]
         autoStarted = []
@@ -254,6 +308,24 @@ final class AppModel: ObservableObject {
         messages = [
             ChatMessage(role: .assistant, text: "新对话已经开始。你可以继续安排提醒、日程、地点、短信或音乐。")
         ]
+    }
+
+    private func persistActiveTurn() {
+        if let activeTurnId, !activeTurnId.isEmpty {
+            UserDefaults.standard.set(activeTurnId, forKey: Self.activeTurnKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: Self.activeTurnKey)
+        }
+        if let conversationId, !conversationId.isEmpty {
+            UserDefaults.standard.set(conversationId, forKey: Self.conversationKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: Self.conversationKey)
+        }
+    }
+
+    private func clearActiveTurn() {
+        activeTurnId = nil
+        UserDefaults.standard.removeObject(forKey: Self.activeTurnKey)
     }
 
     func refreshDashboard(force: Bool = false) async {
@@ -397,6 +469,9 @@ final class AppModel: ObservableObject {
     }
 
     private func handle(_ response: AgentTurnResponse) async {
+        activeTurnId = response.turnId
+        conversationId = response.conversationId
+        persistActiveTurn()
         switch response.status {
         case "awaiting_tool_results":
             pending = response.pending
@@ -412,6 +487,13 @@ final class AppModel: ObservableObject {
             results = [:]
             autoStarted = []
             presentedConfirmation = nil
+            clearActiveTurn()
+        case "interrupted":
+            pending = []
+            results = [:]
+            autoStarted = []
+            presentedConfirmation = nil
+            clearActiveTurn()
         default:
             pending = response.pending
         }

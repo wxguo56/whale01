@@ -187,6 +187,50 @@ final class EventKitExecutor {
         }
     }
 
+    func findReminder(title: String, dueAt: Date?) async -> String? {
+        let normalized = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return nil }
+        let predicate = store.predicateForIncompleteReminders(
+            withDueDateStarting: nil,
+            ending: nil,
+            calendars: nil
+        )
+        return await withCheckedContinuation { continuation in
+            store.fetchReminders(matching: predicate) { reminders in
+                let match = (reminders ?? []).first { reminder in
+                    let candidate = (reminder.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard candidate == normalized else { return false }
+                    switch (dueAt, reminder.dueDateComponents) {
+                    case (nil, nil):
+                        return true
+                    case let (expected?, components?):
+                        guard let existing = Calendar.current.date(from: components) else { return false }
+                        return abs(existing.timeIntervalSince(expected)) < 60
+                    default:
+                        return false
+                    }
+                }
+                continuation.resume(returning: match?.calendarItemIdentifier)
+            }
+        }
+    }
+
+    func findCalendarEvent(title: String, startAt: Date) -> String? {
+        let normalized = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return nil }
+        let window: TimeInterval = 120
+        let predicate = store.predicateForEvents(
+            withStart: startAt.addingTimeInterval(-window),
+            end: startAt.addingTimeInterval(window),
+            calendars: nil
+        )
+        let match = store.events(matching: predicate).first { event in
+            let candidate = (event.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            return candidate == normalized && abs(event.startDate.timeIntervalSince(startAt)) < 60
+        }
+        return match?.eventIdentifier ?? match?.calendarItemIdentifier
+    }
+
     private func resolveReminderCalendar(_ listId: String?) -> EKCalendar? {
         if let listId, let calendar = store.calendar(withIdentifier: listId), calendar.allowsContentModifications {
             return calendar

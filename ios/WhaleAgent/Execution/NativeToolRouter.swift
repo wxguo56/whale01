@@ -52,7 +52,7 @@ final class NativeToolRouter {
         }
         #endif
 
-        if let missing = await permissions.ensure(tool: pending.tool) {
+        if let missing = await permissions.ensure(tool: pending.tool, arguments: pending.arguments) {
             return ToolResultPayload(
                 toolCallId: pending.toolCallId,
                 status: "needs_authorization",
@@ -62,6 +62,10 @@ final class NativeToolRouter {
                     permission: missing
                 )
             )
+        }
+
+        if let write = pendingWrite(for: pending) {
+            await ledger.markPending(write)
         }
 
         do {
@@ -74,12 +78,22 @@ final class NativeToolRouter {
                 data: data,
                 deduplicated: data.objectValue?.optionalBool("deduplicated") ?? false
             )
-            await ledger.record(
+            await ledger.resolvePending(
                 operationId: pending.operationId,
                 outcome: CachedToolOutcome(status: result.status, data: result.data, error: result.error)
             )
             return result
         } catch let error as ToolExecutionError {
+            if error.code != "execution_unknown" {
+                await ledger.resolvePending(
+                    operationId: pending.operationId,
+                    outcome: CachedToolOutcome(
+                        status: error.status,
+                        data: nil,
+                        error: ToolErrorPayload(code: error.code, message: error.message, permission: error.permission)
+                    )
+                )
+            }
             return ToolResultPayload(
                 toolCallId: pending.toolCallId,
                 status: error.status,
@@ -90,6 +104,14 @@ final class NativeToolRouter {
                 )
             )
         } catch {
+            await ledger.resolvePending(
+                operationId: pending.operationId,
+                outcome: CachedToolOutcome(
+                    status: "failed",
+                    data: nil,
+                    error: ToolErrorPayload(code: "native_execution_failed", message: error.localizedDescription)
+                )
+            )
             return ToolResultPayload(
                 toolCallId: pending.toolCallId,
                 status: "failed",
@@ -99,6 +121,84 @@ final class NativeToolRouter {
                 )
             )
         }
+    }
+
+    private func pendingWrite(for pending: PendingTool) -> PendingWrite? {
+        guard ["create_reminder", "create_calendar_event"].contains(pending.tool) else { return nil }
+        return PendingWrite(
+            operationId: pending.operationId,
+            tool: pending.tool,
+            title: pending.arguments.optionalString("title") ?? "",
+            dueAt: pending.arguments.optionalString("dueAt"),
+            startAt: pending.arguments.optionalString("startAt"),
+            createdAt: Date()
+        )
+    }
+
+    func reconcileUnknownWrites() async -> [String] {
+        let writes = await ledger.listPendingWrites()
+        var notes: [String] = []
+        for write in writes {
+            let age = Date().timeIntervalSince(write.createdAt)
+            switch write.tool {
+            case "create_reminder":
+                guard !write.title.isEmpty else { continue }
+                let due = write.dueAt.flatMap { ToolDate.parse($0) }
+                if let id = await eventKit.findReminder(title: write.title, dueAt: due) {
+                    let data = JSONValue.object([
+                        "recordId": .string(id),
+                        "title": .string(write.title),
+                        "source": .string("eventkit"),
+                        "reconciled": .bool(true)
+                    ])
+                    await ledger.resolvePending(
+                        operationId: write.operationId,
+                        outcome: CachedToolOutcome(status: "success", data: data, error: nil)
+                    )
+                    notes.append("已核对：提醒「\(write.title)」实际已写入系统，未重复创建。")
+                } else if age > 120 {
+                    await ledger.resolvePending(
+                        operationId: write.operationId,
+                        outcome: CachedToolOutcome(
+                            status: "failed",
+                            data: nil,
+                            error: ToolErrorPayload(code: "reconciled_absent", message: "核对后未发现该提醒")
+                        )
+                    )
+                    notes.append("已核对：未发现提醒「\(write.title)」，可以重新发起。")
+                }
+            case "create_calendar_event":
+                guard !write.title.isEmpty, let rawStart = write.startAt, let start = ToolDate.parse(rawStart) else {
+                    continue
+                }
+                if let id = eventKit.findCalendarEvent(title: write.title, startAt: start) {
+                    let data = JSONValue.object([
+                        "eventId": .string(id),
+                        "title": .string(write.title),
+                        "source": .string("eventkit"),
+                        "reconciled": .bool(true)
+                    ])
+                    await ledger.resolvePending(
+                        operationId: write.operationId,
+                        outcome: CachedToolOutcome(status: "success", data: data, error: nil)
+                    )
+                    notes.append("已核对：日程「\(write.title)」实际已写入系统，未重复创建。")
+                } else if age > 120 {
+                    await ledger.resolvePending(
+                        operationId: write.operationId,
+                        outcome: CachedToolOutcome(
+                            status: "failed",
+                            data: nil,
+                            error: ToolErrorPayload(code: "reconciled_absent", message: "核对后未发现该日程")
+                        )
+                    )
+                    notes.append("已核对：未发现日程「\(write.title)」，可以重新发起。")
+                }
+            default:
+                continue
+            }
+        }
+        return notes
     }
 
     /// Stops waiting for a system operation instead of leaving the turn stuck forever.

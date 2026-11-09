@@ -31,6 +31,8 @@ struct RootView: View {
         }
         .task {
             await model.health()
+            await model.reconcileUnknownWrites()
+            await model.resumeActiveTurnIfNeeded()
             model.refreshPermissions()
             await model.refreshDashboard(force: true)
             await model.drainSharedInbox()

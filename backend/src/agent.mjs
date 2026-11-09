@@ -2,6 +2,13 @@ import { randomUUID } from "node:crypto";
 import { allowedToolNames, buildCapabilityManifest, isDeviceTool } from "./capabilities.mjs";
 import { ConversationStore } from "./conversation.mjs";
 import { buildSystemPrompt } from "./prompt.mjs";
+import {
+  buildTaskPlan,
+  describeTaskGaps,
+  finalizeTask,
+  publicTask,
+  updateTaskFromToolResult
+} from "./taskPlan.mjs";
 import { parseReminderIntent, zonedParts } from "./time.mjs";
 
 const COMPLETED = new Set(["completed", "completed_with_limits", "failed", "superseded", "cancelled"]);
@@ -45,7 +52,8 @@ export class Agent {
     conversations = new ConversationStore(),
     systemPrompt = "",
     modelMode = "mock",
-    executionMode = "mock"
+    executionMode = "mock",
+    turnStore = null
   }) {
     this.adapter = adapter;
     this.registry = registry;
@@ -57,6 +65,7 @@ export class Agent {
     this.systemPrompt = systemPrompt;
     this.modelMode = modelMode;
     this.executionMode = executionMode;
+    this.turnStore = turnStore;
     this.turns = new Map();
   }
 
@@ -132,6 +141,8 @@ export class Agent {
       autoConfirm,
       deferExecution,
       reply: "",
+      task: buildTaskPlan(text),
+      taskNoticeFor: "",
       seq: 0,
       events: [],
       onEvent,
@@ -268,10 +279,17 @@ export class Agent {
   }
 
   snapshot(turnId) {
-    const state = this.#turn(turnId);
+    const state = this.turns.get(turnId);
+    if (state) return this.#snapshotFromState(state);
+    const archived = this.turnStore?.get(turnId);
+    if (archived) return archived;
+    throw new AgentError(`未知 turnId ${turnId}`, "unknown_turn");
+  }
+
+  #snapshotFromState(state) {
     return {
       contractVersion: this.contractVersion,
-      turnId,
+      turnId: state.turnId,
       conversationId: state.conversationId,
       status: state.status,
       reply: state.reply,
@@ -284,7 +302,9 @@ export class Agent {
         operationId: item.operationId,
         arguments: item.args,
         requiresConfirmation: item.tool.requiresConfirmation
-      }))
+      })),
+      task: publicTask(state.task),
+      updatedAt: new Date().toISOString()
     };
   }
 
@@ -349,9 +369,7 @@ export class Agent {
 
       if (!calls.length) {
         state.messages.push({ role: "assistant", content: response.content ?? "" });
-        state.status = "completed";
-        this.#persist(state);
-        this.#emit(state, "turn.completed", { status: "completed" });
+        this.#finish(state);
         return;
       }
 
@@ -567,6 +585,12 @@ export class Agent {
 
   #needsActionNudge(state, content = "") {
     if (state.actionNudges >= 1) return false;
+    if (state.task) {
+      const hasSearch = state.task.observations.some((item) => item.tool === "search_places");
+      const hasNavigation = state.task.observations.some((item) => item.tool === "open_navigation");
+      if (state.task.constraints.locationMode === "current" && !hasSearch) return true;
+      if (state.task.constraints.navigationRequested && !hasNavigation) return true;
+    }
     const text = state.text.trim();
     if (!/^(暂停|继续|播放|下一首|上一首|换一首|切歌|停止|带我去|导航|打开地图)/.test(text)) return false;
     return /(已经|已|正在|好的|好了|开始|暂停|播放|切换|打开)/.test(content);
@@ -623,6 +647,14 @@ export class Agent {
         deduplicated: result.deduplicated
       });
       this.#recordEntities(state, item.tool.name, result);
+      if (state.task) {
+        updateTaskFromToolResult(state.task, item.tool.name, result);
+        const notice = describeTaskGaps(state.task);
+        if (notice && notice !== state.taskNoticeFor) {
+          state.taskNoticeFor = notice;
+          state.messages.push({ role: "system", content: notice });
+        }
+      }
       if (["success", "opened_external_app"].includes(result.status)) {
         state.successfulActions.set(toolSignature(item.tool.name, item.args), {
           status: result.status,
@@ -779,6 +811,14 @@ export class Agent {
     }
   }
 
+  #finish(state) {
+    const task = finalizeTask(state.task, "completed");
+    const status = task?.remaining?.length ? "completed_with_limits" : "completed";
+    state.status = status;
+    this.#persist(state);
+    this.#emit(state, "turn.completed", { status, task: publicTask(task) });
+  }
+
   #persist(state) {
     if (state.persisted) return;
     state.persisted = true;
@@ -803,6 +843,11 @@ export class Agent {
 
   #limit(state, reason) {
     state.status = "completed_with_limits";
+    if (state.task) {
+      state.task.state = "completed_with_limits";
+      const label = reason === "model_calls" ? "模型调用次数达到上限" : "工具执行批次达到上限";
+      if (!state.task.remaining.includes(label)) state.task.remaining.push(label);
+    }
     const pendingTools = [...new Set(state.pending.map((item) => item.tool.name))];
     const message =
       reason === "model_calls"
@@ -814,6 +859,7 @@ export class Agent {
 
   #fail(state, error) {
     state.status = "failed";
+    if (state.task) state.task.state = "failed";
     const retryable = !["missing_api_key", "invalid_input"].includes(error.code);
     this.#emit(state, "turn.failed", {
       code: error.code ?? "internal_error",
@@ -841,6 +887,14 @@ export class Agent {
         state.onEvent(event);
       } catch {
         // 客户端断流不应中断服务端任务。
+      }
+    }
+    if (this.turnStore) {
+      const record = this.#snapshotFromState(state);
+      if (["turn.completed", "turn.failed", "turn.limit_reached"].includes(type)) {
+        this.turnStore.flush(record);
+      } else {
+        this.turnStore.schedule(record);
       }
     }
   }

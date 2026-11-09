@@ -1,6 +1,7 @@
 import { loadConfig } from "./config.mjs";
 import { ToolRegistry } from "./registry.mjs";
 import { OperationLog } from "./operationLog.mjs";
+import { TurnStore } from "./turnStore.mjs";
 import { MockDeviceExecutor } from "./mockDevice.mjs";
 import { DeepSeekAdapter, MockModelAdapter } from "./adapters.mjs";
 import { Agent } from "./agent.mjs";
@@ -20,6 +21,7 @@ export async function createRuntime(env = process.env, overrides = {}) {
   const conversations =
     overrides.conversations ??
     new ConversationStore({ maxConversations: config.caps.maxConversations });
+  const turnStore = overrides.turnStore ?? (await TurnStore.open(config.paths.turns));
   const systemPrompt = overrides.systemPrompt ?? loadSystemPrompt(config.paths.prompt);
   const agent = new Agent({
     adapter,
@@ -28,10 +30,11 @@ export async function createRuntime(env = process.env, overrides = {}) {
     operationLog,
     caps: config.caps,
     contractVersion: config.contractVersion,
+    turnStore,
     conversations,
     systemPrompt,
     modelMode: config.modelMode,
     executionMode: config.executionMode
   });
-  return { config, registry, operationLog, executor, adapter, conversations, agent };
+  return { config, registry, operationLog, executor, adapter, conversations, turnStore, agent };
 }

@@ -109,9 +109,9 @@
     },
     {
       "name": "search_places",
-      "version": "1.0",
+      "version": "1.1",
       "skill": "travel",
-      "description": "按关键词和地区或当前位置搜索地点，返回带稳定 ID 的候选列表。",
+      "description": "按关键词和当前位置、明确地区或给定坐标搜索地点。给出 radiusMeters 时由手机计算直线距离、过滤并排序后再返回。",
       "requiresConfirmation": false,
       "requiresAuthorization": ["location"],
       "inputSchema": {
@@ -120,6 +120,7 @@
         "additionalProperties": false,
         "properties": {
           "query": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "locationMode": { "type": "string", "enum": ["current", "region", "provided"] },
           "region": { "type": "string", "minLength": 1, "maxLength": 80 },
           "near": {
             "type": "object",
@@ -130,7 +131,8 @@
               "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
             }
           },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 10 }
+          "radiusMeters": { "type": "integer", "minimum": 100, "maximum": 50000 },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 25 }
         }
       }
     },

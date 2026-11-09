@@ -129,3 +129,42 @@ test("设备模式 HTTP：挂起手机工具、标注执行位置并接受回传
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test("配置 WHALE_AUTH_TOKEN 后 /v1 要求 Bearer，healthz 保持公开", async () => {
+  const runtime = await createTestRuntime({}, { WHALE_AUTH_TOKEN: "test-token" });
+  const server = await startServer(runtime, { port: 0 });
+  const { port } = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  try {
+    const health = await (await fetch(`${base}/healthz`)).json();
+    assert.equal(health.authRequired, true);
+
+    const unauthorized = await fetch(`${base}/v1/capabilities`);
+    assert.equal(unauthorized.status, 401);
+    assert.equal((await unauthorized.json()).error.code, "unauthorized");
+
+    const authorized = await fetch(`${base}/v1/capabilities`, {
+      headers: { authorization: "Bearer test-token" }
+    });
+    assert.equal(authorized.status, 200);
+
+    const turn = await fetch(`${base}/v1/turns`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer test-token"
+      },
+      body: JSON.stringify({
+        text: "明天下午三点提醒我取快递",
+        now: FIXED_NOW,
+        timezone: TIMEZONE,
+        autoConfirm: true
+      })
+    });
+    assert.equal(turn.status, 200);
+    assert.equal((await turn.json()).status, "completed");
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

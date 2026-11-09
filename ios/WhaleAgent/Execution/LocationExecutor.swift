@@ -4,39 +4,64 @@ import MapKit
 
 @MainActor
 final class LocationExecutor {
+    private let locationProvider = CurrentLocationProvider()
+
     func searchPlaces(arguments: [String: JSONValue]) async throws -> JSONValue {
         let query = try arguments.requiredString("query")
+        let limit = min(max(arguments.optionalInt("limit") ?? 5, 1), 25)
+        let explicitRadius = arguments.optionalInt("radiusMeters").map { min(max($0, 100), 50_000) }
+
+        let near = arguments.optionalObject("near")
+        let region = arguments.optionalString("region")?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let mode = arguments.optionalString("locationMode")
+            ?? (near != nil ? "provided" : ((region?.isEmpty == false) ? "region" : "current"))
+        guard ["current", "region", "provided"].contains(mode) else {
+            throw ToolExecutionError(code: "invalid_arguments", message: "locationMode 必须是 current、region 或 provided")
+        }
+
+        let center: CLLocation
+        switch mode {
+        case "provided":
+            guard let near,
+                  let latitude = near.optionalDouble("latitude"),
+                  let longitude = near.optionalDouble("longitude") else {
+                throw ToolExecutionError(code: "invalid_arguments", message: "locationMode=provided 时必须提供 near 经纬度")
+            }
+            center = CLLocation(latitude: latitude, longitude: longitude)
+        case "region":
+            guard let region, !region.isEmpty else {
+                throw ToolExecutionError(code: "invalid_arguments", message: "locationMode=region 时必须提供 region")
+            }
+            center = try await geocode(region)
+        default:
+            center = try await locationProvider.currentLocation()
+        }
+
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = query
         request.resultTypes = .pointOfInterest
-
-        var nearCoordinate: CLLocationCoordinate2D?
-        if let near = arguments.optionalObject("near"),
-           let latitude = near.optionalDouble("latitude"),
-           let longitude = near.optionalDouble("longitude") {
-            let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-            nearCoordinate = coordinate
-            request.region = MKCoordinateRegion(
-                center: coordinate,
-                latitudinalMeters: 5_000,
-                longitudinalMeters: 5_000
-            )
-        } else if let region = arguments.optionalString("region"), !region.isEmpty {
-            let geocoded = try? await geocode(region)
-            if let location = geocoded {
-                request.region = MKCoordinateRegion(
-                    center: location.coordinate,
-                    latitudinalMeters: 12_000,
-                    longitudinalMeters: 12_000
-                )
-            }
-        }
+        let searchRadius = Double(explicitRadius ?? 5_000)
+        request.region = MKCoordinateRegion(
+            center: center.coordinate,
+            latitudinalMeters: max(searchRadius * 2.4, 1_200),
+            longitudinalMeters: max(searchRadius * 2.4, 1_200)
+        )
 
         let response = try await search(request)
-        let limit = min(max(arguments.optionalInt("limit") ?? 5, 1), 10)
-        let items = Array(response.mapItems.prefix(limit))
+        let candidates: [(item: MKMapItem, distance: CLLocationDistance)] = response.mapItems.map { item in
+            let target = CLLocation(
+                latitude: item.placemark.coordinate.latitude,
+                longitude: item.placemark.coordinate.longitude
+            )
+            return (item, center.distance(from: target))
+        }
+        let filtered = explicitRadius.map { radius in
+            candidates.filter { $0.distance <= Double(radius) }
+        } ?? candidates
+        let selected = Array(filtered.sorted { $0.distance < $1.distance }.prefix(limit))
 
-        let places: [JSONValue] = items.map { item in
+        let places: [JSONValue] = selected.map { entry in
+            let item = entry.item
             let placeId = PlaceStore.shared.store(item)
             var row: [String: JSONValue] = [
                 "placeId": .string(placeId),
@@ -44,16 +69,9 @@ final class LocationExecutor {
                 "category": item.pointOfInterestCategory.map { JSONValue.string($0.rawValue) } ?? .null,
                 "address": item.placemark.title.map { JSONValue.string($0) } ?? .null,
                 "latitude": .number(item.placemark.coordinate.latitude),
-                "longitude": .number(item.placemark.coordinate.longitude)
+                "longitude": .number(item.placemark.coordinate.longitude),
+                "distanceMeters": .number(entry.distance.rounded())
             ]
-            if let nearCoordinate {
-                let from = CLLocation(latitude: nearCoordinate.latitude, longitude: nearCoordinate.longitude)
-                let to = CLLocation(
-                    latitude: item.placemark.coordinate.latitude,
-                    longitude: item.placemark.coordinate.longitude
-                )
-                row["distanceMeters"] = .number(from.distance(from: to).rounded())
-            }
             if let phone = item.phoneNumber {
                 row["phone"] = .string(phone)
             }
@@ -64,8 +82,18 @@ final class LocationExecutor {
             "query": .string(query),
             "places": .array(places),
             "count": .number(Double(places.count)),
+            "candidatePoolCount": .number(Double(candidates.count)),
+            "locationMode": .string(mode),
+            "searchCenter": .object([
+                "latitude": .number(center.coordinate.latitude),
+                "longitude": .number(center.coordinate.longitude)
+            ]),
+            "radiusMeters": explicitRadius.map { JSONValue.number(Double($0)) } ?? .null,
+            "radiusApplied": .bool(explicitRadius != nil),
+            "distanceType": .string("straight_line"),
             "source": .string("mapkit"),
-            "simulated": .bool(false)
+            "simulated": .bool(false),
+            "note": .string("distanceMeters 为搜索中心到候选的直线距离；radiusApplied=true 时已按半径过滤并排序。")
         ])
     }
 

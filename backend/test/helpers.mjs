@@ -9,10 +9,12 @@ export async function createTestRuntime(overrides = {}, envOverrides = {}) {
     {
       ...process.env,
       MODEL_MODE: "mock",
+      EXECUTION_MODE: "mock",
       ...envOverrides,
       OPERATION_LOG_PATH: join(dir, "operations.jsonl"),
       REMINDERS_PATH: join(dir, "reminders.json"),
-      CALENDAR_PATH: join(dir, "calendar.json")
+      CALENDAR_PATH: join(dir, "calendar.json"),
+      TURNS_PATH: join(dir, "turns")
     },
     overrides
   );

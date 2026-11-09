@@ -17,6 +17,7 @@ export function loadConfig(env = process.env) {
     contractVersion: "1.0",
     port: Number(env.PORT ?? 8787),
     host: env.HOST ?? "127.0.0.1",
+    authToken: env.WHALE_AUTH_TOKEN ?? "",
     modelMode,
     executionMode,
     deepseek: {
@@ -37,7 +38,8 @@ export function loadConfig(env = process.env) {
       prompt: env.PROMPT_PATH ?? fileURLToPath(new URL("../../prompts/assistant-system.v1.txt", import.meta.url)),
       operationLog: env.OPERATION_LOG_PATH ?? dataPath("operations.jsonl"),
       reminders: env.REMINDERS_PATH ?? dataPath("reminders.json"),
-      calendar: env.CALENDAR_PATH ?? dataPath("calendar.json")
+      calendar: env.CALENDAR_PATH ?? dataPath("calendar.json"),
+      turns: env.TURNS_PATH ?? dataPath("turns")
     }
   };
 }

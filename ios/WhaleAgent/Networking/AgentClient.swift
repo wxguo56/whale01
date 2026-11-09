@@ -35,6 +35,10 @@ actor AgentClient {
         try await send(path: "/healthz", method: "GET", body: Optional<EmptyBody>.none)
     }
 
+    func turnSnapshot(turnId: String) async throws -> AgentTurnResponse {
+        try await send(path: "/v1/turns/\(turnId)", method: "GET", body: Optional<EmptyBody>.none)
+    }
+
     func startTurn(
         text: String,
         conversationId: String?,
@@ -79,6 +83,10 @@ actor AgentClient {
         var request = URLRequest(url: requestURL)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "accept")
+        let token = BackendConfig.authToken
+        if !token.isEmpty {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "authorization")
+        }
         if let body {
             request.setValue("application/json", forHTTPHeaderField: "content-type")
             request.httpBody = try JSONEncoder().encode(body)
