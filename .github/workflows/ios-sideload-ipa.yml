@@ -1,0 +1,76 @@
+name: iOS Sideload IPA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "ios/**"
+      - "!ios/**/*.md"
+      - ".github/workflows/ios-sideload-ipa.yml"
+
+concurrency:
+  group: ios-sideload-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Build unsigned device IPA for AltStore / SideStore
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Archive without signing
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project WhaleAgent.xcodeproj \
+            -scheme WhaleAgentSideload \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/WhaleAgent.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive | tee archive.log
+
+      - name: Package unsigned IPA
+        working-directory: ios
+        run: |
+          APP_PATH="$(ls -d build/WhaleAgent.xcarchive/Products/Applications/*.app | head -1)"
+          test -n "$APP_PATH"
+          rm -rf build/Payload
+          mkdir -p build/Payload
+          cp -R "$APP_PATH" build/Payload/
+          cd build
+          zip -qry WhaleAgent-Sideload.ipa Payload
+          unzip -l WhaleAgent-Sideload.ipa | head -20
+
+      - name: Verify binary architectures
+        working-directory: ios
+        run: |
+          lipo -info build/Payload/WhaleAgent.app/WhaleAgent
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: WhaleAgent-Sideload-ipa
+          path: ios/build/WhaleAgent-Sideload.ipa
+
+      - name: Upload archive log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-sideload-archive-log
+          path: ios/archive.log
+          if-no-files-found: warn

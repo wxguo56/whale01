@@ -40,11 +40,48 @@ targets:
       - sdk: MessageUI.framework
       - sdk: MusicKit.framework
       - sdk: WeatherKit.framework
+  WhaleAgentSideload:
+    type: application
+    platform: iOS
+    sources:
+      - path: WhaleAgent
+        excludes:
+          - "Info.plist"
+          - "WhaleAgent.entitlements"
+          - "WhaleAgent-Sideload.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.whale01.whaleagent.alt
+        PRODUCT_NAME: WhaleAgent
+        INFOPLIST_FILE: WhaleAgent/Info.plist
+        CODE_SIGN_ENTITLEMENTS: WhaleAgent/WhaleAgent-Sideload.entitlements
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) FREE_SIGNING"
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: NO
+        CODE_SIGN_STYLE: Automatic
+    dependencies:
+      - sdk: EventKit.framework
+      - sdk: HealthKit.framework
+      - sdk: MapKit.framework
+      - sdk: CoreLocation.framework
+      - sdk: Contacts.framework
+      - sdk: MessageUI.framework
+      - sdk: MusicKit.framework
+      - sdk: WeatherKit.framework
 schemes:
   WhaleAgent:
     build:
       targets:
         WhaleAgent: all
+    run:
+      config: Debug
+    archive:
+      config: Release
+  WhaleAgentSideload:
+    build:
+      targets:
+        WhaleAgentSideload: all
     run:
       config: Debug
     archive:

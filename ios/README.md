@@ -61,6 +61,18 @@ xcodebuild \
 - 真机需要的签名证书和描述文件。
 - App 可访问的后端地址；`127.0.0.1` 在手机上指向手机自身。
 
+## 免费签名真机安装（AltStore / SideStore）
+
+没有付费开发者账号时，使用 `WhaleAgentSideload` scheme：
+
+- Bundle ID：`com.whale01.whaleagent.alt`
+- Entitlements：`WhaleAgent-Sideload.entitlements`（空，不申请受限能力）
+- 编译条件：`FREE_SIGNING`，天气与运动摘要会返回 `unavailable_in_free_build`
+- IPA 由 `.github/workflows/ios-sideload-ipa.yml` 在 macOS runner 上构建并上传 artifact
+- 完整安装与验收步骤见 `15_AltStore与SideStore真机安装.md`
+
+免费签名有效期 7 天，最多同时安装 3 个 App，不支持 HealthKit、WeatherKit、App Groups 与推送。
+
 ## 真实能力
 
 - EventKit：提醒事项、日历读写。

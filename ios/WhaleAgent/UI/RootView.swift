@@ -232,6 +232,7 @@ private struct PermissionChip: View {
         switch value {
         case "granted": return "已授权"
         case "denied": return "已拒绝"
+        case "unavailable": return "免费签名不可用"
         default: return "未请求"
         }
     }

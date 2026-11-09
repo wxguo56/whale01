@@ -64,7 +64,11 @@ final class PermissionCenter: ObservableObject {
 
         let reminderStatus = EKEventStore.authorizationStatus(for: .reminder)
         next["reminder"] = mapEventStatus(reminderStatus, readRequired: true)
+        #if FREE_SIGNING
+        next["activityRead"] = "unavailable"
+        #else
         next["activityRead"] = "unknown"
+        #endif
 
         switch CNContactStore.authorizationStatus(for: .contacts) {
         case .authorized:
@@ -121,7 +125,12 @@ final class PermissionCenter: ObservableObject {
         case "calendarWrite":
             return await ensureCalendar(readRequired: false)
         case "activityRead":
+            #if FREE_SIGNING
+            statuses["activityRead"] = "unavailable"
+            return false
+            #else
             return await ensureHealth()
+            #endif
         case "contacts":
             return await ensureContacts()
         case "location":

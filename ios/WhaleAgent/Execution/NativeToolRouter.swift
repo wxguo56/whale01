@@ -2,6 +2,10 @@ import Foundation
 
 @MainActor
 final class NativeToolRouter {
+    #if FREE_SIGNING
+    private static let freeBuildUnavailableTools: Set<String> = ["get_weather", "get_activity_summary"]
+    #endif
+
     private let permissions: PermissionCenter
     private let eventKit: EventKitExecutor
     private let health: HealthKitExecutor
@@ -32,6 +36,19 @@ final class NativeToolRouter {
                 deduplicated: true
             )
         }
+
+        #if FREE_SIGNING
+        if Self.freeBuildUnavailableTools.contains(pending.tool) {
+            return ToolResultPayload(
+                toolCallId: pending.toolCallId,
+                status: "failed",
+                error: ToolErrorPayload(
+                    code: "unavailable_in_free_build",
+                    message: "免费签名版不包含 HealthKit / WeatherKit 能力，本次未执行；请改用提醒、日历、地点、音乐等能力。"
+                )
+            )
+        }
+        #endif
 
         if let missing = await permissions.ensure(tool: pending.tool) {
             return ToolResultPayload(
