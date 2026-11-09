@@ -68,3 +68,27 @@ test("价格缺口未补齐时最终状态为部分完成", () => {
   assert.deepEqual(task.remaining, ["取得可核对的价格来源"]);
   assert.equal(finalizeTask(task).state, "completed_with_limits");
 });
+
+test("明确地区附近搜索不建立当前位置约束", () => {
+  const task = buildTaskPlan("查一下杭州西湖附近的咖啡店");
+  assert.equal(task.constraints.locationMode, "region");
+  assert.equal(task.constraints.region, "杭州西湖");
+  assert.ok(task.remaining.includes("在明确地区搜索候选地点"));
+  assert.ok(!task.remaining.includes("取得当前位置并搜索候选地点"));
+});
+
+test("我附近与公司附近仍按当前位置处理", () => {
+  assert.equal(buildTaskPlan("我家附近的咖啡店").constraints.locationMode, "current");
+  assert.equal(buildTaskPlan("公司附近的咖啡店").constraints.locationMode, "current");
+});
+
+test("地区搜索成功后移除地区缺口并保留 region 事实", () => {
+  const task = buildTaskPlan("杭州西湖附近的咖啡店");
+  updateTaskFromToolResult(task, "search_places", {
+    status: "success",
+    data: { count: 2, locationMode: "region", radiusMeters: null, radiusApplied: false }
+  });
+  assert.equal(task.remaining.length, 0);
+  assert.equal(task.constraints.locationMode, "region");
+  assert.equal(task.constraints.region, "杭州西湖");
+});

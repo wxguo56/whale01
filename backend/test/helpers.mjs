@@ -10,6 +10,8 @@ export async function createTestRuntime(overrides = {}, envOverrides = {}) {
       ...process.env,
       MODEL_MODE: "mock",
       EXECUTION_MODE: "mock",
+      WHALE_AUTH_TOKENS: "",
+      WHALE_AUTH_TOKEN: "",
       ...envOverrides,
       OPERATION_LOG_PATH: join(dir, "operations.jsonl"),
       REMINDERS_PATH: join(dir, "reminders.json"),

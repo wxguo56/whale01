@@ -2,6 +2,15 @@ const NEARBY_PATTERN = /附近|周边|离我|当前位置|我这|旁边/;
 const MERCHANT_PATTERN = /店|餐厅|咖啡|烧烤|火锅|商场|超市|酒吧|饭店|馆|摊/;
 const PRICE_PATTERN = /价格|多少钱|人均|预算|贵不贵|性价比|菜单|收费/;
 const NAVIGATION_PATTERN = /导航|带我去|怎么走|路线|过去/;
+const REGION_NEARBY_PATTERN = /([\u4e00-\u9fa5]{2,12})(?:附近|周边|一带|这边)/;
+const REGION_SUFFIX_PATTERN = /市|区|县|镇|乡|街道|路|街|大道|广场|公园|机场|车站|大学|学院|商圈|景区|湖|山|岛|湾|港/;
+const REGION_WORDS = ["我家", "家里", "公司", "单位", "学校", "这里", "这儿", "身边", "附近", "当前", "这边"];
+const CITY_NAMES = [
+  "北京", "上海", "广州", "深圳", "杭州", "成都", "南京", "武汉", "西安", "重庆",
+  "苏州", "天津", "长沙", "青岛", "厦门", "宁波", "无锡", "合肥", "济南", "郑州",
+  "福州", "昆明", "大连", "沈阳", "哈尔滨", "长春", "石家庄", "太原", "南昌", "贵阳",
+  "南宁", "海口", "兰州", "银川", "西宁", "乌鲁木齐", "呼和浩特", "拉萨", "香港", "澳门", "台北"
+];
 
 const CHINESE_NUMBERS = {
   一: 1,
@@ -30,6 +39,21 @@ export function parseRadiusMeters(text) {
   return Math.min(Math.max(Math.round(meters), 100), 50_000);
 }
 
+export function detectRegion(text) {
+  const match = REGION_NEARBY_PATTERN.exec(text);
+  if (!match) return null;
+  const name = match[1].replace(
+    /^(?:帮我|请|想|要|查一下|查|找一下|找|搜一下|搜|看看|看一下|了解|在|去|到)+/,
+    ""
+  );
+  if (name.length < 2) return null;
+  if (REGION_WORDS.some((word) => name.includes(word))) return null;
+  if (REGION_SUFFIX_PATTERN.test(name) || CITY_NAMES.some((city) => name.includes(city))) {
+    return name;
+  }
+  return null;
+}
+
 export function buildTaskPlan(text) {
   const input = String(text ?? "").trim();
   if (!input) return null;
@@ -39,12 +63,17 @@ export function buildTaskPlan(text) {
   const priceRequested = PRICE_PATTERN.test(input) && (nearby || merchant);
   const navigationRequested = NAVIGATION_PATTERN.test(input);
   const radiusMeters = parseRadiusMeters(input);
+  const region = detectRegion(input);
 
   if (!nearby && !priceRequested && !navigationRequested) return null;
 
   const constraints = {};
   const remaining = [];
-  if (nearby) {
+  if (region) {
+    constraints.locationMode = "region";
+    constraints.region = region;
+    remaining.push("在明确地区搜索候选地点");
+  } else if (nearby) {
     constraints.locationMode = "current";
     remaining.push("取得当前位置并搜索候选地点");
   }
@@ -74,7 +103,9 @@ export function updateTaskFromToolResult(task, toolName, result) {
 
   if (toolName === "search_places") {
     if (status === "success" && data && typeof data === "object") {
-      task.remaining = task.remaining.filter((item) => item !== "取得当前位置并搜索候选地点");
+      task.remaining = task.remaining.filter(
+        (item) => item !== "取得当前位置并搜索候选地点" && item !== "在明确地区搜索候选地点"
+      );
       if (data.locationMode) task.constraints.locationMode = data.locationMode;
       if (Number.isFinite(data.radiusMeters)) task.constraints.radiusMeters = data.radiusMeters;
       if (data.radiusMeters && data.radiusApplied !== true) {

@@ -12,10 +12,10 @@ export function loadConfig(env = process.env) {
     throw new Error(`EXECUTION_MODE 必须是 mock、device 或 ios，当前为 ${executionModeRaw}`);
   }
   const executionMode = executionModeRaw === "device" ? "ios" : executionModeRaw;
-  const authTokens = (env.WHALE_AUTH_TOKENS ?? env.WHALE_AUTH_TOKEN ?? "")
+  const authTokens = [...new Set(`${env.WHALE_AUTH_TOKENS ?? ""},${env.WHALE_AUTH_TOKEN ?? ""}`
     .split(",")
     .map((token) => token.trim())
-    .filter(Boolean);
+    .filter(Boolean))];
 
   return {
     contractVersion: "1.0",
