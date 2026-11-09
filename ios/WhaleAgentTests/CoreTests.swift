@@ -9,7 +9,7 @@ final class CoreTests: XCTestCase {
     }
 
     func testJSONValueRequiredString() throws {
-        let value = JSONValue.object(["title": .string("取快递")])
+        let value: [String: JSONValue] = ["title": .string("取快递")]
         XCTAssertEqual(try value.requiredString("title"), "取快递")
         XCTAssertThrowsError(try value.requiredString("missing"))
     }
