@@ -10,34 +10,27 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                ConversationTabView(model: model, onOpenMusic: { showMusic = true })
-                    .tag(AppTab.conversation)
-                    .tabItem { Label("对话", systemImage: "bubble.left.and.bubble.right") }
+        TabView(selection: $selectedTab) {
+            withMiniPlayer(ConversationTabView(model: model, onOpenMusic: { showMusic = true }))
+                .tag(AppTab.conversation)
+                .tabItem { Label("对话", systemImage: "bubble.left.and.bubble.right") }
 
-                RecordsView(model: model)
-                    .tag(AppTab.records)
-                    .tabItem { Label("记录", systemImage: "clock") }
+            withMiniPlayer(RecordsView(model: model))
+                .tag(AppTab.records)
+                .tabItem { Label("记录", systemImage: "clock") }
 
-                ProfileView(model: model)
-                    .tag(AppTab.profile)
-                    .tabItem { Label("我的", systemImage: "person") }
-            }
-            .tint(WhaleTheme.accent)
-            .sheet(item: $model.presentedConfirmation) { item in
-                ConfirmationSheet(model: model, item: item)
-            }
-
-            if let track = model.playback.track {
-                miniPlayer(track)
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 56)
-            }
+            withMiniPlayer(ProfileView(model: model))
+                .tag(AppTab.profile)
+                .tabItem { Label("我的", systemImage: "person") }
+        }
+        .tint(WhaleTheme.accent)
+        .sheet(item: $model.presentedConfirmation) { item in
+            ConfirmationSheet(model: model, item: item)
         }
         .sheet(isPresented: $showMusic) {
             MusicView(model: model, showsClose: true)
         }
+        .animation(.easeInOut(duration: 0.2), value: model.playback.track?.trackId)
         .preferredColorScheme(colorScheme)
         .task {
             await model.health()
@@ -56,6 +49,17 @@ struct RootView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .whaleOpenChat)) { _ in
             selectedTab = .conversation
+        }
+    }
+
+    private func withMiniPlayer<Content: View>(_ content: Content) -> some View {
+        content.safeAreaInset(edge: .bottom, spacing: 0) {
+            if let track = model.playback.track {
+                miniPlayer(track)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 6)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
     }
 
