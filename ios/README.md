@@ -88,7 +88,8 @@ xcodebuild \
 - 四个 Tab：首页 / 对话 / 音乐 / 设置；诊断信息集中在“开发设置与诊断”。
 - 首页与音乐页只读真实 EventKit / MusicKit 数据，无权限或无数据时如实说明。
 - 对话页保留真实后端链路，新增原生确认 Sheet、断线重试与新建会话。
-- 版本 `0.2.0`，Build 号由 CI 的 `github.run_number` 递增；本次构建为 Build 3。
+- 版本 `0.2.1`，Build 号由 CI 的 `github.run_number` 递增；当前构建为 Build 5。
+- 对话输入栏内置系统语音输入（Speech + AVAudioEngine），键盘可通过“完成”、收起按钮、点击空白或发送后收起。
 
 ## 真机辅助工具
 
