@@ -49,3 +49,83 @@ test("HTTP 闭环与事件流", async () => {
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test("设备模式 HTTP：挂起手机工具、标注执行位置并接受回传", async () => {
+  const runtime = await createTestRuntime({}, { EXECUTION_MODE: "ios" });
+  const server = await startServer(runtime, { port: 0 });
+  const { port } = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  try {
+    const health = await (await fetch(`${base}/healthz`)).json();
+    assert.equal(health.executionMode, "ios");
+    assert.equal(health.requiresDeferExecution, true);
+
+    const capabilities = await (await fetch(`${base}/v1/capabilities`)).json();
+    const reminder = capabilities.capabilities.find((item) => item.name === "create_reminder");
+    const summarize = capabilities.capabilities.find((item) => item.name === "summarize_shared_content");
+    assert.equal(reminder.executionLocation, "phone");
+    assert.equal(summarize.executionLocation, "backend");
+
+    const rejected = await fetch(`${base}/v1/turns`, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({
+        text: "明天下午三点提醒我取快递",
+        now: FIXED_NOW,
+        timezone: TIMEZONE
+      })
+    });
+    assert.equal(rejected.status, 400);
+    assert.equal((await rejected.json()).error.code, "device_mode_requires_defer");
+
+    const response = await fetch(`${base}/v1/turns`, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({
+        text: "明天下午三点提醒我取快递",
+        now: FIXED_NOW,
+        timezone: TIMEZONE,
+        deferExecution: true,
+        conversationId: "conv_device_http"
+      })
+    });
+    const started = await response.json();
+    assert.equal(started.status, "awaiting_tool_results");
+    assert.equal(started.pending.length, 1);
+    assert.equal(started.pending[0].tool, "create_reminder");
+
+    const pending = started.pending[0];
+    const completedResponse = await fetch(`${base}/v1/turns/${started.turnId}/tool-results`, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({
+        results: [
+          {
+            toolCallId: pending.toolCallId,
+            status: "success",
+            data: {
+              recordId: "REM-IOS-HTTP-1",
+              title: "取快递",
+              dueAt: "2026-11-10T15:00:00+08:00",
+              timezone: TIMEZONE,
+              listName: "提醒事项",
+              source: "eventkit",
+              simulated: false
+            }
+          }
+        ]
+      })
+    });
+    const completed = await completedResponse.json();
+    assert.equal(completed.status, "completed");
+    assert.match(completed.reply, /已创建提醒/);
+    assert.ok(
+      completed.events.some(
+        (event) => event.type === "tool.result" && event.payload.status === "success"
+      )
+    );
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

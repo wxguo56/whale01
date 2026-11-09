@@ -72,6 +72,204 @@ test("缺少具体时间时追问且不调用工具", async () => {
   assert.equal(result.events.some((event) => event.type === "tool.requested"), false);
 });
 
+test("模型自行补造 09:00 时被拦截并要求追问", async () => {
+  let calls = 0;
+  const adapter = {
+    async chat() {
+      calls += 1;
+      if (calls === 1) {
+        return {
+          content: "",
+          toolCalls: [
+            {
+              id: "call_invented_time",
+              name: "create_reminder",
+              arguments: JSON.stringify({
+                title: "取快递",
+                dueAt: "2026-11-10T09:00:00+08:00",
+                timezone: TIMEZONE
+              })
+            }
+          ]
+        };
+      }
+      return { content: "明天几点提醒你取快递？", toolCalls: [] };
+    }
+  };
+  const { agent } = await createTestRuntime({ adapter });
+  const result = await agent.start({
+    text: "明天提醒我取快递",
+    now: FIXED_NOW,
+    timezone: TIMEZONE,
+    autoConfirm: true
+  });
+
+  assert.equal(result.status, "completed");
+  assert.equal(result.events.some((event) => event.type === "tool.requested"), false);
+  const rejected = result.events.find((event) => event.type === "tool.rejected");
+  assert.equal(rejected.payload.error.code, "missing_time");
+  assert.match(result.reply, /几点/);
+});
+
+test("只说三点时拦截并追问上午还是下午", async () => {
+  let calls = 0;
+  const adapter = {
+    async chat() {
+      calls += 1;
+      if (calls === 1) {
+        return {
+          content: "",
+          toolCalls: [
+            {
+              id: "call_missing_period",
+              name: "create_reminder",
+              arguments: JSON.stringify({
+                title: "取快递",
+                dueAt: "2026-11-10T15:00:00+08:00",
+                timezone: TIMEZONE
+              })
+            }
+          ]
+        };
+      }
+      return { content: "三点是上午还是下午？", toolCalls: [] };
+    }
+  };
+  const { agent } = await createTestRuntime({ adapter });
+  const result = await agent.start({
+    text: "明天三点提醒我取快递",
+    now: FIXED_NOW,
+    timezone: TIMEZONE,
+    autoConfirm: true
+  });
+
+  assert.equal(result.status, "completed");
+  assert.equal(result.events.some((event) => event.type === "tool.requested"), false);
+  const rejected = result.events.find((event) => event.type === "tool.rejected");
+  assert.equal(rejected.payload.error.code, "missing_period");
+  assert.match(result.reply, /上午还是下午/);
+});
+
+test("修改待确认时间时沿用原下午上下文", async () => {
+  const adapter = {
+    async chat() {
+      return {
+        content: "",
+        toolCalls: [
+          {
+            id: "call_edit_pm",
+            name: "create_reminder",
+            arguments: JSON.stringify({
+              title: "取快递",
+              dueAt: "2026-11-10T16:00:00+08:00",
+              timezone: TIMEZONE
+            })
+          }
+        ]
+      };
+    }
+  };
+  const { agent, conversations } = await createTestRuntime({ adapter });
+  conversations.ensure("conv_test_edit_pm");
+  conversations.upsertTask("conv_test_edit_pm", {
+    taskId: "task-reminder-1",
+    kind: "create_reminder",
+    state: "waiting_confirmation",
+    operationId: "op-old-preview",
+    turnId: "turn_seed",
+    knownArguments: { title: "取快递", dueAt: "2026-11-10T15:00:00+08:00", timezone: TIMEZONE }
+  });
+  const result = await agent.start({
+    text: "改成四点，其他不变",
+    now: FIXED_NOW,
+    timezone: TIMEZONE,
+    autoConfirm: false,
+    conversationId: "conv_test_edit_pm"
+  });
+
+  assert.equal(result.status, "awaiting_confirmation");
+  assert.equal(result.pending[0].arguments.dueAt, "2026-11-10T16:00:00+08:00");
+});
+
+test("同一时间修改日期时允许沿用已确认时间", async () => {
+  const adapter = {
+    async chat() {
+      return {
+        content: "",
+        toolCalls: [
+          {
+            id: "call_edit_date",
+            name: "create_reminder",
+            arguments: JSON.stringify({
+              title: "取快递",
+              dueAt: "2026-11-11T15:00:00+08:00",
+              timezone: TIMEZONE
+            })
+          }
+        ]
+      };
+    }
+  };
+  const { agent, conversations } = await createTestRuntime({ adapter });
+  conversations.ensure("conv_test_edit_date");
+  conversations.upsertTask("conv_test_edit_date", {
+    taskId: "task-reminder-1",
+    kind: "create_reminder",
+    state: "waiting_confirmation",
+    operationId: "op-old-preview",
+    turnId: "turn_seed",
+    knownArguments: { title: "取快递", dueAt: "2026-11-10T15:00:00+08:00", timezone: TIMEZONE }
+  });
+  const result = await agent.start({
+    text: "换成后天，同一时间",
+    now: FIXED_NOW,
+    timezone: TIMEZONE,
+    autoConfirm: false,
+    conversationId: "conv_test_edit_date"
+  });
+
+  assert.equal(result.status, "awaiting_confirmation");
+  assert.equal(result.pending[0].arguments.dueAt, "2026-11-11T15:00:00+08:00");
+});
+
+test("动作命令只回文字时强制改调工具", async () => {
+  let calls = 0;
+  const adapter = {
+    async chat() {
+      calls += 1;
+      if (calls === 1) return { content: "已暂停。", toolCalls: [] };
+      if (calls === 2) {
+        return {
+          content: "",
+          toolCalls: [{ id: "call_pause", name: "pause_music", arguments: JSON.stringify({}) }]
+        };
+      }
+      return { content: "已暂停《雨天电台》。", toolCalls: [] };
+    }
+  };
+  const { agent, executor } = await createTestRuntime({ adapter });
+  executor.seedPlayback("conv_test_pause", {
+    state: "playing",
+    sessionId: "music-session-1",
+    trackId: "music_demo_2",
+    queue: ["music_demo_2"]
+  });
+  const result = await agent.start({
+    text: "暂停",
+    now: FIXED_NOW,
+    timezone: TIMEZONE,
+    autoConfirm: true,
+    conversationId: "conv_test_pause"
+  });
+
+  assert.equal(result.status, "completed");
+  const requested = result.events.find((event) => event.type === "tool.requested");
+  assert.equal(requested.payload.tool, "pause_music");
+  const toolResult = result.events.find((event) => event.type === "tool.result");
+  assert.equal(toolResult.payload.status, "success");
+  assert.match(result.reply, /已暂停/);
+});
+
 test("模型循环到达上限后停止并说明未完成", async () => {
   let callIndex = 0;
   const loopingAdapter = {
@@ -137,4 +335,84 @@ test("延迟执行模式下回传工具结果后继续", async () => {
 
   assert.equal(done.status, "completed");
   assert.match(done.reply, /已创建提醒/);
+});
+
+test("设备模式下必须延迟执行，且能力表标注手机执行位置", async () => {
+  const { agent } = await createTestRuntime({}, { EXECUTION_MODE: "ios" });
+
+  await assert.rejects(
+    () =>
+      agent.start({
+        text: "明天下午三点提醒我取快递",
+        now: FIXED_NOW,
+        timezone: TIMEZONE
+      }),
+    (error) => error.code === "device_mode_requires_defer"
+  );
+
+  const capabilities = agent.capabilities();
+  const reminder = capabilities.find((item) => item.name === "create_reminder");
+  const summarize = capabilities.find((item) => item.name === "summarize_shared_content");
+  assert.equal(reminder.executionMode, "ios");
+  assert.equal(reminder.executionLocation, "phone");
+  assert.equal(reminder.implemented, true);
+  assert.equal(summarize.executionLocation, "backend");
+});
+
+test("设备模式下只把手机工具挂起，模型侧摘要先在后端执行", async () => {
+  let callIndex = 0;
+  const adapter = {
+    async chat() {
+      callIndex += 1;
+      if (callIndex === 1) {
+        return {
+          content: "",
+          toolCalls: [
+            {
+              id: "call_summary_1",
+              name: "summarize_shared_content",
+              arguments: JSON.stringify({ contentId: "content_1", maxPoints: 3 })
+            },
+            {
+              id: "call_reminder_1",
+              name: "create_reminder",
+              arguments: JSON.stringify({
+                title: "取快递",
+                timezone: TIMEZONE,
+                dueAt: "2026-11-10T15:00:00+08:00"
+              })
+            }
+          ]
+        };
+      }
+      return { content: "已完成", toolCalls: [] };
+    }
+  };
+  const { agent } = await createTestRuntime({ adapter }, { EXECUTION_MODE: "ios" });
+
+  const started = await agent.start({
+    text: "总结这篇文章，再提醒我明天下午三点取快递",
+    now: FIXED_NOW,
+    timezone: TIMEZONE,
+    deferExecution: true
+  });
+
+  assert.equal(started.status, "awaiting_tool_results");
+  assert.deepEqual(started.pending.map((item) => item.tool), ["create_reminder"]);
+  assert.ok(started.events.some((event) => event.type === "tool.result" && event.payload.tool === "summarize_shared_content"));
+
+  const done = await agent.submitToolResults(started.turnId, [
+    {
+      toolCallId: started.pending[0].toolCallId,
+      status: "success",
+      data: {
+        recordId: "REM-DEVICE-2",
+        title: "取快递",
+        dueAt: "2026-11-10T15:00:00+08:00",
+        timezone: TIMEZONE
+      }
+    }
+  ]);
+  assert.equal(done.status, "completed");
+  assert.equal(done.reply, "已完成");
 });

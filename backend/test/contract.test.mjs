@@ -2,22 +2,38 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { loadConfig } from "../src/config.mjs";
 import { ToolRegistry } from "../src/registry.mjs";
+import { isDeviceTool } from "../src/capabilities.mjs";
 
 const config = loadConfig({ MODEL_MODE: "mock" });
 const registry = ToolRegistry.fromFile(config.paths.tools, config.paths.toolDefinition);
 
-test("工具目录覆盖总纲要求的 9 个工具", () => {
+test("工具目录覆盖总纲要求的 9 个工具与 6 个音乐工具", () => {
   assert.deepEqual(registry.names().sort(), [
     "create_calendar_event",
     "create_reminder",
     "get_activity_summary",
+    "get_playback_state",
     "get_weather",
     "list_calendar_events",
     "open_navigation",
+    "pause_music",
+    "play_music",
     "prepare_message",
+    "resume_music",
+    "search_music_library",
     "search_places",
+    "skip_music_track",
     "summarize_shared_content"
   ]);
+});
+
+test("音乐工具需要音乐库授权且不需要逐次确认", () => {
+  const play = registry.get("play_music");
+  assert.equal(play.skill, "music");
+  assert.deepEqual(play.requiresAuthorization, ["music"]);
+  assert.equal(play.requiresConfirmation, false);
+  assert.equal(registry.validateArguments("play_music", {}).ok, false);
+  assert.equal(registry.validateArguments("play_music", { trackId: "music_demo_1" }).ok, true);
 });
 
 test("create_reminder 必填 title 与 timezone", () => {
@@ -62,4 +78,19 @@ test("写操作带有确认策略", () => {
   assert.equal(registry.get("create_reminder").requiresConfirmation, true);
   assert.equal(registry.get("create_calendar_event").requiresConfirmation, true);
   assert.equal(registry.get("get_weather").requiresConfirmation, false);
+});
+
+test("EXECUTION_MODE 支持 device/ios 并统一为 ios", () => {
+  assert.equal(loadConfig({ MODEL_MODE: "mock", EXECUTION_MODE: "device" }).executionMode, "ios");
+  assert.equal(loadConfig({ MODEL_MODE: "mock", EXECUTION_MODE: "ios" }).executionMode, "ios");
+  assert.throws(
+    () => loadConfig({ MODEL_MODE: "mock", EXECUTION_MODE: "real" }),
+    /EXECUTION_MODE 必须是 mock、device 或 ios/
+  );
+});
+
+test("设备工具清单只包含手机系统能力，摘要仍由后端模型处理", () => {
+  assert.equal(isDeviceTool("create_reminder"), true);
+  assert.equal(isDeviceTool("play_music"), true);
+  assert.equal(isDeviceTool("summarize_shared_content"), false);
 });

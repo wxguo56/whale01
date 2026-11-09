@@ -30,15 +30,18 @@ export class ToolRegistry {
     return [...this.tools.keys()];
   }
 
-  listForModel() {
-    return [...this.tools.values()].map((tool) => ({
+  listForModel({ allowed = null } = {}) {
+    const allowedSet = allowed ? new Set(allowed) : null;
+    return [...this.tools.values()]
+      .filter((tool) => !allowedSet || allowedSet.has(tool.name))
+      .map((tool) => ({
       type: "function",
       function: {
         name: tool.name,
         description: `${tool.description}（需要用户确认：${tool.requiresConfirmation ? "是" : "否"}）`,
         parameters: tool.inputSchema
       }
-    }));
+      }));
   }
 
   validateArguments(name, args) {

@@ -1,48 +1,178 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { permissionKeysForTool } from "./capabilities.mjs";
+
+const MUSIC_LIBRARY = [
+  { trackId: "music_demo_1", title: "夜航", artist: "鲸鱼示例乐队", album: "演示曲库 A", durationSec: 214 },
+  { trackId: "music_demo_2", title: "雨天电台", artist: "林间信号", album: "演示曲库 B", durationSec: 242 },
+  { trackId: "music_demo_3", title: "光的方向", artist: "示例歌手", album: "演示曲库 C", durationSec: 198 }
+];
+
+const DEMO_CALENDAR = [
+  {
+    eventId: "CAL-DEMO-1",
+    title: "深色模式评审",
+    startAt: "2026-11-09T16:00:00+08:00",
+    endAt: "2026-11-09T17:00:00+08:00",
+    calendarId: "work",
+    location: "线上"
+  },
+  {
+    eventId: "CAL-DEMO-2",
+    title: "健身",
+    startAt: "2026-11-10T16:00:00+08:00",
+    endAt: "2026-11-10T17:00:00+08:00",
+    calendarId: "personal",
+    location: "社区健身房"
+  }
+];
 
 export class MockDeviceExecutor {
-  constructor({ remindersPath }) {
+  constructor({ remindersPath, calendarPath = null, now = () => new Date() } = {}) {
     this.remindersPath = remindersPath;
+    this.calendarPath = calendarPath;
+    this.now = now;
+    this.musicSessions = new Map();
+    this.extraTracks = new Map();
   }
 
-  async execute({ tool, arguments: args, operationId, turnId }) {
-    if (tool === "create_reminder") {
-      return this.#createReminder({ args, operationId, turnId });
+  seedTracks(tracks = []) {
+    for (const track of tracks) {
+      const trackId = track?.trackId ?? track?.id;
+      if (!trackId) continue;
+      this.extraTracks.set(trackId, {
+        trackId,
+        title: track.title ?? trackId,
+        artist: track.artist ?? "评测夹具",
+        album: track.album ?? "评测曲库",
+        durationSec: track.durationSec ?? 0,
+        simulated: true
+      });
     }
-    return {
-      status: "unsupported",
-      data: null,
-      error: { code: "mock_tool_not_implemented", message: `Mock 设备未实现 ${tool}` },
-      deduplicated: false
-    };
   }
 
-  async #createReminder({ args, operationId, turnId }) {
-    if (args.dueAt && Number.isNaN(Date.parse(args.dueAt))) {
+  seedPlayback(conversationId, playback = {}) {
+    const queue = [...(playback.queue ?? [])];
+    if (!queue.length && playback.trackId) queue.push(playback.trackId);
+    const customTracks = new Map();
+    for (const id of queue) {
+      if (!MUSIC_LIBRARY.some((track) => track.trackId === id)) {
+        customTracks.set(id, {
+          trackId: id,
+          title: id,
+          artist: "评测夹具",
+          durationSec: 0,
+          simulated: true
+        });
+      }
+    }
+    const index = Math.max(0, queue.indexOf(playback.trackId));
+    this.musicSessions.set(conversationId, {
+      sessionId: playback.sessionId ?? `ms_seed_${Date.now().toString(36)}`,
+      queue,
+      index,
+      state: playback.state ?? "playing",
+      customTracks,
+      startedAt: new Date().toISOString()
+    });
+    return this.#playbackState(conversationId).data;
+  }
+
+  capabilities() {
+    return [
+      "get_weather",
+      "list_calendar_events",
+      "create_calendar_event",
+      "create_reminder",
+      "get_activity_summary",
+      "search_places",
+      "open_navigation",
+      "summarize_shared_content",
+      "prepare_message",
+      "search_music_library",
+      "play_music",
+      "pause_music",
+      "resume_music",
+      "skip_music_track",
+      "get_playback_state"
+    ];
+  }
+
+  async execute({ tool, arguments: args = {}, operationId, turnId, conversationId = "conv_local", permissions = {} }) {
+    const denied = permissionKeysForTool(tool).find((key) => permissions[key] === "denied");
+    if (denied) {
       return {
-        status: "failed",
+        status: "needs_authorization",
         data: null,
-        error: { code: "invalid_due_at", message: "dueAt 无法解析" },
+        error: {
+          code: "permission_denied",
+          permission: denied,
+          message: `需要先授权 ${denied}，本次未执行`
+        },
         deduplicated: false
       };
     }
 
-    const records = await this.#read();
+    switch (tool) {
+      case "create_reminder":
+        return this.#createReminder({ args, operationId, turnId });
+      case "list_calendar_events":
+        return this.#listCalendarEvents(args);
+      case "create_calendar_event":
+        return this.#createCalendarEvent({ args, operationId, turnId });
+      case "get_weather":
+        return this.#getWeather(args);
+      case "get_activity_summary":
+        return this.#getActivitySummary();
+      case "search_places":
+        return this.#searchPlaces(args);
+      case "open_navigation":
+        return this.#openNavigation(args);
+      case "summarize_shared_content":
+        return this.#summarizeContent(args);
+      case "prepare_message":
+        return this.#prepareMessage(args);
+      case "search_music_library":
+        return this.#searchMusic(args);
+      case "play_music":
+        return this.#playMusic(args, conversationId);
+      case "pause_music":
+        return this.#pauseMusic(conversationId);
+      case "resume_music":
+        return this.#resumeMusic(conversationId);
+      case "skip_music_track":
+        return this.#skipMusic(args, conversationId);
+      case "get_playback_state":
+        return this.#playbackState(conversationId);
+      default:
+        return {
+          status: "unsupported",
+          data: null,
+          error: { code: "mock_tool_not_implemented", message: `Mock 设备未实现 ${tool}` },
+          deduplicated: false
+        };
+    }
+  }
+
+  async #createReminder({ args, operationId, turnId }) {
+    if (args.dueAt && Number.isNaN(Date.parse(args.dueAt))) {
+      return this.#failure("invalid_due_at", "dueAt 无法解析");
+    }
+
+    const records = await this.#readJson(this.remindersPath, []);
     const existing = records.find((record) => record.operationId === operationId);
     if (existing) {
-      return {
-        status: "success",
-        data: {
+      return this.#success(
+        {
           recordId: existing.recordId,
           title: existing.title,
           dueAt: existing.dueAt,
           timezone: existing.timezone,
-          listName: existing.listName
+          listName: existing.listName,
+          simulated: true
         },
-        error: null,
-        deduplicated: true
-      };
+        true
+      );
     }
 
     const record = {
@@ -57,37 +187,294 @@ export class MockDeviceExecutor {
       createdAt: new Date().toISOString()
     };
     records.push(record);
-    await this.#write(records);
+    await this.#writeJson(this.remindersPath, records);
 
+    return this.#success({
+      recordId: record.recordId,
+      title: record.title,
+      dueAt: record.dueAt,
+      timezone: record.timezone,
+      listName: record.listName,
+      simulated: true
+    });
+  }
+
+  async #listCalendarEvents(args) {
+    const start = Date.parse(args.startAt);
+    const end = Date.parse(args.endAt);
+    const stored = this.calendarPath ? await this.#readJson(this.calendarPath, []) : [];
+    const events = [...DEMO_CALENDAR, ...stored].filter((event) => {
+      const at = Date.parse(event.startAt);
+      return at >= start && at < end;
+    });
+    return this.#success({
+      events,
+      count: events.length,
+      source: "mock_demo_calendar",
+      note: events.length ? "模拟日历数据，不代表已读取 iPhone 日历" : "模拟日历在该区间没有事件，不代表真实日历为空"
+    });
+  }
+
+  async #createCalendarEvent({ args, operationId, turnId }) {
+    if (Number.isNaN(Date.parse(args.startAt)) || Number.isNaN(Date.parse(args.endAt))) {
+      return this.#failure("invalid_time_range", "日程开始或结束时间无法解析");
+    }
+    if (Date.parse(args.endAt) <= Date.parse(args.startAt)) {
+      return this.#failure("invalid_time_range", "结束时间必须晚于开始时间");
+    }
+    const records = this.calendarPath ? await this.#readJson(this.calendarPath, []) : [];
+    const existing = records.find((record) => record.operationId === operationId);
+    if (existing) {
+      return this.#success({ ...existing, simulated: true }, true);
+    }
+    const event = {
+      operationId,
+      turnId,
+      eventId: `CAL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      title: args.title,
+      startAt: args.startAt,
+      endAt: args.endAt,
+      calendarId: args.calendarId ?? "personal",
+      location: args.location ?? null,
+      notes: args.notes ?? null,
+      createdAt: new Date().toISOString()
+    };
+    if (this.calendarPath) {
+      records.push(event);
+      await this.#writeJson(this.calendarPath, records);
+    }
+    return this.#success({
+      eventId: event.eventId,
+      title: event.title,
+      startAt: event.startAt,
+      endAt: event.endAt,
+      calendarId: event.calendarId,
+      simulated: true
+    });
+  }
+
+  #getWeather(args) {
+    const date = String(args.startAt).slice(0, 10);
+    const city = args.locationName;
+    if (date === "2026-11-10" && /杭州/.test(city)) {
+      return this.#success({
+        locationName: city,
+        date,
+        condition: "rainy",
+        summary: "小雨",
+        temperatureC: { min: 16, max: 21 },
+        precipitationChance: 70,
+        advice: "带伞",
+        source: "mock_weather",
+        simulated: true
+      });
+    }
+    return this.#success({
+      locationName: city,
+      date,
+      condition: "cloudy",
+      summary: "多云",
+      temperatureC: { min: 18, max: 24 },
+      precipitationChance: 20,
+      advice: "暂无强降雨信号",
+      source: "mock_weather",
+      simulated: true
+    });
+  }
+
+  #getActivitySummary() {
+    return this.#success({
+      state: "no_data",
+      metrics: {},
+      note: "未读取健康数据，不能推断为 0 步",
+      source: "mock_health",
+      simulated: true
+    });
+  }
+
+  #searchPlaces(args) {
+    const query = args.query ?? "附近";
+    const places = [
+      { placeId: "place_cafe_1", name: "河岸咖啡", category: "咖啡", distanceMeters: 320, address: "示例路 18 号", simulated: true },
+      { placeId: "place_cafe_2", name: "晴窗咖啡", category: "咖啡", distanceMeters: 540, address: "示例路 42 号", simulated: true },
+      { placeId: "place_cafe_3", name: "慢岛咖啡馆", category: "咖啡", distanceMeters: 810, address: "滨江道 6 号", simulated: true }
+    ];
+    return this.#success({
+      query,
+      places: places.slice(0, args.limit ?? 3),
+      source: "mock_places",
+      note: "演示地点，不是实时地图结果",
+      simulated: true
+    });
+  }
+
+  #openNavigation(args) {
+    return this.#success({
+      handoff: "opened_map",
+      placeId: args.placeId,
+      mode: args.mode ?? "walking",
+      note: "仅表示已把地点交给地图，未开始路线或抵达",
+      simulated: true
+    });
+  }
+
+  #summarizeContent(args) {
+    return this.#success({
+      contentId: args.contentId,
+      points: ["这是一段模拟摘要，用于演示分享内容处理", "真实摘要需要可访问的内容来源"],
+      source: "mock_content",
+      simulated: true
+    });
+  }
+
+  #prepareMessage(args) {
+    return this.#success({
+      draft: "prepared",
+      channel: args.channel,
+      recipientId: args.recipientId,
+      body: args.body,
+      note: "仅生成草稿预览，未打开系统界面，也未发送",
+      simulated: true
+    });
+  }
+
+  #searchMusic(args) {
+    const query = (args.query ?? "").toLowerCase();
+    const artist = (args.artist ?? "").toLowerCase();
+    const tracks = [...MUSIC_LIBRARY, ...this.extraTracks.values()].filter((track) => {
+      const matchesQuery = !query || track.title.toLowerCase().includes(query) || track.artist.toLowerCase().includes(query);
+      const matchesArtist = !artist || track.artist.toLowerCase().includes(artist);
+      return matchesQuery && matchesArtist;
+    }).slice(0, args.limit ?? 5);
+    return this.#success({
+      tracks,
+      total: tracks.length,
+      library: "demo",
+      note: tracks.length
+        ? "演示曲库，未读取 iPhone 音乐库，也没有真实音源"
+        : "演示曲库没有匹配曲目；不会自动转成云端付费播放",
+      simulated: true
+    });
+  }
+
+  #playMusic(args, conversationId) {
+    let session = this.musicSessions.get(conversationId);
+    const track =
+      this.#libraryTrack(args.trackId) ??
+      session?.customTracks?.get(args.trackId);
+    if (!track) {
+      return this.#failure("unknown_track", "曲目引用不存在或已过期，请重新选择");
+    }
+    if (!session) {
+      session = { sessionId: `ms_${Date.now().toString(36)}`, queue: [], index: 0, state: "stopped" };
+      this.musicSessions.set(conversationId, session);
+    }
+    if (args.queueIntent === "append") {
+      session.queue.push(track.trackId);
+    } else {
+      session.queue = [track.trackId];
+      session.index = 0;
+    }
+    session.state = "playing";
+    session.startedAt = new Date().toISOString();
+    return this.#success(this.#playbackPayload(session, track));
+  }
+
+  #pauseMusic(conversationId) {
+    const session = this.musicSessions.get(conversationId);
+    if (!session || session.state !== "playing") {
+      return this.#failure("no_active_playback", "当前没有正在播放的音乐");
+    }
+    session.state = "paused";
+    const track = this.#trackById(session, session.queue[session.index]);
+    return this.#success(this.#playbackPayload(session, track));
+  }
+
+  #resumeMusic(conversationId) {
+    const session = this.musicSessions.get(conversationId);
+    if (!session || session.state !== "paused") {
+      return this.#failure("no_paused_playback", "当前没有可继续的播放，需要先选曲");
+    }
+    session.state = "playing";
+    const track = this.#trackById(session, session.queue[session.index]);
+    return this.#success(this.#playbackPayload(session, track));
+  }
+
+  #skipMusic(args, conversationId) {
+    const session = this.musicSessions.get(conversationId);
+    if (!session || !session.queue.length) {
+      return this.#failure("no_active_playback", "当前没有可切换的播放队列");
+    }
+    const nextIndex = session.index + (args.direction === "previous" ? -1 : 1);
+    if (nextIndex < 0 || nextIndex >= session.queue.length) {
+      const track = this.#trackById(session, session.queue[session.index]);
+      return this.#success({ ...this.#playbackPayload(session, track), atBoundary: true });
+    }
+    session.index = nextIndex;
+    const track = this.#trackById(session, session.queue[session.index]);
+    return this.#success(this.#playbackPayload(session, track));
+  }
+
+  #playbackState(conversationId) {
+    const session = this.musicSessions.get(conversationId);
+    if (!session) {
+      return this.#success({ state: "stopped", track: null, sessionId: null, simulated: true });
+    }
+    const track = this.#trackById(session, session.queue[session.index]);
+    return this.#success(this.#playbackPayload(session, track));
+  }
+
+  #trackById(session, trackId) {
+    if (!trackId) return null;
+    return (
+      this.#libraryTrack(trackId) ??
+      session?.customTracks?.get(trackId) ??
+      null
+    );
+  }
+
+  #libraryTrack(trackId) {
+    return MUSIC_LIBRARY.find((item) => item.trackId === trackId) ?? this.extraTracks.get(trackId) ?? null;
+  }
+
+  #playbackPayload(session, track) {
     return {
-      status: "success",
-      data: {
-        recordId: record.recordId,
-        title: record.title,
-        dueAt: record.dueAt,
-        timezone: record.timezone,
-        listName: record.listName
-      },
-      error: null,
-      deduplicated: false
+      sessionId: session.sessionId,
+      state: session.state,
+      track: track ?? null,
+      positionSec: 0,
+      queueLength: session.queue.length,
+      simulated: true,
+      audioOutput: false,
+      note: "模拟播放状态，没有真实音频输出"
     };
   }
 
-  async #read() {
+  #success(data, deduplicated = false) {
+    return { status: "success", data, error: null, deduplicated };
+  }
+
+  #failure(code, message) {
+    return { status: "failed", data: null, error: { code, message }, deduplicated: false };
+  }
+
+  async #readJson(path, fallback) {
+    if (!path) return fallback;
     try {
-      const content = await readFile(this.remindersPath, "utf8");
+      const content = await readFile(path, "utf8");
       const parsed = JSON.parse(content);
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? parsed : fallback;
     } catch (error) {
-      if (error.code === "ENOENT") return [];
+      if (error.code === "ENOENT") return fallback;
       throw error;
     }
   }
 
-  async #write(records) {
-    await mkdir(dirname(this.remindersPath), { recursive: true });
-    const tempPath = `${this.remindersPath}.tmp`;
+  async #writeJson(path, records) {
+    if (!path) return;
+    await mkdir(dirname(path), { recursive: true });
+    const tempPath = `${path}.tmp`;
     await writeFile(tempPath, JSON.stringify(records, null, 2), "utf8");
-    await rename(tempPath, this.remindersPath);
+    await rename(tempPath, path);
   }
 }

@@ -187,6 +187,107 @@
           "subject": { "type": "string", "maxLength": 200 }
         }
       }
+    },
+    {
+      "name": "search_music_library",
+      "version": "1.0",
+      "skill": "music",
+      "description": "在用户已授权的音乐库中按关键词或艺人查找可播放曲目，只返回候选引用，不自动播放。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["music"],
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {
+          "query": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "artist": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 25 }
+        }
+      }
+    },
+    {
+      "name": "play_music",
+      "version": "1.0",
+      "skill": "music",
+      "description": "播放本轮已查询并确认的曲目引用。只有播放器实际进入播放状态后才可报告正在播放。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["music"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["trackId"],
+        "additionalProperties": false,
+        "properties": {
+          "trackId": { "type": "string", "minLength": 2, "maxLength": 120 },
+          "queueIntent": { "type": "string", "enum": ["replace", "append"] },
+          "sessionId": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
+    },
+    {
+      "name": "pause_music",
+      "version": "1.0",
+      "skill": "music",
+      "description": "暂停当前播放会话。没有可暂停的播放时准确说明，不创建新队列。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["music"],
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
+    },
+    {
+      "name": "resume_music",
+      "version": "1.0",
+      "skill": "music",
+      "description": "继续当前已暂停的播放会话。没有可恢复队列时要求用户重新选曲。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["music"],
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
+    },
+    {
+      "name": "skip_music_track",
+      "version": "1.0",
+      "skill": "music",
+      "description": "按当前播放会话的真实队列切换上一首或下一首，到边界时准确反馈。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["music"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["direction"],
+        "additionalProperties": false,
+        "properties": {
+          "direction": { "type": "string", "enum": ["next", "previous"] },
+          "sessionId": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
+    },
+    {
+      "name": "get_playback_state",
+      "version": "1.0",
+      "skill": "music",
+      "description": "读取当前播放会话的播放、暂停、加载、停止或失败状态及当前曲目信息。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["music"],
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
     }
   ]
 }

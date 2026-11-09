@@ -8,12 +8,12 @@
   "properties": {
     "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$" },
     "version": { "type": "string", "pattern": "^1\\.[0-9]+$" },
-    "skill": { "type": "string", "enum": ["schedule", "travel", "health", "content", "communication"] },
+    "skill": { "type": "string", "enum": ["schedule", "travel", "health", "content", "communication", "music"] },
     "description": { "type": "string", "minLength": 1, "maxLength": 500 },
     "requiresConfirmation": { "type": "boolean" },
     "requiresAuthorization": {
       "type": "array",
-      "items": { "type": "string", "enum": ["eventkit", "location", "healthkit", "contacts", "messages"] },
+      "items": { "type": "string", "enum": ["eventkit", "location", "healthkit", "contacts", "messages", "music"] },
       "uniqueItems": true
     },
     "inputSchema": { "type": "object" }

@@ -74,10 +74,12 @@ export function parseReminderIntent(text, nowIso, timeZone) {
   let needsTime = false;
   let needsPeriod = false;
   let parsedHour = null;
+  let parsedDate = null;
 
   if (dateMatch || timeMatch) {
     const dayShift = dateMatch ? DATE_WORDS[dateMatch[1]] : 0;
     const dateParts = addDaysToDate(base, dayShift);
+    parsedDate = `${dateParts.year}-${pad(dateParts.month)}-${pad(dateParts.day)}`;
 
     if (!timeMatch) {
       needsTime = true;
@@ -122,7 +124,8 @@ export function parseReminderIntent(text, nowIso, timeZone) {
     dueAt,
     needsTime,
     needsPeriod,
-    parsedHour
+    parsedHour,
+    date: parsedDate
   };
 }
 

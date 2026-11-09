@@ -1,7 +1,11 @@
 import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
 import { AgentError } from "./agent.mjs";
+import { ConversationError } from "./conversation.mjs";
+import { loadLocalEnv } from "./env.mjs";
 import { createRuntime } from "./runtime.mjs";
+
+loadLocalEnv();
 
 const MAX_BODY_BYTES = 1024 * 1024;
 
@@ -22,8 +26,20 @@ export function createHttpServer(runtime) {
         sendJson(response, 200, {
           status: "ok",
           modelMode: runtime.config.modelMode,
+          executionMode: runtime.config.executionMode,
+          requiresDeferExecution: runtime.config.executionMode !== "mock",
+          adapterConfigured: runtime.config.modelMode === "deepseek" ? Boolean(runtime.config.deepseek.apiKey) : true,
+          tools: runtime.registry.names().length,
           contractVersion: runtime.config.contractVersion,
           caps: runtime.config.caps
+        });
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/v1/capabilities") {
+        sendJson(response, 200, {
+          executionMode: runtime.config.executionMode,
+          capabilities: runtime.agent.capabilities()
         });
         return;
       }
@@ -35,6 +51,8 @@ export function createHttpServer(runtime) {
         const timezone = body.timezone ?? "Asia/Shanghai";
         const autoConfirm = body.autoConfirm ?? runtime.config.modelMode === "mock";
         const deferExecution = body.deferExecution ?? false;
+        const conversationId = body.conversationId;
+        const permissions = body.permissions ?? {};
 
         if (acceptsEventStream(request)) {
           response.writeHead(200, {
@@ -47,7 +65,7 @@ export function createHttpServer(runtime) {
             closed = true;
           });
           const result = await runtime.agent.start(
-            { text, now, timezone, autoConfirm, deferExecution },
+            { text, now, timezone, autoConfirm, deferExecution, conversationId, permissions },
             {
               onEvent: (event) => {
                 if (!closed) response.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
@@ -61,9 +79,36 @@ export function createHttpServer(runtime) {
           return;
         }
 
-        const result = await runtime.agent.start({ text, now, timezone, autoConfirm, deferExecution });
+        const result = await runtime.agent.start({
+          text,
+          now,
+          timezone,
+          autoConfirm,
+          deferExecution,
+          conversationId,
+          permissions
+        });
         sendJson(response, 200, result);
         return;
+      }
+
+      const conversationMatch = /^\/v1\/conversations\/([^/]+)$/.exec(url.pathname);
+      if (conversationMatch) {
+        const conversationId = decodeURIComponent(conversationMatch[1]);
+        if (request.method === "GET") {
+          const summary = runtime.conversations?.summary(conversationId);
+          if (!summary) {
+            sendJson(response, 404, { error: { code: "unknown_conversation", message: "未知会话" } });
+            return;
+          }
+          sendJson(response, 200, summary);
+          return;
+        }
+        if (request.method === "DELETE") {
+          runtime.conversations?.reset(conversationId);
+          sendJson(response, 200, { status: "reset", conversationId });
+          return;
+        }
       }
 
       const confirmMatch = /^\/v1\/turns\/([^/]+)\/confirm$/.exec(url.pathname);
@@ -101,7 +146,7 @@ export function createHttpServer(runtime) {
         response.end();
         return;
       }
-      const status = error instanceof AgentError ? 400 : 500;
+      const status = error instanceof AgentError || error instanceof ConversationError ? 400 : 500;
       sendJson(response, status, {
         error: { code: error.code ?? "internal_error", message: error.message }
       });
@@ -162,7 +207,7 @@ function sendJson(response, status, body) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const runtime = await createRuntime();
-  const server = await startServer(runtime);
+  const server = await startServer(runtime, { host: runtime.config.host });
   const address = server.address();
   console.log(`whale01 backend listening on http://${address.address}:${address.port}`);
   console.log(`model mode: ${runtime.config.modelMode}, contract: ${runtime.config.contractVersion}`);
