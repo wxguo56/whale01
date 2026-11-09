@@ -20,7 +20,10 @@ const state = {
   turnCounter: 0,
   opCounter: 0,
   lastWriteOp: null,
+  confirmOp: null,
   selectedPlace: null,
+  view: "home",
+  viewBeforeSettings: null,
   busy: false,
   listening: false
 };
@@ -43,6 +46,10 @@ function init() {
   bindChatActions();
   bindScenarioSheet();
   bindSidePanel();
+  bindHome();
+  bindSettings();
+  bindConfirmSheet();
+  showHome();
   updateClock();
   setInterval(updateClock, 15000);
   if (state.reminders.length) {
@@ -112,6 +119,11 @@ function bindChatActions() {
       if (op) executeOperation(op);
       return;
     }
+    if (action === "review-tool") {
+      const op = state.operations.get(button.dataset.op);
+      if (op) openConfirmSheet(op);
+      return;
+    }
     if (action === "cancel-tool") {
       const op = state.operations.get(button.dataset.op);
       if (op) cancelOperation(op);
@@ -145,7 +157,7 @@ function bindChatActions() {
 }
 
 function bindScenarioSheet() {
-  $("#scenarioBtn").addEventListener("click", openSheet);
+  $("#settingsScenario").addEventListener("click", openSheet);
   $("#closeSheet").addEventListener("click", closeSheet);
   $("#sheetBackdrop").addEventListener("click", closeSheet);
 
@@ -198,12 +210,107 @@ function bindSidePanel() {
   });
 }
 
+function bindHome() {
+  $$("[data-home-prompt]").forEach((button) => {
+    button.addEventListener("click", () => {
+      showChat();
+      runTurn(button.dataset.homePrompt);
+    });
+  });
+  const enterChat = () => {
+    showChat();
+    setTimeout(() => input.focus(), 60);
+  };
+  $("#askEntry").addEventListener("click", enterChat);
+  $("#startChat").addEventListener("click", enterChat);
+  $("#openSettings").addEventListener("click", showSettings);
+  $("#homeBtn").addEventListener("click", showHome);
+  $("#settingsBtn").addEventListener("click", showSettings);
+}
+
+function bindSettings() {
+  $("#settingsBack").addEventListener("click", () => {
+    if (state.viewBeforeSettings === "chat") showChat();
+    else showHome();
+  });
+  $("#settingsLog").addEventListener("click", () => {
+    $("#sidePanel").classList.add("open");
+  });
+  $("#settingsReset").addEventListener("click", () => {
+    localStorage.removeItem(STORAGE_SCENARIO);
+    localStorage.removeItem(STORAGE_REMINDERS);
+    location.reload();
+  });
+  $("#settingsVoice").addEventListener("change", (event) => {
+    toast(event.target.checked ? "语音播报已开启（模拟）" : "语音播报已关闭（模拟）");
+  });
+}
+
+function bindConfirmSheet() {
+  $("#confirmClose").addEventListener("click", closeConfirmSheet);
+  $("#confirmBackdrop").addEventListener("click", closeConfirmSheet);
+  $("#confirmActions").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    const op = state.confirmOp;
+    if (!op) return;
+    if (button.dataset.action === "confirm-sheet") {
+      closeConfirmSheet();
+      executeOperation(op);
+    } else if (button.dataset.action === "cancel-sheet") {
+      closeConfirmSheet();
+      cancelOperation(op);
+    } else if (button.dataset.action === "edit-sheet") {
+      renderConfirmSheet(op, true);
+    } else if (button.dataset.action === "back-sheet") {
+      renderConfirmSheet(op, false);
+    } else if (button.dataset.action === "save-sheet") {
+      saveConfirmEdits(op);
+    }
+  });
+}
+
+function showHome() {
+  state.view = "home";
+  $("#homeView").hidden = false;
+  chat.hidden = true;
+  $(".composer").hidden = true;
+  $("#homeBtn").hidden = true;
+  $("#settingsBtn").hidden = false;
+  $("#settingsView").hidden = true;
+}
+
+function showChat() {
+  state.view = "chat";
+  $("#homeView").hidden = true;
+  chat.hidden = false;
+  $(".composer").hidden = false;
+  $("#homeBtn").hidden = false;
+  $("#settingsBtn").hidden = false;
+  $("#settingsView").hidden = true;
+  scrollChat();
+}
+
+function showSettings() {
+  if (state.view === "settings") return;
+  state.viewBeforeSettings = state.view ?? "home";
+  state.view = "settings";
+  $("#settingsView").hidden = false;
+  $("#homeView").hidden = true;
+  chat.hidden = true;
+  $(".composer").hidden = true;
+  $("#homeBtn").hidden = false;
+  $("#settingsBtn").hidden = true;
+  syncStatus();
+}
+
 async function runTurn(text) {
   if (state.busy) {
     toast("上一条还在处理中");
     return;
   }
   state.busy = true;
+  showChat();
   addUserMessage(text);
   const turnId = createTurn(text);
 
@@ -575,15 +682,15 @@ function appendToolCard(op) {
     <div class="card-head">
       <span class="tool-icon">${toolIcon(op.tool)}</span>
       <div class="card-title">
-        <strong>${escapeHtml(op.tool)}</strong>
-        <small>${skillName(op.tool)} · 写操作</small>
+        <strong>${escapeHtml(toolLabel(op.tool))}</strong>
+        <small>${escapeHtml(skillLabel(op.tool))} · 需要确认</small>
       </div>
       <span class="chip pending" data-role="chip">待确认</span>
     </div>
     <dl class="args">${argumentRows(op)}</dl>
     <div class="card-actions" data-role="actions">
       <button class="btn ghost" data-action="cancel-tool" data-op="${op.id}">取消</button>
-      <button class="btn primary" data-action="confirm-tool" data-op="${op.id}">${confirmLabel(op.tool)}</button>
+      <button class="btn primary" data-action="review-tool" data-op="${op.id}">查看并确认</button>
     </div>
     <div data-role="result"></div>`;
   op.card = card;
@@ -991,6 +1098,187 @@ function placeCatalog() {
   ];
 }
 
+function toolLabel(tool) {
+  return {
+    create_reminder: "创建提醒",
+    create_calendar_event: "创建日程",
+    open_navigation: "打开地图",
+    prepare_message: "准备短信草稿"
+  }[tool] ?? "执行操作";
+}
+
+function skillLabel(tool) {
+  return {
+    create_reminder: "日程能力",
+    create_calendar_event: "日程能力",
+    open_navigation: "出行能力",
+    prepare_message: "通讯能力"
+  }[tool] ?? "助手能力";
+}
+
+function displayZone(timeZone) {
+  const map = {
+    "Asia/Shanghai": "上海（+08:00）",
+    "Europe/Berlin": "柏林（+01:00）",
+    "America/New_York": "纽约（-05:00）"
+  };
+  return map[timeZone] ?? timeZone;
+}
+
+function confirmTitle(tool) {
+  return {
+    create_reminder: "创建提醒",
+    create_calendar_event: "创建日程",
+    open_navigation: "打开地图",
+    prepare_message: "准备短信草稿"
+  }[tool] ?? "确认操作";
+}
+
+function confirmPrimaryLabel(tool) {
+  return {
+    create_reminder: "确认创建",
+    create_calendar_event: "确认创建",
+    open_navigation: "确认打开",
+    prepare_message: "确认准备"
+  }[tool] ?? "确认";
+}
+
+function openConfirmSheet(op) {
+  renderConfirmSheet(op, false);
+}
+
+function closeConfirmSheet() {
+  $("#confirmBackdrop").hidden = true;
+  $("#confirmSheet").hidden = true;
+  state.confirmOp = null;
+}
+
+function renderConfirmSheet(op, editing) {
+  state.confirmOp = op;
+  $("#confirmTitle").textContent = confirmTitle(op.tool);
+  $("#confirmSubtitle").textContent = editing ? "修改后需要重新确认" : "执行前预览 · 尚未写入";
+  const body = $("#confirmBody");
+  const actions = $("#confirmActions");
+  const isReminder = op.tool === "create_reminder";
+
+  if (editing && isReminder) {
+    body.innerHTML = `
+      <div class="confirm-row"><span class="label">事项</span><input id="editTitle" value="${escapeAttr(op.args.title)}" aria-label="提醒事项"></div>
+      <div class="confirm-row"><span class="label">时间</span><input id="editDue" type="datetime-local" value="${op.args.dueAt ? toDateTimeLocal(op.args.dueAt) : ""}" aria-label="提醒时间"></div>
+      <div class="confirm-row"><span class="label">时区</span><span class="value">${escapeHtml(displayZone(op.args.timezone))}</span></div>
+      <p class="confirm-note">留空表示无日期待办。修改后旧确认失效，需要重新确认。</p>`;
+    actions.innerHTML = `
+      <button class="btn ghost" data-action="back-sheet">返回</button>
+      <button class="btn primary" data-action="save-sheet">保存修改</button>`;
+  } else {
+    body.innerHTML = `${confirmRows(op)}<p class="confirm-note">${escapeHtml(confirmNote(op))}</p>`;
+    actions.innerHTML = isReminder
+      ? `<button class="btn ghost modify" data-action="edit-sheet">修改</button>
+         <button class="btn ghost" data-action="cancel-sheet">取消</button>
+         <button class="btn primary" data-action="confirm-sheet">${confirmPrimaryLabel(op.tool)}</button>`
+      : `<button class="btn ghost" data-action="cancel-sheet">取消</button>
+         <button class="btn primary" data-action="confirm-sheet">${confirmPrimaryLabel(op.tool)}</button>`;
+  }
+  $("#confirmBackdrop").hidden = false;
+  $("#confirmSheet").hidden = false;
+}
+
+function confirmRows(op) {
+  const args = op.args;
+  let rows = [];
+  if (op.tool === "create_reminder") {
+    rows = [
+      ["事项", args.title],
+      ["时间", args.dueAt ? formatDueFull(args.dueAt) : "无日期待办"],
+      ["时区", displayZone(args.timezone)]
+    ];
+  } else if (op.tool === "create_calendar_event") {
+    rows = [
+      ["日程", args.title],
+      ["开始", formatDue(args.startAt)],
+      ["结束", formatDue(args.endAt)],
+      ["日历", args.calendarId ?? "个人"]
+    ];
+  } else if (op.tool === "open_navigation") {
+    rows = [
+      ["地点", state.selectedPlace?.name ?? args.placeId],
+      ["方式", args.mode === "driving" ? "驾车" : args.mode]
+    ];
+  } else if (op.tool === "prepare_message") {
+    rows = [
+      ["收件人", "张三"],
+      ["渠道", "短信"],
+      ["正文", args.body]
+    ];
+  }
+  return rows
+    .map(
+      ([label, value]) =>
+        `<div class="confirm-row"><span class="label">${escapeHtml(label)}</span><span class="value">${escapeHtml(String(value))}</span></div>`
+    )
+    .join("");
+}
+
+function confirmNote(op) {
+  if (op.tool === "create_reminder") return "确认后才会请求提醒事项权限并写入系统。";
+  if (op.tool === "create_calendar_event") return "确认后才会写入日历，不覆盖已有事件。";
+  if (op.tool === "open_navigation") return "确认后只会打开地图并交接地点，不代表已开始路线或抵达。";
+  if (op.tool === "prepare_message") return "确认后只准备系统草稿，最终发送由你在系统界面完成。";
+  return "确认后才会执行。";
+}
+
+function saveConfirmEdits(op) {
+  const title = $("#editTitle")?.value.trim() ?? "";
+  if (!title) {
+    toast("事项不能为空");
+    return;
+  }
+  const dueValue = $("#editDue")?.value ?? "";
+  const args = { ...op.args, title };
+  if (dueValue) args.dueAt = fromDateTimeLocal(dueValue);
+  else delete args.dueAt;
+
+  const changed = args.title !== op.args.title || args.dueAt !== op.args.dueAt;
+  op.args = args;
+  op.status = "requested";
+  const argsEl = op.card?.querySelector(".args");
+  if (argsEl) argsEl.innerHTML = argumentRows(op);
+  updateStatus(op, "requested");
+
+  emit(op.turnId, "tool.requested", {
+    tool: op.tool,
+    toolCallId: op.toolCallId,
+    operationId: op.id,
+    arguments: args,
+    requiresConfirmation: true,
+    requiresAuthorization: ["eventkit"]
+  });
+  emit(op.turnId, "tool.confirmation_required", {
+    tool: op.tool,
+    toolCallId: op.toolCallId,
+    operationId: op.id,
+    arguments: args
+  });
+  closeConfirmSheet();
+  if (changed) toast("参数已修改，旧确认失效");
+  setCharacter("waiting", "等待确认");
+}
+
+function toDateTimeLocal(iso) {
+  const parts = zonedParts(new Date(iso), state.scenario.timezone);
+  return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}T${pad(parts.hour)}:${pad(parts.minute)}`;
+}
+
+function fromDateTimeLocal(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const [, year, month, day, hour, minute] = match;
+  return toLocalIso(
+    { year: Number(year), month: Number(month), day: Number(day), hour: Number(hour), minute: Number(minute) },
+    offsetMinutesAt(nowDate(), state.scenario.timezone)
+  );
+}
+
 function argumentRows(op) {
   const args = op.args;
   let rows = [];
@@ -998,7 +1286,7 @@ function argumentRows(op) {
     rows = [
       ["标题", args.title],
       ["时间", args.dueAt ? formatDue(args.dueAt) : "无日期待办"],
-      ["时区", args.timezone],
+      ["时区", displayZone(args.timezone)],
       ["列表", "提醒事项"]
     ];
   } else if (op.tool === "create_calendar_event") {
@@ -1011,8 +1299,7 @@ function argumentRows(op) {
   } else if (op.tool === "open_navigation") {
     rows = [
       ["地点", state.selectedPlace?.name ?? args.placeId],
-      ["方式", args.mode === "driving" ? "驾车" : args.mode],
-      ["选择 ID", args.placeId]
+      ["方式", args.mode === "driving" ? "驾车" : args.mode]
     ];
   } else if (op.tool === "prepare_message") {
     rows = [
@@ -1127,6 +1414,16 @@ function syncStatus() {
   const pill = $("#modePill");
   pill.textContent = state.scenario.network === "online" ? "Mock" : "Offline";
   pill.className = `pill ${state.scenario.network === "online" ? "ok" : "warn"}`;
+
+  const setReminder = $("#setReminder");
+  if (setReminder) {
+    setReminder.textContent = state.scenario.permission === "granted" ? "已允许 · 可创建" : `${permissionText} · 不可创建`;
+    setReminder.style.color = state.scenario.permission === "granted" ? "" : "var(--red)";
+  }
+  const setHealth = $("#setHealth");
+  if (setHealth) setHealth.textContent = state.scenario.health === "has" ? "有数据（模拟）" : "无数据";
+  const setCalendar = $("#setCalendar");
+  if (setCalendar) setCalendar.textContent = state.scenario.permission === "granted" ? "示例未开启" : "需要提醒事项权限";
 }
 
 function openSheet() {
@@ -1296,6 +1593,12 @@ function formatDue(iso) {
   if (!iso) return "无日期";
   const parts = zonedParts(new Date(iso), state.scenario.timezone);
   return `${parts.month}月${parts.day}日 ${pad(parts.hour)}:${pad(parts.minute)}`;
+}
+
+function formatDueFull(iso) {
+  if (!iso) return "无日期";
+  const parts = zonedParts(new Date(iso), state.scenario.timezone);
+  return `${parts.year}年${parts.month}月${parts.day}日 ${pad(parts.hour)}:${pad(parts.minute)}`;
 }
 
 function loadJson(key, fallback) {
