@@ -1,0 +1,10 @@
+Test Suite 'All tests' started at 2026-11-09 12:50:31.594.
+Test Suite 'WhaleAgentTests.xctest' started at 2026-11-09 12:50:31.595.
+Test Suite 'CoreTests' started at 2026-11-09 12:50:31.595.
+Test Suite 'CoreTests' passed at 2026-11-09 12:50:31.682.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.085 (0.087) seconds
+Test Suite 'WhaleAgentTests.xctest' passed at 2026-11-09 12:50:31.824.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.085 (0.229) seconds
+Test Suite 'All tests' passed at 2026-11-09 12:50:31.824.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.085 (0.230) seconds
+** TEST SUCCEEDED **
