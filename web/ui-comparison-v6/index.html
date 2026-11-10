@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>代号鲸鱼01 · 五套乔布斯风设计对比 v6</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "SF Pro Text", "PingFang SC", system-ui, sans-serif;
+    background: #F2F2F7; color: #1C1C1E; line-height: 1.45; padding-bottom: 64px;
+  }
+  /* ===== 页头（页面自身用中性壳，五套视觉在画布内呈现） ===== */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.85); backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    padding: 14px 20px 0;
+  }
+  .head-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; max-width: 1120px; margin: 0 auto; }
+  header h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.2px; }
+  header .sub { font-size: 12px; color: #8E8E93; margin-top: 2px; }
+  .shell-toggle {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 44px;
+    background: #1D1D1F; color: #fff; border: none; border-radius: 999px;
+    padding: 0 18px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  /* 方向切换 */
+  .tabs { display: flex; gap: 6px; max-width: 1120px; margin: 14px auto 0; overflow-x: auto; padding-bottom: 12px; }
+  .tab {
+    min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.10);
+    background: #fff; cursor: pointer; font-size: 14px; font-weight: 600; color: #1C1C1E;
+    white-space: nowrap; transition: all .18s ease; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .tab .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .tab:hover { border-color: rgba(0,0,0,0.28); }
+  .tab.active { background: #1D1D1F; color: #fff; border-color: #1D1D1F; }
+
+  main { max-width: 1120px; margin: 0 auto; padding: 28px 20px 0; }
+  .stage { display: flex; gap: 36px; align-items: flex-start; flex-wrap: wrap; }
+  .stage-info { flex: 1; min-width: 300px; }
+
+  /* ===== 手机画布：视觉由所选方向的 Token 驱动 ===== */
+  .phone-scale { width: 252px; height: 548px; overflow: hidden; flex-shrink: 0; }
+  .phone {
+    width: 402px; height: 874px; transform: scale(0.627); transform-origin: top left;
+    background: var(--bg-page); background-image: var(--bg-page-image, none);
+    border-radius: 44px; border: 1px solid rgba(0,0,0,0.12);
+    display: flex; flex-direction: column; overflow: hidden;
+    color: var(--text-1); transition: background .3s ease, color .3s ease;
+  }
+  .phone-top { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 8px; }
+  .brand { font-size: var(--fs-title); font-weight: var(--fw-brand); letter-spacing: var(--ls-brand); color: var(--text-1); }
+  .entries { display: flex; gap: 2px; }
+  .icon-btn {
+    min-width: 44px; height: 44px; border: none; cursor: pointer;
+    border-radius: var(--r-control); background: transparent; color: var(--text-2);
+    font-size: 14px; font-weight: var(--fw-entry); padding: 0 12px;
+    transition: background .16s ease;
+  }
+  .icon-btn:hover { background: var(--accent-muted); color: var(--accent); }
+  .phone-body {
+    flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 0 var(--pg-m); gap: var(--sp-gap); text-align: center;
+  }
+  .whale-mark {
+    width: 60px; height: 60px; border-radius: var(--r-orb);
+    background: var(--accent-muted); display: flex; align-items: center; justify-content: center;
+    font-size: 30px; animation: breathe 3.5s ease-in-out infinite;
+  }
+  @keyframes breathe { 0%,100% { transform: translateY(0);} 50% { transform: translateY(-4px);} }
+  .empty-greet { font-size: var(--fs-largeTitle); font-weight: var(--fw-largeTitle); letter-spacing: var(--ls-largeTitle); line-height: 1.2; }
+  .empty-sub { font-size: 14px; color: var(--text-2); }
+  .phone-bottom { padding: 8px var(--pg-m) 26px; display: flex; flex-direction: column; gap: 10px; }
+  .chat { display: none; flex-direction: column; gap: 12px; width: 100%; text-align: left; }
+  .chat.show { display: flex; animation: rise .22s ease; }
+  @keyframes rise { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .bubble-user {
+    align-self: flex-end; max-width: 82%;
+    background: var(--bg-raised); color: var(--text-1);
+    border-radius: var(--r-card); border-top-right-radius: var(--r-bubble-tail);
+    padding: 12px 16px; font-size: 17px;
+    box-shadow: var(--bubble-shadow, none); border: var(--bubble-border, none);
+  }
+  .bubble-ai { align-self: flex-start; max-width: 90%; font-size: 17px; padding: 2px 0; color: var(--text-1); }
+  .mini-player {
+    display: none; align-items: center; gap: 10px;
+    background: var(--bg-raised); color: var(--text-1);
+    border-radius: var(--r-card); padding: 10px 14px;
+    box-shadow: var(--shadow-player); border: var(--mini-border, none);
+  }
+  .mini-player.show { display: flex; animation: rise .22s ease; }
+  .mini-cover { width: 36px; height: 36px; border-radius: 10px; background: var(--accent-muted); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .mini-meta { flex: 1; min-width: 0; }
+  .mini-meta .t { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini-meta .a { font-size: 12px; color: var(--text-2); }
+  .input-bar { display: flex; align-items: center; gap: 8px; }
+  .plus-btn {
+    width: 44px; height: 44px; border-radius: var(--r-control); border: none; cursor: pointer;
+    background: var(--bg-input); color: var(--text-2); font-size: 18px; flex-shrink: 0;
+    transition: all .16s ease;
+  }
+  .plus-btn:hover { color: var(--accent); }
+  .input-field {
+    flex: 1; display: flex; align-items: center; height: 44px; padding: 0 16px;
+    background: var(--bg-input); color: var(--text-2);
+    border-radius: var(--r-control); font-size: 17px;
+    border: var(--input-border, none);
+  }
+  .voice-btn {
+    height: 44px; padding: 0 18px; border: none; cursor: pointer; flex-shrink: 0;
+    background: var(--accent); color: var(--text-on-accent);
+    border-radius: var(--r-control); font-size: 15px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px; transition: all .16s ease;
+  }
+  .voice-btn:hover { background: var(--accent-pressed); }
+
+  /* ===== 右侧信息面板 ===== */
+  .info-card { background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .info-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+  .vibe { font-size: 14px; color: #6E6E73; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+  .sw .chip { height: 44px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.06); }
+  .sw .n { font-size: 11px; color: #8E8E93; margin-top: 4px; font-family: ui-monospace, monospace; }
+  .demo-btn {
+    display: inline-flex; align-items: center; height: 44px; padding: 0 20px;
+    border: none; border-radius: var(--r-control); font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .demo-btn.primary { background: var(--accent); color: var(--text-on-accent); }
+  .demo-btn.secondary { background: var(--accent-muted); color: var(--accent); margin-left: 10px; }
+  .demo-tag { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 500; background: color-mix(in srgb, var(--s-success) 16%, transparent); color: var(--s-success); margin-right: 8px; }
+  .demo-actions-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .type-demo .l1 { font-size: var(--fs-largeTitle); font-weight: var(--fw-largeTitle); letter-spacing: var(--ls-largeTitle); color: var(--text-1); line-height: 1.15; }
+  .type-demo .l2 { font-size: 17px; color: var(--text-2); margin-top: 6px; }
+
+  /* ===== 五套速览 ===== */
+  section.quick { margin-top: 44px; }
+  section.quick h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 6px; }
+  section.quick .desc { font-size: 14px; color: #8E8E93; margin-bottom: 20px; }
+  .quick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
+  .q-card { border: 1px solid rgba(0,0,0,0.08); border-radius: 16px; overflow: hidden; background: #fff; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease; }
+  .q-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
+  .q-thumb { height: 220px; position: relative; overflow: hidden; background: var(--bg-page); background-image: var(--bg-page-image, none); }
+  .q-thumb-inner { position: absolute; left: 8px; right: 8px; top: 8px; color: var(--text-1); font-size: 9px; display: flex; flex-direction: column; gap: 5px; }
+  .q-greet { font-size: 11px; font-weight: var(--fw-largeTitle); letter-spacing: var(--ls-largeTitle); text-align: center; margin-top: 42px; }
+  .q-input { position: absolute; left: 8px; right: 8px; bottom: 8px; height: 16px; border-radius: var(--r-control); background: var(--bg-input); border: var(--input-border, none); }
+  .q-bar { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between; font-size: 8px; color: var(--text-2); font-weight: var(--fw-entry); }
+  .q-name { padding: 12px 14px; }
+  .q-name .t { font-size: 14px; font-weight: 700; }
+  .q-name .v { font-size: 12px; color: #8E8E93; margin-top: 2px; }
+  footer { text-align: center; font-size: 12px; color: #8E8E93; margin-top: 48px; padding: 0 20px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .whale-mark { animation: none; }
+    .chat.show, .mini-player.show { animation: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="head-row">
+    <div>
+      <h1>🐋 代号鲸鱼01 · 五套乔布斯风设计对比</h1>
+      <div class="sub">v6 · 以设计规范系统 v1.0 为底板 · 共享极简单主页骨架与 23 号交互规则 · 402×874pt · 2026-11-10</div>
+    </div>
+    <button class="shell-toggle" id="shellToggle" onclick="toggleTheme()">◐ 画布切浅色</button>
+  </div>
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<main>
+  <div class="stage">
+    <div class="phone-scale"><div class="phone" id="phone">
+      <div class="phone-top">
+        <span class="brand">鲸鱼</span>
+        <div class="entries">
+          <button class="icon-btn">任务</button>
+          <button class="icon-btn">设置</button>
+        </div>
+      </div>
+      <div class="phone-body" id="phoneBody">
+        <div class="whale-mark">🐋</div>
+        <div class="empty-greet">有什么想聊的？</div>
+        <div class="empty-sub" id="emptySub">文字或语音都可以</div>
+      </div>
+      <div class="phone-bottom">
+        <div class="mini-player" id="miniPlayer">
+          <div class="mini-cover">🎵</div>
+          <div class="mini-meta"><div class="t">鲸鱼之歌</div><div class="a">本地曲库 · 02:41</div></div>
+          <div class="mini-meta" style="flex:0"><div class="t" style="font-size:18px">⏸ ⏭</div></div>
+        </div>
+        <div class="chat" id="chat">
+          <div class="bubble-user">明天下午三点提醒我取快递</div>
+          <div class="bubble-ai">好的，我来创建提醒：11月10日 15:00「取快递」。确认后写入系统提醒事项。</div>
+        </div>
+        <div class="input-bar">
+          <button class="plus-btn">＋</button>
+          <div class="input-field">给鲸鱼发消息…</div>
+          <button class="voice-btn" onclick="demoChat()">🎙 语音</button>
+        </div>
+      </div>
+    </div></div>
+
+    <div class="stage-info">
+      <div class="info-card">
+        <h3 id="dirName"></h3>
+        <p class="vibe" id="dirVibe"></p>
+      </div>
+      <div class="info-card">
+        <h3>排版性格</h3>
+        <div class="type-demo">
+          <div class="l1">有什么想聊的？</div>
+          <div class="l2">明天下午三点提醒我取快递。正文 17pt，动态字体全支持。</div>
+        </div>
+        <p class="vibe" id="dirType" style="margin-top:10px"></p>
+      </div>
+      <div class="info-card">
+        <h3>调色板（当前主题）</h3>
+        <div class="swatches" id="swatches"></div>
+      </div>
+      <div class="info-card">
+        <h3>组件取样</h3>
+        <div class="demo-actions-row">
+          <button class="demo-btn primary">确认创建</button>
+          <button class="demo-btn secondary">查看来源</button>
+          <span class="demo-tag">✓ 已创建提醒</span>
+        </div>
+        <p class="vibe" style="margin-top:10px" id="dirRadius"></p>
+      </div>
+    </div>
+  </div>
+
+  <section class="quick">
+    <h2>五套速览</h2>
+    <p class="desc">同一底板（极简单主页 + 统一输入），五种乔布斯式表达。点击任意卡片切换到该方向。</p>
+    <div class="quick-grid" id="quickGrid"></div>
+  </section>
+</main>
+
+<footer>代号鲸鱼01 UI Comparison v6 · Token 来源 design/ui-comparison-v6/tokens.json · 布局与交互继承 26 号规范底板 · 本页为原型演示，不代表原生真机验收</footer>
+
+<script>
+  const DIRS = {
+    aqua: {
+      name: "AQUA 经典", en: "01 · CLASSIC",
+      vibe: "初代 iPhone 的克制与信任感：雪白分组底、系统蓝、发丝线，最像「苹果默认」。最稳、落地代价最低。",
+      type: "系统字重 400/600，层级靠字重与分组；largeTitle 28pt。",
+      radius: "圆角 12/12，sheet 顶部 24；间距系数 1.0。",
+      dot: "#007AFF", defaultTheme: "light"
+    },
+    mono: {
+      name: "MONO 讲稿", en: "02 · KEYNOTE",
+      vibe: "乔布斯 Keynote 幻灯片：纯黑/纯白、巨大字体、黑白为唯二主角，红色只做错误语义。辨识度最高、最「发布会」。",
+      type: "大字号 700 收紧字距，黑白对比即层级；largeTitle 34pt。",
+      radius: "圆角 8/8，接近锐利；间距系数 1.15。",
+      dot: "#1D1D1F", defaultTheme: "dark"
+    },
+    glass: {
+      name: "GLASS 通透", en: "03 · TRANSLUCENT",
+      vibe: "iOS 7 精神：内容之上悬浮半透明层，深度来自模糊与遮挡。空间感最强，需真机验证材质渲染开销。",
+      type: "系统字重，次级文字用 vibrancy 透明度；largeTitle 28pt。",
+      radius: "圆角 20/16，sheet 顶部 28；间距系数 1.0。",
+      dot: "#5856D6", defaultTheme: "light"
+    },
+    grid: {
+      name: "GRID 秩序", en: "04 · RAMS",
+      vibe: "Braun 工具理性：暖灰白、可见网格线、橙色唯一点缀，功能主义精度。适合办事效率优先。",
+      type: "严格 8pt 网格 + 等宽标签；层级靠位置与留白；largeTitle 26pt。",
+      radius: "圆角 8/8，几何利落；间距系数 1.0。",
+      dot: "#FF9500", defaultTheme: "light"
+    },
+    calm: {
+      name: "CALM 留白", en: "05 · SERENE",
+      vibe: "Apple 式安静优雅：暖纸白、超大留白、一枚柔和青色，界面退后让对话呼吸。最亲切、最不打扰。",
+      type: "轻字重 500、行高 1.55；层级几乎全靠留白；largeTitle 30pt。",
+      radius: "圆角 24/20，sheet 顶部 32；间距系数 1.25。",
+      dot: "#3AA8A0", defaultTheme: "light"
+    }
+  };
+
+  const TOKENS = {
+    aqua: {
+      light: { "--bg-page":"#F2F2F7","--bg-surface":"#FFFFFF","--bg-raised":"#FFFFFF","--bg-input":"#E9E9EE",
+        "--text-1":"#1C1C1E","--text-2":"#8E8E93","--text-3":"#AEAEB2","--text-on-accent":"#FFFFFF",
+        "--accent":"#007AFF","--accent-pressed":"#0062CC","--accent-muted":"rgba(0,122,255,0.10)",
+        "--s-success":"#34C759","--s-warning":"#FF9500","--s-error":"#FF3B30",
+        "--r-card":"12px","--r-control":"12px","--r-orb":"16px","--r-bubble-tail":"4px",
+        "--pg-m":"20px","--sp-gap":"18px","--fs-largeTitle":"28px","--fw-largeTitle":"600","--ls-largeTitle":"-0.4px",
+        "--fs-title":"17px","--fw-brand":"600","--ls-brand":"-0.2px","--fw-entry":"500",
+        "--shadow-player":"0 4px 16px rgba(0,0,0,0.12)","--bubble-shadow":"0 1px 2px rgba(0,0,0,0.06)" },
+      dark: { "--bg-page":"#000000","--bg-surface":"#1C1C1E","--bg-raised":"#2C2C2E","--bg-input":"#1C1C1E",
+        "--text-1":"#FFFFFF","--text-2":"#98989E","--text-3":"#636366","--text-on-accent":"#FFFFFF",
+        "--accent":"#0A84FF","--accent-pressed":"#409CFF","--accent-muted":"rgba(10,132,255,0.18)",
+        "--s-success":"#30D158","--s-warning":"#FF9F0A","--s-error":"#FF453A",
+        "--r-card":"12px","--r-control":"12px","--r-orb":"16px","--r-bubble-tail":"4px",
+        "--pg-m":"20px","--sp-gap":"18px","--fs-largeTitle":"28px","--fw-largeTitle":"600","--ls-largeTitle":"-0.4px",
+        "--fs-title":"17px","--fw-brand":"600","--ls-brand":"-0.2px","--fw-entry":"500",
+        "--shadow-player":"0 4px 16px rgba(0,0,0,0.5)","--bubble-shadow":"none" }
+    },
+    mono: {
+      light: { "--bg-page":"#FFFFFF","--bg-surface":"#F5F5F7","--bg-raised":"#F5F5F7","--bg-input":"#F5F5F7",
+        "--text-1":"#1D1D1F","--text-2":"#6E6E73","--text-3":"#86868B","--text-on-accent":"#FFFFFF",
+        "--accent":"#1D1D1F","--accent-pressed":"#000000","--accent-muted":"rgba(29,29,31,0.08)",
+        "--s-success":"#1D1D1F","--s-warning":"#86868B","--s-error":"#E30000",
+        "--r-card":"8px","--r-control":"8px","--r-orb":"4px","--r-bubble-tail":"2px",
+        "--pg-m":"22px","--sp-gap":"22px","--fs-largeTitle":"34px","--fw-largeTitle":"700","--ls-largeTitle":"-1.2px",
+        "--fs-title":"19px","--fw-brand":"700","--ls-brand":"-0.5px","--fw-entry":"600",
+        "--shadow-player":"0 4px 16px rgba(0,0,0,0.10)","--bubble-shadow":"none" },
+      dark: { "--bg-page":"#000000","--bg-surface":"#111113","--bg-raised":"#1D1D1F","--bg-input":"#111113",
+        "--text-1":"#F5F5F7","--text-2":"#86868B","--text-3":"#6E6E73","--text-on-accent":"#000000",
+        "--accent":"#F5F5F7","--accent-pressed":"#FFFFFF","--accent-muted":"rgba(245,245,247,0.10)",
+        "--s-success":"#F5F5F7","--s-warning":"#86868B","--s-error":"#FF453A",
+        "--r-card":"8px","--r-control":"8px","--r-orb":"4px","--r-bubble-tail":"2px",
+        "--pg-m":"22px","--sp-gap":"22px","--fs-largeTitle":"34px","--fw-largeTitle":"700","--ls-largeTitle":"-1.2px",
+        "--fs-title":"19px","--fw-brand":"700","--ls-brand":"-0.5px","--fw-entry":"600",
+        "--shadow-player":"0 4px 16px rgba(0,0,0,0.6)","--bubble-shadow":"none" }
+    },
+    glass: {
+      light: { "--bg-page":"#DCE7F5","--bg-page-image":"linear-gradient(180deg,#DCE7F5 0%,#EDE4F2 55%,#F6E8E4 100%)",
+        "--bg-raised":"rgba(255,255,255,0.85)","--bg-input":"rgba(255,255,255,0.60)",
+        "--text-1":"#1D1D1F","--text-2":"rgba(29,29,31,0.62)","--text-3":"rgba(29,29,31,0.42)","--text-on-accent":"#FFFFFF",
+        "--accent":"#5856D6","--accent-pressed":"#4B49C4","--accent-muted":"rgba(88,86,214,0.14)",
+        "--s-success":"#34A853","--s-warning":"#C77D0A","--s-error":"#D6453A",
+        "--r-card":"20px","--r-control":"16px","--r-orb":"20px","--r-bubble-tail":"6px",
+        "--pg-m":"20px","--sp-gap":"18px","--fs-largeTitle":"28px","--fw-largeTitle":"600","--ls-largeTitle":"-0.4px",
+        "--fs-title":"17px","--fw-brand":"600","--ls-brand":"-0.2px","--fw-entry":"500",
+        "--shadow-player":"0 8px 24px rgba(20,24,40,0.18)","--bubble-shadow":"0 2px 10px rgba(20,24,40,0.10)",
+        "--input-border":"1px solid rgba(255,255,255,0.65)","--mini-border":"1px solid rgba(255,255,255,0.65)" },
+      dark: { "--bg-page":"#0E1220","--bg-page-image":"linear-gradient(180deg,#0E1220 0%,#161B2E 55%,#1E1A26 100%)",
+        "--bg-raised":"rgba(52,58,88,0.72)","--bg-input":"rgba(28,32,52,0.60)",
+        "--text-1":"#F5F6FA","--text-2":"rgba(245,246,250,0.65)","--text-3":"rgba(245,246,250,0.42)","--text-on-accent":"#FFFFFF",
+        "--accent":"#8B8AF0","--accent-pressed":"#7A79E6","--accent-muted":"rgba(139,138,240,0.16)",
+        "--s-success":"#5FD08A","--s-warning":"#E8B45A","--s-error":"#F08078",
+        "--r-card":"20px","--r-control":"16px","--r-orb":"20px","--r-bubble-tail":"6px",
+        "--pg-m":"20px","--sp-gap":"18px","--fs-largeTitle":"28px","--fw-largeTitle":"600","--ls-largeTitle":"-0.4px",
+        "--fs-title":"17px","--fw-brand":"600","--ls-brand":"-0.2px","--fw-entry":"500",
+        "--shadow-player":"0 8px 24px rgba(0,0,0,0.5)","--bubble-shadow":"0 2px 10px rgba(0,0,0,0.35)",
+        "--input-border":"1px solid rgba(255,255,255,0.12)","--mini-border":"1px solid rgba(255,255,255,0.12)" }
+    },
+    grid: {
+      light: { "--bg-page":"#FAFAF8","--bg-surface":"#FFFFFF","--bg-raised":"#FFFFFF","--bg-input":"#F1F1EE",
+        "--text-1":"#1A1A1A","--text-2":"#737371","--text-3":"#A6A6A3","--text-on-accent":"#FFFFFF",
+        "--accent":"#FF9500","--accent-pressed":"#E08400","--accent-muted":"rgba(255,149,0,0.12)",
+        "--s-success":"#3D7A44","--s-warning":"#FF9500","--s-error":"#C93B2E",
+        "--r-card":"8px","--r-control":"8px","--r-orb":"8px","--r-bubble-tail":"2px",
+        "--pg-m":"20px","--sp-gap":"16px","--fs-largeTitle":"26px","--fw-largeTitle":"600","--ls-largeTitle":"-0.2px",
+        "--fs-title":"16px","--fw-brand":"600","--ls-brand":"0px","--fw-entry":"500",
+        "--shadow-player":"0 4px 14px rgba(26,26,26,0.14)","--bubble-shadow":"none","--input-border":"1px solid #E5E5E3" },
+      dark: { "--bg-page":"#141412","--bg-surface":"#1E1E1C","--bg-raised":"#282825","--bg-input":"#191917",
+        "--text-1":"#F2F2EF","--text-2":"#A8A8A3","--text-3":"#787874","--text-on-accent":"#141412",
+        "--accent":"#FFA833","--accent-pressed":"#FFB95C","--accent-muted":"rgba(255,168,51,0.14)",
+        "--s-success":"#7FBF8A","--s-warning":"#FFA833","--s-error":"#E8705F",
+        "--r-card":"8px","--r-control":"8px","--r-orb":"8px","--r-bubble-tail":"2px",
+        "--pg-m":"20px","--sp-gap":"16px","--fs-largeTitle":"26px","--fw-largeTitle":"600","--ls-largeTitle":"-0.2px",
+        "--fs-title":"16px","--fw-brand":"600","--ls-brand":"0px","--fw-entry":"500",
+        "--shadow-player":"0 4px 14px rgba(0,0,0,0.5)","--bubble-shadow":"none","--input-border":"1px solid #33332F" }
+    },
+    calm: {
+      light: { "--bg-page":"#FBFAF7","--bg-surface":"#FFFFFF","--bg-raised":"#FFFFFF","--bg-input":"#F4F2EC",
+        "--text-1":"#2C2C2E","--text-2":"#8A8A8E","--text-3":"#B4B4B8","--text-on-accent":"#FFFFFF",
+        "--accent":"#3AA8A0","--accent-pressed":"#2F9089","--accent-muted":"rgba(58,168,160,0.10)",
+        "--s-success":"#5BA36B","--s-warning":"#C29B4A","--s-error":"#C96A5E",
+        "--r-card":"24px","--r-control":"20px","--r-orb":"28px","--r-bubble-tail":"8px",
+        "--pg-m":"24px","--sp-gap":"24px","--fs-largeTitle":"30px","--fw-largeTitle":"500","--ls-largeTitle":"-0.2px",
+        "--fs-title":"17px","--fw-brand":"500","--ls-brand":"0px","--fw-entry":"500",
+        "--shadow-player":"0 6px 20px rgba(44,44,46,0.10)","--bubble-shadow":"0 1px 6px rgba(44,44,46,0.06)" },
+      dark: { "--bg-page":"#191A1C","--bg-surface":"#222325","--bg-raised":"#2B2C2F","--bg-input":"#1D1E20",
+        "--text-1":"#EDEDEA","--text-2":"#9E9E9B","--text-3":"#6E6E6B","--text-on-accent":"#0E2A28",
+        "--accent":"#6CC7C0","--accent-pressed":"#8AD5CF","--accent-muted":"rgba(108,199,192,0.14)",
+        "--s-success":"#8CC9A0","--s-warning":"#D9BC7E","--s-error":"#E09087",
+        "--r-card":"24px","--r-control":"20px","--r-orb":"28px","--r-bubble-tail":"8px",
+        "--pg-m":"24px","--sp-gap":"24px","--fs-largeTitle":"30px","--fw-largeTitle":"500","--ls-largeTitle":"-0.2px",
+        "--fs-title":"17px","--fw-brand":"500","--ls-brand":"0px","--fw-entry":"500",
+        "--shadow-player":"0 6px 20px rgba(0,0,0,0.45)","--bubble-shadow":"none" }
+    }
+  };
+
+  const SW_KEYS = [
+    ["--bg-page","页面底"],["--bg-raised","浮起面"],["--bg-input","输入框"],["--text-1","正文"],
+    ["--text-2","次级"],["--accent","强调"],["--s-success","成功"],["--s-error","错误"]
+  ];
+
+  let currentDir = "aqua";
+  let currentTheme = null; // null = 跟随方向默认
+
+  function applyDir(dirKey, theme) {
+    currentDir = dirKey;
+    const dir = DIRS[dirKey];
+    currentTheme = theme || (currentTheme && currentTheme !== "auto" ? currentTheme : dir.defaultTheme);
+    const set = TOKENS[dirKey][currentTheme];
+    for (const [k, v] of Object.entries(set)) document.documentElement.style.setProperty(k, v);
+    // 信息面板
+    document.getElementById("dirName").textContent = dir.en + " · " + dir.name;
+    document.getElementById("dirVibe").textContent = dir.vibe;
+    document.getElementById("dirType").textContent = dir.type;
+    document.getElementById("dirRadius").textContent = dir.radius;
+    // 色板
+    const cs = getComputedStyle(document.documentElement);
+    document.getElementById("swatches").innerHTML = SW_KEYS.map(([k, n]) =>
+      `<div class="sw"><div class="chip" style="background:${cs.getPropertyValue(k)}"></div><div class="n">${n}</div></div>`).join("");
+    // 标签页激活态
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.dir === dirKey));
+    document.getElementById("shellToggle").textContent = "◐ 画布切" + (currentTheme === "dark" ? "浅色" : "深色");
+  }
+
+  function toggleTheme() {
+    currentTheme = currentTheme === "dark" ? "light" : "dark";
+    applyDir(currentDir, currentTheme);
+  }
+
+  function buildTabs() {
+    document.getElementById("tabs").innerHTML = Object.entries(DIRS).map(([k, d]) =>
+      `<button class="tab" data-dir="${k}" onclick="applyDir('${k}')"><span class="dot" style="background:${d.dot}"></span>${d.name}</button>`).join("");
+  }
+
+  function buildQuick() {
+    document.getElementById("quickGrid").innerHTML = Object.entries(DIRS).map(([k, d]) => {
+      const t = TOKENS[k][d.defaultTheme];
+      return `<div class="q-card" onclick="applyDir('${k}')" style="${Object.entries(t).map(([p, v]) => `${p}:${v}`).join(";")}">
+        <div class="q-thumb">
+          <div class="q-bar"><span>鲸鱼</span><span>任务 · 设置</span></div>
+          <div class="q-greet">有什么想聊的？</div>
+          <div class="q-input"></div>
+        </div>
+        <div class="q-name"><div class="t">${d.name}</div><div class="v">${d.en} · 默认${d.defaultTheme === "dark" ? "深" : "浅"}色</div></div>
+      </div>`;
+    }).join("");
+  }
+
+  function demoChat() {
+    document.getElementById("chat").classList.add("show");
+    document.getElementById("miniPlayer").classList.add("show");
+    document.getElementById("emptySub").textContent = "示例 · 点击对话区恢复空状态";
+  }
+  function resetBody() {
+    document.getElementById("chat").classList.remove("show");
+    document.getElementById("miniPlayer").classList.remove("show");
+    document.getElementById("emptySub").textContent = "文字或语音都可以";
+  }
+  document.getElementById("phoneBody").addEventListener("click", resetBody);
+
+  buildTabs(); buildQuick(); applyDir("aqua");
+</script>
+</body>
+</html>
