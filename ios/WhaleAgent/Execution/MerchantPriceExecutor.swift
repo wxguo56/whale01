@@ -184,9 +184,10 @@ final class MerchantPriceExecutor {
                       let text = object.optionalString("text") else { continue }
                 let title = object.optionalString("title") ?? candidate.title
                 let pageFetchedAt = object.optionalString("fetchedAt") ?? fetchedAt
+                let analysisText = "\(title)\n\(text)"
                 successfulPages += 1
                 let rows = MerchantPriceExtractor.extract(
-                    text: text,
+                    text: analysisText,
                     merchant: merchant,
                     branch: branch,
                     city: city,
@@ -201,8 +202,8 @@ final class MerchantPriceExecutor {
                         "url": .string(candidate.url),
                         "status": .string("fetched"),
                         "fetchedAt": .string(pageFetchedAt),
-                        "merchantMentioned": .bool(!rows.isEmpty || MerchantPriceExtractor.merchantMentioned(in: text, merchant: merchant)),
-                        "branchMatch": .string(MerchantPriceExtractor.branchMatch(in: text, branch: branch, city: city)),
+                        "merchantMentioned": .bool(!rows.isEmpty || MerchantPriceExtractor.merchantMentioned(in: analysisText, merchant: merchant)),
+                        "branchMatch": .string(MerchantPriceExtractor.branchMatch(in: analysisText, branch: branch, city: city)),
                         "textLength": .number(Double(text.count))
                     ])
                 )
