@@ -67,6 +67,7 @@ struct RootView: View {
         .task {
             await model.health()
             await model.reconcileUnknownWrites()
+            await model.flushResultOutbox()
             await model.resumeActiveTurnIfNeeded()
             model.refreshPermissions()
             await model.refreshDashboard(force: true)
@@ -77,7 +78,10 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
-            Task { await model.drainSharedInbox() }
+            Task {
+                await model.flushResultOutbox()
+                await model.drainSharedInbox()
+            }
         }
         .onChange(of: page) { oldPage, newPage in
             guard oldPage != newPage else { return }

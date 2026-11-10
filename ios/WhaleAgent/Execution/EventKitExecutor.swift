@@ -247,8 +247,30 @@ final class EventKitExecutor {
             guard let due = reminder.dueDateComponents.flatMap({ ToolDate.calendar(TimeZone.current.identifier).date(from: $0) }) else { return false }
             return abs(due.timeIntervalSince(dueAt)) < 60
         }
+        if matches.count > 1 {
+            let timezone = TimeZone.current.identifier
+            let candidates = matches.prefix(5).map { reminder -> String in
+                let due = reminder.dueDateComponents
+                    .flatMap { ToolDate.calendar(timezone).date(from: $0) }
+                    .map { ToolDate.iso($0) } ?? "无截止时间"
+                let list = reminder.calendar?.title ?? "提醒事项"
+                return "\(due)｜\(list)｜\(reminder.calendarItemIdentifier)"
+            }.joined(separator: "；")
+            throw ToolExecutionError(
+                code: "ambiguous_reminder",
+                message: "找到 \(matches.count) 条同名提醒：\(candidates)。请补充具体日期/时间或 recordId 后再操作，不要直接修改第一条。"
+            )
+        }
         if let exact = matches.first { return exact }
         throw ToolExecutionError(code: "reminder_not_found", message: "没有找到匹配的提醒，请先查询确认，不要直接新建")
+    }
+
+    func reminderExists(recordId: String) -> Bool {
+        store.calendarItem(withIdentifier: recordId) is EKReminder
+    }
+
+    func calendarEventExists(eventId: String) -> Bool {
+        store.event(withIdentifier: eventId) != nil
     }
 
     private func reminderPayload(_ reminder: EKReminder, timezone: String) -> [String: JSONValue] {

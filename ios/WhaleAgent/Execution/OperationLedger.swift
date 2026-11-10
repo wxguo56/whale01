@@ -11,6 +11,59 @@ struct PendingWrite: Codable, Sendable {
     var recordId: String? = nil
 }
 
+struct ResultOutboxEntry: Codable, Sendable {
+    let turnId: String
+    let results: [ToolResultPayload]
+    let createdAt: Date
+}
+
+actor ResultOutbox {
+    static let shared = ResultOutbox()
+
+    private let storageKey = "whale.result.outbox.v1"
+    private let capacity = 20
+    private var entries: [String: ResultOutboxEntry] = [:]
+
+    init() {
+        guard
+            let data = UserDefaults.standard.data(forKey: storageKey),
+            let decoded = try? JSONDecoder().decode([String: ResultOutboxEntry].self, from: data)
+        else {
+            return
+        }
+        entries = decoded
+    }
+
+    func enqueue(turnId: String, results: [ToolResultPayload]) {
+        guard !turnId.isEmpty, !results.isEmpty else { return }
+        entries[turnId] = ResultOutboxEntry(turnId: turnId, results: results, createdAt: Date())
+        while entries.count > capacity, let oldest = entries.values.min(by: { $0.createdAt < $1.createdAt }) {
+            entries.removeValue(forKey: oldest.turnId)
+        }
+        persist()
+    }
+
+    func list() -> [ResultOutboxEntry] {
+        entries.values.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func remove(turnId: String) {
+        entries.removeValue(forKey: turnId)
+        persist()
+    }
+
+    func clear() {
+        entries = [:]
+        persist()
+    }
+
+    private func persist() {
+        if let data = try? JSONEncoder().encode(entries) {
+            UserDefaults.standard.set(data, forKey: storageKey)
+        }
+    }
+}
+
 actor OperationLedger {
     static let shared = OperationLedger()
 

@@ -14,6 +14,12 @@ final class MessageExecutor {
         let name: String?
     }
 
+    private struct RecipientCandidate {
+        let value: String
+        let name: String?
+        let identifier: String
+    }
+
     private let contactStore = CNContactStore()
 
     func prepare(arguments: [String: JSONValue]) async throws -> JSONValue {
@@ -75,32 +81,104 @@ final class MessageExecutor {
     }
 
     private func resolveRecipient(_ raw: String, channel: String) async throws -> ResolvedRecipient {
-        if channel == "sms" && looksLikePhone(raw) {
-            return ResolvedRecipient(value: raw, name: nil)
+        let requested = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if channel == "sms" && looksLikePhone(requested) {
+            return ResolvedRecipient(value: requested, name: nil)
         }
-        if channel == "email" && raw.contains("@") {
-            return ResolvedRecipient(value: raw, name: nil)
+        if channel == "email" && requested.contains("@") {
+            return ResolvedRecipient(value: requested, name: nil)
         }
 
         if
-            let contact = try? contactStore.unifiedContact(withIdentifier: raw, keysToFetch: contactKeys),
-            let value = preferredValue(for: contact, channel: channel)
+            let contact = try? contactStore.unifiedContact(withIdentifier: requested, keysToFetch: contactKeys)
         {
-            return ResolvedRecipient(value: value, name: displayName(contact))
+            return try selectCandidate(
+                from: candidates(for: contact, channel: channel),
+                requested: requested,
+                channel: channel
+            )
         }
 
-        let predicate = CNContact.predicateForContacts(matchingName: raw)
+        let predicate = CNContact.predicateForContacts(matchingName: requested)
         let contacts = try contactStore.unifiedContacts(matching: predicate, keysToFetch: contactKeys)
+        var found: [RecipientCandidate] = []
         for contact in contacts {
-            if let value = preferredValue(for: contact, channel: channel) {
-                return ResolvedRecipient(value: value, name: displayName(contact))
+            found.append(contentsOf: candidates(for: contact, channel: channel))
+        }
+        return try selectCandidate(from: found, requested: requested, channel: channel)
+    }
+
+    private func selectCandidate(
+        from candidates: [RecipientCandidate],
+        requested: String,
+        channel: String
+    ) throws -> ResolvedRecipient {
+        var seen = Set<String>()
+        let unique = candidates.filter { candidate in
+            let key = candidateKey(candidate.value, channel: channel)
+            guard !key.isEmpty, !seen.contains(key) else { return false }
+            seen.insert(key)
+            return true
+        }
+        guard !unique.isEmpty else {
+            throw ToolExecutionError(
+                code: "contact_not_found",
+                message: "通讯录里没有找到 \(requested) 的\(channel == "sms" ? "电话" : "邮箱")"
+            )
+        }
+        if unique.count == 1, let candidate = unique.first {
+            return ResolvedRecipient(value: candidate.value, name: candidate.name)
+        }
+        let labels = unique.prefix(5).map(candidateLabel).joined(separator: "、")
+        throw ToolExecutionError(
+            code: "ambiguous_contact",
+            message: "通讯录里找到 \(unique.count) 个候选：\(labels)。请明确要发给哪一个（可直接回复完整号码或邮箱），不要直接选第一个。"
+        )
+    }
+
+    private func candidates(for contact: CNContact, channel: String) -> [RecipientCandidate] {
+        let name = displayName(contact)
+        if channel == "sms" {
+            return contact.phoneNumbers.compactMap { item in
+                let value = item.value.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !value.isEmpty else { return nil }
+                return RecipientCandidate(value: value, name: name, identifier: contact.identifier)
             }
         }
+        return contact.emailAddresses.compactMap { item in
+            let value = String(item.value).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !value.isEmpty else { return nil }
+            return RecipientCandidate(value: value, name: name, identifier: contact.identifier)
+        }
+    }
 
-        throw ToolExecutionError(
-            code: "contact_not_found",
-            message: "通讯录里没有找到 \(raw) 的\(channel == "sms" ? "电话" : "邮箱")"
-        )
+    private func candidateKey(_ value: String, channel: String) -> String {
+        if channel == "sms" {
+            return value.filter(\.isNumber)
+        }
+        return value.lowercased()
+    }
+
+    private func candidateLabel(_ candidate: RecipientCandidate) -> String {
+        let masked = maskedValue(candidate.value)
+        if let name = candidate.name, !name.isEmpty {
+            return "\(name)（\(masked)）"
+        }
+        return masked
+    }
+
+    private func maskedValue(_ value: String) -> String {
+        if value.contains("@") {
+            let parts = value.split(separator: "@", maxSplits: 1, omittingEmptySubsequences: false)
+            guard parts.count == 2 else { return "***" }
+            let prefix = parts[0].prefix(1)
+            return "\(prefix)***@\(parts[1])"
+        }
+        let digits = value.filter(\.isNumber)
+        if digits.count >= 7 {
+            return "\(digits.prefix(3))****\(digits.suffix(4))"
+        }
+        return "***"
     }
 
     private var contactKeys: [CNKeyDescriptor] {
@@ -111,13 +189,6 @@ final class MessageExecutor {
             CNContactEmailAddressesKey as CNKeyDescriptor,
             CNContactFormatter.descriptorForRequiredKeys(for: .fullName)
         ]
-    }
-
-    private func preferredValue(for contact: CNContact, channel: String) -> String? {
-        if channel == "sms" {
-            return contact.phoneNumbers.first?.value.stringValue
-        }
-        return contact.emailAddresses.first.map { String($0.value) }
     }
 
     private func displayName(_ contact: CNContact) -> String? {

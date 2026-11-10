@@ -190,7 +190,11 @@ actor LocalAgentEngine: AgentTransport {
             history.append(DSMessage(role: "assistant", content: nil, tool_calls: calls, tool_call_id: nil, name: nil))
         }
 
-        for result in results {
+        let existingToolIds = Set(
+            history.compactMap { $0.role == "tool" ? $0.tool_call_id : nil }
+        )
+        let novelResults = results.filter { !existingToolIds.contains($0.toolCallId) }
+        for result in novelResults {
             history.append(
                 DSMessage(
                     role: "tool",
@@ -203,7 +207,9 @@ actor LocalAgentEngine: AgentTransport {
         }
         saveHistory(history, for: turn.conversationId)
 
-        turn.batches += 1
+        if !novelResults.isEmpty {
+            turn.batches += 1
+        }
         if turn.batches > 3 {
             turns.removeValue(forKey: turn.turnId)
             saveTurns()
@@ -296,7 +302,7 @@ actor LocalAgentEngine: AgentTransport {
         var messages = [
             DSMessage(role: "system", content: systemPrompt(permissions: permissions), tool_calls: nil, tool_call_id: nil, name: nil)
         ]
-        messages.append(contentsOf: history.suffix(30))
+        messages.append(contentsOf: Self.trimmedHistory(history, limit: 30))
 
         let requestBody = DSRequest(
             model: LocalAgentConfig.model,
@@ -411,9 +417,43 @@ actor LocalAgentEngine: AgentTransport {
     }
 
     private func hasAssistantToolCalls(_ history: [DSMessage], matching pending: [PendingTool]) -> Bool {
-        guard let last = history.last, last.role == "assistant", let calls = last.tool_calls else { return false }
-        let ids = Set(calls.map(\.id))
-        return pending.allSatisfy { ids.contains($0.toolCallId) }
+        for message in history.reversed() {
+            if message.role == "tool" { continue }
+            guard message.role == "assistant", let calls = message.tool_calls else { return false }
+            let ids = Set(calls.map(\.id))
+            return pending.allSatisfy { ids.contains($0.toolCallId) }
+        }
+        return false
+    }
+
+    static func trimmedHistory(_ history: [DSMessage], limit: Int = 30) -> [DSMessage] {
+        let slice = history.count > limit ? Array(history.suffix(limit)) : history
+        var sanitized: [DSMessage] = []
+        var index = 0
+        while index < slice.count {
+            let message = slice[index]
+            if message.role == "tool" {
+                index += 1
+                continue
+            }
+            if message.role == "assistant", let calls = message.tool_calls, !calls.isEmpty {
+                let expected = Set(calls.map(\.id))
+                var cursor = index + 1
+                var delivered = Set<String>()
+                while cursor < slice.count, slice[cursor].role == "tool" {
+                    if let id = slice[cursor].tool_call_id { delivered.insert(id) }
+                    cursor += 1
+                }
+                if expected.isSubset(of: delivered) {
+                    sanitized.append(contentsOf: slice[index..<cursor])
+                }
+                index = cursor
+                continue
+            }
+            sanitized.append(message)
+            index += 1
+        }
+        return sanitized
     }
 
     private func encodeArguments(_ arguments: [String: JSONValue]) -> String {
@@ -448,7 +488,7 @@ actor LocalAgentEngine: AgentTransport {
     }
 
     private func saveHistory(_ messages: [DSMessage], for conversationId: String) {
-        let trimmed = Array(messages.suffix(30))
+        let trimmed = Self.trimmedHistory(messages, limit: 60)
         if let data = try? JSONEncoder().encode(trimmed) {
             UserDefaults.standard.set(data, forKey: historyKey(conversationId))
         }

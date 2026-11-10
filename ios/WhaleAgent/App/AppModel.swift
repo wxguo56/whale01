@@ -275,13 +275,58 @@ final class AppModel: ObservableObject {
                 }
             }
 
-            conversationId = response.conversationId
-            activeTurnId = response.turnId
-            persistActiveTurn()
-            appendReplyIfNeeded(response)
-            await handle(response)
+            await adopt(response)
         } catch {
             // 后端暂时不可达时保留 turnId，下次启动再试。
+        }
+    }
+
+    func flushResultOutbox() async {
+        for entry in await ResultOutbox.shared.list() {
+            _ = await recoverOutboxEntry(entry, retryIfAwaiting: true)
+        }
+    }
+
+    private func adopt(_ response: AgentTurnResponse) async {
+        conversationId = response.conversationId
+        activeTurnId = response.turnId
+        persistActiveTurn()
+        appendReplyIfNeeded(response)
+        await handle(response)
+    }
+
+    private func recoverOutboxEntry(
+        _ entry: ResultOutboxEntry,
+        retryIfAwaiting: Bool
+    ) async -> Bool {
+        do {
+            let snapshot = try await client.turnSnapshot(turnId: entry.turnId)
+            if snapshot.status == "awaiting_tool_results" {
+                guard retryIfAwaiting else { return false }
+                let response = try await client.submitToolResults(
+                    turnId: entry.turnId,
+                    results: entry.results
+                )
+                await ResultOutbox.shared.remove(turnId: entry.turnId)
+                await adopt(response)
+                return true
+            }
+            await ResultOutbox.shared.remove(turnId: entry.turnId)
+            if snapshot.status == "interrupted" && snapshot.conversationId.isEmpty {
+                clearActiveTurn()
+                appendMessage(
+                    ChatMessage(
+                        role: .tool,
+                        text: "上一轮已结束",
+                        detail: "工具结果没有重复提交；本轮记录已保留。"
+                    )
+                )
+                return true
+            }
+            await adopt(snapshot)
+            return true
+        } catch {
+            return false
         }
     }
 
@@ -309,6 +354,14 @@ final class AppModel: ObservableObject {
     func send(text rawText: String, displayText: String? = nil, speakReply: Bool = false) async {
         let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isBusy else { return }
+        if !(await ResultOutbox.shared.list()).isEmpty {
+            await flushResultOutbox()
+            if !(await ResultOutbox.shared.list()).isEmpty {
+                errorText = "上一轮工具结果仍在等待回传，联网后会自动续传。为避免任务串线，请稍后再发送。"
+                appendMessage(ChatMessage(role: .tool, text: "结果等待回传", detail: errorText))
+                return
+            }
+        }
         speech.stop()
         speakReplyForActiveTurn = speakReply && voiceReplyEnabled
         input = ""
@@ -463,17 +516,52 @@ final class AppModel: ObservableObject {
 
     func confirm(_ item: PendingTool) async {
         guard !isBusy else { return }
+        guard
+            let current = pending.first(where: {
+                $0.toolCallId == item.toolCallId && $0.operationId == item.operationId
+            }),
+            results[current.toolCallId] == nil,
+            current.requiresConfirmation
+        else {
+            presentedConfirmation = nil
+            appendMessage(
+                ChatMessage(
+                    role: .tool,
+                    text: "确认卡已失效",
+                    detail: "这张确认卡不属于当前待执行任务，未执行任何写操作。请重新发起请求。"
+                )
+            )
+            presentNextConfirmation()
+            return
+        }
         presentedConfirmation = nil
         isBusy = true
         defer { isBusy = false }
-        await executeAndCollect(item)
+        await executeAndCollect(current)
         presentNextConfirmation()
     }
 
     func skip(_ item: PendingTool) async {
+        guard
+            let current = pending.first(where: {
+                $0.toolCallId == item.toolCallId && $0.operationId == item.operationId
+            }),
+            results[current.toolCallId] == nil
+        else {
+            presentedConfirmation = nil
+            appendMessage(
+                ChatMessage(
+                    role: .tool,
+                    text: "确认卡已失效",
+                    detail: "这张确认卡不属于当前待执行任务，未提交任何结果。"
+                )
+            )
+            presentNextConfirmation()
+            return
+        }
         presentedConfirmation = nil
-        results[item.toolCallId] = ToolResultPayload(
-            toolCallId: item.toolCallId,
+        results[current.toolCallId] = ToolResultPayload(
+            toolCallId: current.toolCallId,
             status: "cancelled",
             error: ToolErrorPayload(code: "user_cancelled", message: "你跳过了本次操作")
         )
@@ -807,17 +895,34 @@ final class AppModel: ObservableObject {
         guard let turnId = activeTurnId, !pending.isEmpty else { return }
         guard pending.allSatisfy({ results[$0.toolCallId] != nil }) else { return }
         let payload = pending.compactMap { results[$0.toolCallId] }
+        let entry = ResultOutboxEntry(turnId: turnId, results: payload, createdAt: Date())
+        await ResultOutbox.shared.enqueue(turnId: turnId, results: payload)
         pending = []
         autoStarted = []
         do {
             let response = try await client.submitToolResults(turnId: turnId, results: payload)
-            conversationId = response.conversationId
-            activeTurnId = response.turnId
-            appendReplyIfNeeded(response)
-            await handle(response)
+            await ResultOutbox.shared.remove(turnId: turnId)
+            await adopt(response)
         } catch {
-            fail(error)
+            if isStateConflict(error), await recoverOutboxEntry(entry, retryIfAwaiting: false) {
+                return
+            }
+            errorText = "工具结果已保存在手机，网络恢复后会自动续传；不要重复执行或重复确认。"
+            appendMessage(
+                ChatMessage(
+                    role: .tool,
+                    text: "结果等待回传",
+                    detail: errorText
+                )
+            )
+            backendOnline = agentMode == "cloud" ? false : LocalAgentConfig.isConfigured
         }
+    }
+
+    private func isStateConflict(_ error: Error) -> Bool {
+        guard case AgentClientError.http(let status, let body) = error else { return false }
+        return status == 409
+            || (status == 400 && (body.contains("invalid_state") || body.contains("unknown_tool_call")))
     }
 
     private func appendReplyIfNeeded(_ response: AgentTurnResponse) {

@@ -87,4 +87,38 @@ final class CoreTests: XCTestCase {
         let error = ToolExecutionError(code: "execution_unknown", message: "需要核对")
         XCTAssertEqual(error.status, "execution_unknown")
     }
+
+    func testHistoryTrimDropsOrphanToolMessages() {
+        let call = DSToolCall(
+            id: "call_1",
+            type: "function",
+            function: DSFunctionCall(name: "list_reminders", arguments: "{}")
+        )
+        let history = [
+            DSMessage(role: "assistant", content: nil, tool_calls: [call], tool_call_id: nil, name: nil),
+            DSMessage(role: "tool", content: "{\"status\":\"success\"}", tool_calls: nil, tool_call_id: "call_1", name: nil)
+        ]
+        XCTAssertEqual(LocalAgentEngine.trimmedHistory(history, limit: 1).count, 0)
+        XCTAssertEqual(LocalAgentEngine.trimmedHistory(history, limit: 2).count, 2)
+    }
+
+    func testHistoryTrimDropsIncompleteToolCallBlock() {
+        let calls = [
+            DSToolCall(
+                id: "call_a",
+                type: "function",
+                function: DSFunctionCall(name: "list_reminders", arguments: "{}")
+            ),
+            DSToolCall(
+                id: "call_b",
+                type: "function",
+                function: DSFunctionCall(name: "list_calendar_events", arguments: "{}")
+            )
+        ]
+        let history = [
+            DSMessage(role: "assistant", content: nil, tool_calls: calls, tool_call_id: nil, name: nil),
+            DSMessage(role: "tool", content: "{}", tool_calls: nil, tool_call_id: "call_a", name: nil)
+        ]
+        XCTAssertEqual(LocalAgentEngine.trimmedHistory(history, limit: 10).count, 0)
+    }
 }
