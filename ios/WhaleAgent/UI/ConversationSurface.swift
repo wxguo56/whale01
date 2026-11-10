@@ -196,8 +196,12 @@ struct ConversationSurface: View {
             .onChange(of: model.isBusy) { _, busy in
                 if busy { pinToBottom(proxy) }
             }
-            .onChange(of: keyboardInset) { _, _ in
+            .onChange(of: keyboardTop) { oldTop, newTop in
+                guard oldTop == nil, newTop != nil else { return }
                 DispatchQueue.main.async { pinToBottom(proxy, animated: false) }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.36) {
+                    pinToBottom(proxy, animated: false)
+                }
             }
             .onAppear {
                 DispatchQueue.main.async { pinToBottom(proxy, animated: false) }
