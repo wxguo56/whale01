@@ -407,6 +407,7 @@ struct MessageRow: View {
 struct PlaceMapCard: View {
     let places: [PlaceSummary]
     let statusText: String
+    @State private var lastOpenAttempt = Date.distantPast
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -434,6 +435,11 @@ struct PlaceMapCard: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
             }
+            .overlay {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { openInMaps() }
+            }
             .accessibilityLabel("地图，已标记 \(places.count) 个候选地点")
 
             if let first = places.first {
@@ -458,6 +464,11 @@ struct PlaceMapCard: View {
             }
         }
         .whaleCard(padding: 12)
+        .contentShape(Rectangle())
+        .onTapGesture { openInMaps() }
+        .accessibilityElement(children: .contain)
+        .accessibilityAction { openInMaps() }
+        .accessibilityHint("轻点整张卡片，在系统地图中查看路线")
     }
 
     private var region: MKCoordinateRegion {
@@ -487,6 +498,10 @@ struct PlaceMapCard: View {
     }
 
     private func openInMaps() {
+        let now = Date()
+        guard now.timeIntervalSince(lastOpenAttempt) > 1 else { return }
+        lastOpenAttempt = now
+
         let items = places.prefix(10).map { place -> MKMapItem in
             let item = MKMapItem(placemark: MKPlacemark(coordinate: place.coordinate))
             item.name = place.name
