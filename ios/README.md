@@ -67,11 +67,11 @@ xcodebuild \
 
 - Bundle ID：`com.whale01.whaleagent.alt`
 - Entitlements：`WhaleAgent-Sideload.entitlements`（空，不申请受限能力）
-- 编译条件：`FREE_SIGNING`，天气与运动摘要会返回 `unavailable_in_free_build`
+- 编译条件：`FREE_SIGNING`；天气走 Open-Meteo 公共 HTTPS 接口，不受签名限制；运动摘要（HealthKit）返回 `unavailable_in_free_build`
 - IPA 由 `.github/workflows/ios-sideload-ipa.yml` 在 macOS runner 上构建并上传 artifact
 - 完整安装与验收步骤见 `15_AltStore与SideStore真机安装.md`
 
-免费签名有效期 7 天，最多同时安装 3 个 App，不支持 HealthKit、WeatherKit、App Groups 与推送。
+免费签名有效期 7 天，最多同时安装 3 个 App，不支持 HealthKit、App Groups 与推送。天气不再依赖 WeatherKit，改用无需 entitlement 的公共接口。
 
 ## 真实能力
 
@@ -80,7 +80,7 @@ xcodebuild \
 - MapKit：地点搜索与地图导航交接。
 - Contacts + MessageUI：联系人解析与短信/邮件草稿。
 - MusicKit：用户音乐库搜索与播放控制。
-- WeatherKit：天气查询（需要 WeatherKit entitlement）。
+- Open-Meteo：逐日天气查询（公共 HTTPS 接口，免 Key，免费签名可用；只支持未来 16 天）。
 - 分享内容摘要仍由后端模型处理，不伪装成手机系统写入。
 
 ## 0.2.0 原生业务界面
