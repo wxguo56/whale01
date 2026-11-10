@@ -20,15 +20,21 @@ extension Color {
 }
 
 enum WhaleTheme {
-    static let accent = Color(light: 0x2F67D8, dark: 0x346DDD)
-    static let accentDeep = Color(light: 0x1E4BA8, dark: 0x2A5BC0)
-    static let accentSoft = Color(light: 0xEAF1FE, dark: 0x1C2C4A)
-    static let ink = Color(light: 0x1D2B42, dark: 0xEDF2FA)
-    static let muted = Color(light: 0x64748B, dark: 0xADBACD)
+    static let accent = Color(light: 0x5856D6, dark: 0x8B8AF0)
+    static let accentDeep = Color(light: 0x433FC0, dark: 0x7B79E8)
+    static let accentSoft = Color(light: 0xECEBFB, dark: 0x2A2A4A)
+    static let ink = Color(light: 0x1D1D1F, dark: 0xF5F6FA)
+    static let muted = Color(light: 0x6B6B70, dark: 0xB9BDD0)
     static let background = Color(light: 0xF6F8FC, dark: 0x101725)
     static let card = Color(light: 0xFFFFFF, dark: 0x1B2434)
-    static let soft = Color(light: 0xEEF2F8, dark: 0x232E40)
-    static let line = Color(light: 0xE3E9F2, dark: 0x344055)
+    static let cardSolid = Color(light: 0xEDF1F8, dark: 0x272E45)
+    static let soft = Color(light: 0xEEF0FA, dark: 0x232A42)
+    static let line = Color(light: 0xE1E3F2, dark: 0x34405C)
+    static let glassStroke = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.white.withAlphaComponent(0.14)
+            : UIColor.white.withAlphaComponent(0.65)
+    })
     static let warm = Color(light: 0xE9A23B, dark: 0xF0B45C)
     static let success = Color(light: 0x2E9E6B, dark: 0x4FC08D)
     static let danger = Color(light: 0xD34747, dark: 0xF07A7A)
@@ -36,6 +42,16 @@ enum WhaleTheme {
     static let cardRadius: CGFloat = 20
     static let controlRadius: CGFloat = 16
     static let pagePadding: CGFloat = 20
+
+    static let pageGradient = LinearGradient(
+        colors: [
+            Color(light: 0xDCE7F5, dark: 0x0E1220),
+            Color(light: 0xEDE4F2, dark: 0x161B2E),
+            Color(light: 0xF6E8E4, dark: 0x1E1A26)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
 
     static let heroGradient = LinearGradient(
         colors: [accent, accentDeep],
@@ -47,12 +63,7 @@ enum WhaleTheme {
 extension View {
     func whaleCard(padding: CGFloat = 16) -> some View {
         self
-            .padding(padding)
-            .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: WhaleTheme.cardRadius, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: WhaleTheme.cardRadius, style: .continuous)
-                    .strokeBorder(WhaleTheme.line, lineWidth: 1)
-            }
+            .modifier(GlassCardStyle(padding: padding))
     }
 
     func whalePrimaryButton() -> some View {
@@ -62,6 +73,31 @@ extension View {
             .frame(maxWidth: .infinity)
             .frame(minHeight: 52)
             .background(WhaleTheme.accent, in: RoundedRectangle(cornerRadius: WhaleTheme.controlRadius, style: .continuous))
+    }
+}
+
+struct GlassCardStyle: ViewModifier {
+    var padding: CGFloat = 16
+    var radius: CGFloat = WhaleTheme.cardRadius
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .background {
+                if reduceTransparency {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .fill(WhaleTheme.cardSolid)
+                } else {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+            }
+            .shadow(color: .black.opacity(0.06), radius: 12, y: 6)
     }
 }
 
@@ -115,5 +151,88 @@ struct WhaleIconTile: View {
             .foregroundStyle(tint)
             .frame(width: size, height: size)
             .background(tint.opacity(0.11), in: RoundedRectangle(cornerRadius: size * 0.32, style: .continuous))
+    }
+}
+
+struct GlassChipStyle: ViewModifier {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background {
+                if reduceTransparency {
+                    Capsule().fill(WhaleTheme.cardSolid)
+                } else {
+                    Capsule().fill(.ultraThinMaterial)
+                }
+            }
+            .overlay {
+                Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+            }
+    }
+}
+
+extension View {
+    func whaleChip() -> some View {
+        modifier(GlassChipStyle())
+    }
+
+    func whaleGlassCircle(size: CGFloat = 40) -> some View {
+        self
+            .frame(width: size, height: size)
+            .background(.ultraThinMaterial, in: Circle())
+            .overlay {
+                Circle().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+            }
+    }
+}
+
+/// Wraps chips onto as many lines as needed without a horizontal scroll view,
+/// so the root pager keeps exclusive ownership of horizontal drags.
+struct WhaleFlowLayout: Layout {
+    var spacing: CGFloat = 8
+    var lineSpacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var lineHeight: CGFloat = 0
+        var widest: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > 0, x + size.width > maxWidth {
+                widest = max(widest, x - spacing)
+                x = 0
+                y += lineHeight + lineSpacing
+                lineHeight = 0
+            }
+            x += size.width + spacing
+            lineHeight = max(lineHeight, size.height)
+        }
+
+        widest = max(widest, max(0, x - spacing))
+        return CGSize(width: proposal.width ?? widest, height: y + lineHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX
+        var y = bounds.minY
+        var lineHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > bounds.minX, x + size.width > bounds.maxX {
+                x = bounds.minX
+                y += lineHeight + lineSpacing
+                lineHeight = 0
+            }
+            subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+            x += size.width + spacing
+            lineHeight = max(lineHeight, size.height)
+        }
     }
 }

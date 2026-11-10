@@ -18,10 +18,11 @@ struct ChatView: View {
             }
             inputBar
         }
-        .background(WhaleTheme.background)
+        .background(WhaleTheme.pageGradient)
         .background(SwipeBackEnabler().frame(width: 0, height: 0))
         .navigationTitle("对话")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 8) {

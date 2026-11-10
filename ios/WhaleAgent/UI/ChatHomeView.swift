@@ -3,7 +3,8 @@ import SwiftUI
 struct ConversationTabView: View {
     @ObservedObject var model: AppModel
     @Binding var isDetailOpen: Bool
-    let onOpenMusic: () -> Void
+    let onOpenRecords: () -> Void
+    let onOpenSettings: () -> Void
 
     @State private var showChat = false
     @State private var showVoice = false
@@ -37,7 +38,8 @@ struct ConversationTabView: View {
                     autoFocus = true
                     showChat = true
                 },
-                onOpenMusic: onOpenMusic
+                onOpenRecords: onOpenRecords,
+                onOpenSettings: onOpenSettings
             )
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $showChat) {
@@ -72,7 +74,7 @@ struct ConversationTabView: View {
                 .presentationDetents([.height(460)])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(30)
-                .presentationBackground(WhaleTheme.background)
+                .presentationBackground(WhaleTheme.pageGradient)
                 .interactiveDismissDisabled(voice.isRecording)
             }
         }
@@ -104,11 +106,13 @@ struct ChatHomeView: View {
     let onSend: (String) -> Void
     let onTalk: () -> Void
     let onType: () -> Void
-    let onOpenMusic: () -> Void
+    let onOpenRecords: () -> Void
+    let onOpenSettings: () -> Void
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 11),
-        GridItem(.flexible(), spacing: 11)
+    private let suggestions: [(title: String, prompt: String)] = [
+        ("附近吃点什么", "找我附近两公里内的餐厅，帮我看看价格。"),
+        ("看看今天安排", "帮我看看今天和最近的日程安排。"),
+        ("定个提醒", "帮我定一个提醒。")
     ]
 
     var body: some View {
@@ -116,72 +120,50 @@ struct ChatHomeView: View {
             header
 
             ScrollView {
-                VStack(spacing: 0) {
-                    Image("WhaleMascot")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 188, height: 141)
-                        .padding(.top, 14)
-                        .accessibilityHidden(true)
-
-                    Text("今天有什么想法？")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("今天想做点什么？")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
                         .foregroundStyle(WhaleTheme.ink)
-                        .padding(.top, 4)
+                        .padding(.top, 30)
 
-                    Text("聊一聊，或把一件事交给我。")
+                    Text("说一句，我来办。写入系统前会先请你确认。")
                         .font(.system(size: 14))
                         .foregroundStyle(WhaleTheme.muted)
-                        .padding(.top, 7)
+                        .padding(.top, 8)
 
-                    Button(action: onTalk) {
-                        Label("和鲸鱼说话", systemImage: "mic.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 232, height: 52)
-                            .background(WhaleTheme.accent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .shadow(color: WhaleTheme.accent.opacity(0.22), radius: 12, y: 6)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, 20)
-                    .accessibilityHint("开始语音对话")
-
-                    LazyVGrid(columns: columns, spacing: 11) {
-                        suggestion(
-                            icon: "mappin.and.ellipse",
-                            title: "附近吃点什么",
-                            subtitle: "找店，再看看价格"
-                        ) {
-                            onSend("找我附近两公里内的餐厅，帮我看看价格。")
-                        }
-                        suggestion(
-                            icon: "music.note",
-                            title: "听点音乐",
-                            subtitle: "从自己的曲库开始"
-                        ) {
-                            onOpenMusic()
+                    WhaleFlowLayout(spacing: 8, lineSpacing: 8) {
+                        ForEach(suggestions.indices, id: \.self) { index in
+                            suggestionChip(suggestions[index].title) {
+                                onSend(suggestions[index].prompt)
+                            }
                         }
                     }
-                    .padding(.top, 27)
+                    .padding(.top, 22)
 
-                    Button {
-                        onSend("帮我看看这段通知里有什么需要安排的。")
-                    } label: {
-                        Label("也可以发来一篇通知，接着安排。", systemImage: "doc.text")
-                            .font(.system(size: 13))
-                            .foregroundStyle(WhaleTheme.muted)
-                            .frame(minHeight: 44)
+                    if let recent = model.recentActions.first {
+                        recentCard(recent)
                     }
-                    .padding(.top, 10)
+
+                    if model.isBusy {
+                        HStack(spacing: 10) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text(model.statusLine)
+                                .font(.system(size: 13))
+                                .foregroundStyle(WhaleTheme.muted)
+                                .lineLimit(2)
+                        }
+                        .padding(.top, 22)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, WhaleTheme.pagePadding)
-                .padding(.bottom, 12)
+                .padding(.bottom, 24)
             }
             .scrollIndicators(.hidden)
 
             composer
         }
-        .background(WhaleTheme.background)
     }
 
     private var header: some View {
@@ -199,74 +181,100 @@ struct ChatHomeView: View {
                     .foregroundStyle(WhaleTheme.muted)
             }
             Spacer()
-            Button {
-                model.newConversation()
-            } label: {
-                Image(systemName: "square.and.pencil")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(WhaleTheme.muted)
-                    .frame(width: 44, height: 44)
+            Button(action: onOpenRecords) {
+                Image(systemName: "clock")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .whaleGlassCircle()
             }
-            .accessibilityLabel("开启新会话")
+            .buttonStyle(.plain)
+            .accessibilityLabel("任务与记录")
+
+            Button(action: onOpenSettings) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .whaleGlassCircle()
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("设置")
         }
         .padding(.horizontal, 16)
         .padding(.top, 4)
     }
 
-    private func suggestion(
-        icon: String,
-        title: String,
-        subtitle: String,
-        action: @escaping () -> Void
-    ) -> some View {
+    private func suggestionChip(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 7) {
-                Image(systemName: icon)
-                    .font(.system(size: 19, weight: .medium))
-                    .foregroundStyle(WhaleTheme.accent)
-                Spacer(minLength: 0)
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.ink)
-                Text(subtitle)
-                    .font(.system(size: 13))
-                    .foregroundStyle(WhaleTheme.muted)
-            }
-            .frame(maxWidth: .infinity, minHeight: 105, alignment: .leading)
-            .padding(16)
-            .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .strokeBorder(WhaleTheme.line, lineWidth: 1)
-            }
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(WhaleTheme.ink)
+                .whaleChip()
         }
         .buttonStyle(.plain)
     }
 
-    private var composer: some View {
-        Button(action: onType) {
+    private func recentCard(_ action: NativeActionRecord) -> some View {
+        Button(action: onOpenRecords) {
             HStack(spacing: 12) {
-                Image(systemName: "plus.circle")
-                    .font(.system(size: 21, weight: .regular))
-                    .foregroundStyle(WhaleTheme.muted)
-                Text("有什么想说的…")
-                    .font(.system(size: 16))
-                    .foregroundStyle(WhaleTheme.muted)
+                WhaleIconTile(systemName: action.icon, size: 38)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("最近一次")
+                        .font(.system(size: 12))
+                        .foregroundStyle(WhaleTheme.muted)
+                    Text(action.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .lineLimit(1)
+                }
                 Spacer()
-                Image(systemName: "mic")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(WhaleTheme.ink)
+                Text(action.isSuccess ? "已完成" : "待核对")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(action.isSuccess ? WhaleTheme.success : WhaleTheme.warm)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.muted)
             }
-            .padding(.horizontal, 18)
-            .frame(height: 52)
-            .background(WhaleTheme.card, in: Capsule())
-            .overlay {
-                Capsule().strokeBorder(WhaleTheme.line, lineWidth: 1)
-            }
+            .whaleCard(padding: 14)
         }
         .buttonStyle(.plain)
+        .padding(.top, 20)
+        .accessibilityHint("打开任务与记录")
+    }
+
+    private var composer: some View {
+        HStack(spacing: 10) {
+            Button(action: onType) {
+                HStack(spacing: 10) {
+                    Text("有什么想说的…")
+                        .font(.system(size: 16))
+                        .foregroundStyle(WhaleTheme.muted)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 18)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay {
+                    Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("输入消息")
+
+            Button(action: onTalk) {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 50, height: 50)
+                    .background(WhaleTheme.heroGradient, in: Circle())
+                    .shadow(color: WhaleTheme.accent.opacity(0.32), radius: 10, y: 4)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("语音输入")
+            .accessibilityHint("打开语音对话")
+        }
         .padding(.horizontal, 16)
+        .padding(.top, 8)
         .padding(.bottom, 8)
-        .accessibilityLabel("输入消息")
     }
 }

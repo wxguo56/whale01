@@ -5,35 +5,59 @@ import UIKit
 @MainActor
 struct RootView: View {
     @StateObject private var model = AppModel()
-    @State private var selectedTab: AppTab = .conversation
+    @State private var page: AppTab? = .conversation
     @State private var showMusic = false
     @State private var conversationDetailOpen = false
+    @State private var settingsDetailOpen = false
     @AppStorage("whale.appearance") private var appearance = "system"
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            withMiniPlayer(ConversationTabView(
-                model: model,
-                isDetailOpen: $conversationDetailOpen,
-                onOpenMusic: { showMusic = true }
-            ))
-                .tag(AppTab.conversation)
-                .tabItem { Label("对话", systemImage: "bubble.left.and.bubble.right") }
+        GeometryReader { proxy in
+            ScrollView(.horizontal) {
+                HStack(spacing: 0) {
+                    ConversationTabView(
+                        model: model,
+                        isDetailOpen: $conversationDetailOpen,
+                        onOpenRecords: { go(.records) },
+                        onOpenSettings: { go(.settings) }
+                    )
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .id(AppTab.conversation)
 
-            withMiniPlayer(RecordsView(model: model))
-                .tag(AppTab.records)
-                .tabItem { Label("记录", systemImage: "clock") }
+                    RecordsView(model: model, onBackToChat: { go(.conversation) })
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .id(AppTab.records)
 
-            withMiniPlayer(ProfileView(model: model))
-                .tag(AppTab.profile)
-                .tabItem { Label("我的", systemImage: "person") }
+                    SettingsView(
+                        model: model,
+                        isDetailOpen: $settingsDetailOpen,
+                        onBackToChat: { go(.conversation) }
+                    )
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .id(AppTab.settings)
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $page)
+            .scrollIndicators(.hidden)
+            .scrollDisabled(
+                conversationDetailOpen || settingsDetailOpen || showMusic || model.presentedConfirmation != nil
+            )
+            .background(WhaleTheme.pageGradient)
         }
+        .background(WhaleTheme.pageGradient.ignoresSafeArea())
         .tint(WhaleTheme.accent)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 20)
-                .onEnded(handleTabSwipe)
-        )
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if let track = model.playback.track {
+                miniPlayer(track)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 6)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         .sheet(item: $model.presentedConfirmation) { item in
             ConfirmationSheet(model: model, item: item)
         }
@@ -57,18 +81,28 @@ struct RootView: View {
             guard phase == .active else { return }
             Task { await model.drainSharedInbox() }
         }
+        .onChange(of: page) { oldPage, newPage in
+            guard oldPage != newPage else { return }
+            UISelectionFeedbackGenerator().selectionChanged()
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil,
+                from: nil,
+                for: nil
+            )
+        }
         .onReceive(NotificationCenter.default.publisher(for: .whaleOpenChat)) { _ in
-            selectedTab = .conversation
+            go(.conversation)
         }
     }
 
-    private func withMiniPlayer<Content: View>(_ content: Content) -> some View {
-        content.safeAreaInset(edge: .bottom, spacing: 0) {
-            if let track = model.playback.track {
-                miniPlayer(track)
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 6)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+    private func go(_ tab: AppTab) {
+        guard page != tab else { return }
+        if reduceMotion {
+            page = tab
+        } else {
+            withAnimation(.snappy(duration: 0.34)) {
+                page = tab
             }
         }
     }
@@ -81,44 +115,10 @@ struct RootView: View {
         }
     }
 
-    /// Horizontal swipe switches the three root entries.
-    ///
-    /// The gesture is gated so it never competes with vertical scrolling, the
-    /// left-edge back gesture, the pushed conversation, or an open sheet.
-    private func handleTabSwipe(_ value: DragGesture.Value) {
-        guard !conversationDetailOpen, model.presentedConfirmation == nil, !showMusic else { return }
-        guard value.startLocation.x > 24 else { return }
-
-        let dx = value.translation.width
-        let dy = value.translation.height
-        guard abs(dx) >= 70, abs(dx) >= abs(dy) * 1.6 else { return }
-
-        let target: AppTab?
-        if dx < 0 {
-            switch selectedTab {
-            case .conversation: target = .records
-            case .records: target = .profile
-            case .profile: target = nil
-            }
-        } else {
-            switch selectedTab {
-            case .conversation: target = nil
-            case .records: target = .conversation
-            case .profile: target = .records
-            }
-        }
-
-        guard let target else { return }
-        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-        withAnimation(.easeInOut(duration: 0.18)) {
-            selectedTab = target
-        }
-    }
-
     private func miniPlayer(_ track: MusicTrackItem) -> some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(LinearGradient(colors: [WhaleTheme.accent.opacity(0.75), WhaleTheme.accentDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .fill(LinearGradient(colors: [WhaleTheme.accent.opacity(0.8), WhaleTheme.accentDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
                 .frame(width: 38, height: 38)
                 .overlay {
                     Image(systemName: "music.note")
@@ -159,12 +159,12 @@ struct RootView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
-        .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(WhaleTheme.line, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
         }
-        .shadow(color: Color.black.opacity(0.08), radius: 10, y: 4)
+        .shadow(color: Color.black.opacity(0.12), radius: 16, y: 6)
     }
 }
 
@@ -225,7 +225,7 @@ private struct ConfirmationSheet: View {
                 }
                 .padding(20)
             }
-            .background(WhaleTheme.background)
+            .background(WhaleTheme.pageGradient)
             .navigationTitle("确认操作")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

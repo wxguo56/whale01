@@ -4,7 +4,7 @@ import SwiftUI
 enum AppTab: Hashable {
     case conversation
     case records
-    case profile
+    case settings
 }
 
 struct NativeActionRecord: Identifiable, Equatable {

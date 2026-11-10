@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RecordsView: View {
     @ObservedObject var model: AppModel
+    var onBackToChat: () -> Void = {}
 
     private struct DayGroup: Identifiable {
         let day: Date
@@ -18,7 +19,9 @@ struct RecordsView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            header
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     if groups.isEmpty {
@@ -26,10 +29,10 @@ struct RecordsView: View {
                     } else {
                         ForEach(groups) { group in
                             Text(label(for: group.day))
-                                .font(.system(size: 13))
+                                .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(WhaleTheme.muted)
-                                .padding(.top, 22)
-                                .padding(.bottom, 11)
+                                .padding(.top, 18)
+                                .padding(.bottom, 10)
                             ForEach(group.items) { action in
                                 recordCard(action)
                                     .padding(.bottom, 11)
@@ -40,10 +43,33 @@ struct RecordsView: View {
                 .padding(.horizontal, WhaleTheme.pagePadding)
                 .padding(.bottom, 28)
             }
-            .background(WhaleTheme.background)
-            .navigationTitle("记录")
-            .navigationBarTitleDisplayMode(.large)
+            .scrollIndicators(.hidden)
         }
+    }
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("任务与记录")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(WhaleTheme.ink)
+                Text("提醒、日程与地点操作的真实结果")
+                    .font(.system(size: 12))
+                    .foregroundStyle(WhaleTheme.muted)
+            }
+            Spacer()
+            Button(action: onBackToChat) {
+                Image(systemName: "bubble.left.and.bubble.right")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .whaleGlassCircle()
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("回到对话")
+        }
+        .padding(.horizontal, WhaleTheme.pagePadding)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
     }
 
     private var emptyState: some View {
@@ -59,7 +85,7 @@ struct RecordsView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 96)
+        .padding(.top, 88)
         .padding(.horizontal, 24)
     }
 
@@ -73,15 +99,19 @@ struct RecordsView: View {
                     .font(.system(size: 12))
                     .foregroundStyle(WhaleTheme.muted)
                 Spacer()
-                Text(action.isSuccess ? "已完成" : "待核对")
-                    .font(.system(size: 11, weight: .semibold))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(
-                        (action.isSuccess ? WhaleTheme.success : WhaleTheme.warm).opacity(0.14),
-                        in: RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    )
-                    .foregroundStyle(action.isSuccess ? WhaleTheme.success : WhaleTheme.warm)
+                HStack(spacing: 4) {
+                    Image(systemName: action.isSuccess ? "checkmark.circle" : "questionmark.circle")
+                        .font(.system(size: 10, weight: .bold))
+                    Text(action.isSuccess ? "已完成" : "待核对")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    (action.isSuccess ? WhaleTheme.success : WhaleTheme.warm).opacity(0.14),
+                    in: Capsule()
+                )
+                .foregroundStyle(action.isSuccess ? WhaleTheme.success : WhaleTheme.warm)
             }
             Text(action.title)
                 .font(.system(size: 17, weight: .semibold))
@@ -94,12 +124,7 @@ struct RecordsView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(17)
-        .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(WhaleTheme.line, lineWidth: 1)
-        }
+        .whaleCard(padding: 17)
     }
 
     private func label(for day: Date) -> String {

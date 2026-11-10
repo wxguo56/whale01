@@ -10,6 +10,11 @@ private struct PermissionRowSpec: Identifiable {
 
 struct SettingsView: View {
     @ObservedObject var model: AppModel
+    @Binding var isDetailOpen: Bool
+    var onBackToChat: () -> Void = {}
+
+    @AppStorage("whale.appearance") private var appearance = "system"
+    @State private var showDeveloper = false
 
     private let permissionRows: [PermissionRowSpec] = [
         PermissionRowSpec(key: "reminder", title: "提醒事项", icon: "bell.badge"),
@@ -24,88 +29,215 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    HStack(spacing: 14) {
-                        Image(systemName: "waveform.circle.fill")
-                            .font(.system(size: 44))
-                            .foregroundStyle(WhaleTheme.accent)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("鲸鱼")
-                                .font(.title2.weight(.bold))
-                            Text("版本 \(model.versionText)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        WhaleStatusPill(
-                            text: model.backendOnline ? "在线" : "离线",
-                            color: model.backendOnline ? .green : .orange
-                        )
-                    }
-                    .padding(.vertical, 6)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    header
+                    identityCard
+                    appearanceCard
+                    voiceCard
+                    permissionCard
+                    performanceCard
+                    developerCard
+                    aboutCard
                 }
-
-                Section("系统权限") {
-                    ForEach(permissionRows) { row in
-                        PermissionSettingsRow(
-                            key: row.key,
-                            title: row.title,
-                            icon: row.icon,
-                            status: model.permissionsSnapshot[row.key] ?? "unknown",
-                            onRequest: { Task { await model.requestPermission(row.key) } },
-                            onOpenSettings: { model.openSystemSettings() }
-                        )
-                    }
-                    Button("刷新权限状态") {
-                        model.refreshPermissions()
-                    }
-                    .font(.subheadline.weight(.medium))
-                }
-
-                Section("性能") {
-                    LabeledContent("首轮响应", value: TurnMetricsStore.summary)
-                    LabeledContent("设备操作", value: ToolMetricsStore.summary)
-                    Text("分别记录模型首轮响应与设备执行耗时，不含用户确认等待；完整测量见 Beta 测试报告。")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Section("语音") {
-                    Toggle("自动播报回复", isOn: Binding(
-                        get: { model.voiceReplyEnabled },
-                        set: { model.setVoiceReply($0) }
-                    ))
-                    LabeledContent("播报引擎", value: "系统中文语音")
-                    LabeledContent("语音引擎", value: XfyunConfig.statusText)
-                    Text("语音对话的回复会自动播报；开始录音、发送新消息或点消息旁的停止按钮会立刻打断。讯飞合成尚未接入，当前播报使用系统中文语音。")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Section("开发") {
-                    NavigationLink {
-                        DeveloperSettingsView(model: model)
-                    } label: {
-                        Label("开发设置与诊断", systemImage: "hammer")
-                    }
-                }
-
-                Section("关于") {
-                    LabeledContent("应用", value: "鲸鱼")
-                    LabeledContent("版本", value: model.versionText)
-                    LabeledContent("隐私", value: "对话经 DeepSeek 处理，系统数据留在设备")
-                    Text("鲸鱼只在获得确认后写入提醒、日历和短信草稿；天气与运动摘要需要对应系统能力授权。")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                .padding(.horizontal, WhaleTheme.pagePadding)
+                .padding(.bottom, 28)
             }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
-            .background(WhaleTheme.background)
-            .navigationTitle("设置")
+            .scrollIndicators(.hidden)
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(isPresented: $showDeveloper) {
+                DeveloperSettingsView(model: model)
+            }
+            .onChange(of: showDeveloper) { _, open in
+                isDetailOpen = open
+            }
             .task { model.refreshPermissions() }
         }
+    }
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("设置")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(WhaleTheme.ink)
+                Text("偏好、授权与语音")
+                    .font(.system(size: 12))
+                    .foregroundStyle(WhaleTheme.muted)
+            }
+            Spacer()
+            Button(action: onBackToChat) {
+                Image(systemName: "bubble.left.and.bubble.right")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .whaleGlassCircle()
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("回到对话")
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 2)
+    }
+
+    private var identityCard: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "waveform.circle.fill")
+                .font(.system(size: 44))
+                .foregroundStyle(WhaleTheme.accent)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("鲸鱼")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(WhaleTheme.ink)
+                Text("版本 \(model.versionText)")
+                    .font(.system(size: 12))
+                    .foregroundStyle(WhaleTheme.muted)
+            }
+            Spacer()
+            WhaleStatusPill(
+                text: model.backendOnline ? "在线" : "离线",
+                color: model.backendOnline ? WhaleTheme.success : WhaleTheme.warm
+            )
+        }
+        .whaleCard()
+    }
+
+    private var appearanceCard: some View {
+        card("外观") {
+            Picker("界面主题", selection: $appearance) {
+                Text("跟随系统").tag("system")
+                Text("浅色").tag("light")
+                Text("深色").tag("dark")
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    private var voiceCard: some View {
+        card("语音") {
+            Toggle("自动播报回复", isOn: Binding(
+                get: { model.voiceReplyEnabled },
+                set: { model.setVoiceReply($0) }
+            ))
+            .tint(WhaleTheme.accent)
+            .font(.system(size: 15))
+            .foregroundStyle(WhaleTheme.ink)
+
+            divider
+            infoRow("播报引擎", "系统中文语音")
+            divider
+            infoRow("语音识别", XfyunConfig.statusText)
+
+            Text("开始录音、发送新消息或点消息旁的停止按钮会立刻打断播报。讯飞合成尚未接入，当前播报使用系统中文语音。")
+                .font(.system(size: 12))
+                .foregroundStyle(WhaleTheme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var permissionCard: some View {
+        card("系统权限") {
+            ForEach(Array(permissionRows.enumerated()), id: \.element.id) { index, row in
+                PermissionSettingsRow(
+                    key: row.key,
+                    title: row.title,
+                    icon: row.icon,
+                    status: model.permissionsSnapshot[row.key] ?? "unknown",
+                    onRequest: { Task { await model.requestPermission(row.key) } },
+                    onOpenSettings: { model.openSystemSettings() }
+                )
+                if index < permissionRows.count - 1 {
+                    divider
+                }
+            }
+            Button {
+                model.refreshPermissions()
+            } label: {
+                Text("刷新权限状态")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.accent)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 40)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var performanceCard: some View {
+        card("性能") {
+            infoRow("首轮响应", TurnMetricsStore.summary)
+            divider
+            infoRow("设备操作", ToolMetricsStore.summary)
+            Text("分别记录模型首轮响应与设备执行耗时，不含用户确认等待；完整测量见 Beta 测试报告。")
+                .font(.system(size: 12))
+                .foregroundStyle(WhaleTheme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var developerCard: some View {
+        card("开发") {
+            Button {
+                showDeveloper = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "hammer")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(WhaleTheme.accent)
+                    Text("开发设置与诊断")
+                        .font(.system(size: 15))
+                        .foregroundStyle(WhaleTheme.ink)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.muted)
+                }
+                .frame(minHeight: 44)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var aboutCard: some View {
+        card("关于") {
+            infoRow("应用", "鲸鱼")
+            divider
+            infoRow("版本", model.versionText)
+            divider
+            infoRow("隐私", "对话经 DeepSeek 处理，系统数据留在设备")
+            Text("鲸鱼只在获得确认后写入提醒、日历和短信草稿；天气与运动摘要需要对应系统能力授权。")
+                .font(.system(size: 12))
+                .foregroundStyle(WhaleTheme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func card<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(WhaleTheme.ink)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .whaleCard()
+    }
+
+    private func infoRow(_ title: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(title)
+                .font(.system(size: 14))
+                .foregroundStyle(WhaleTheme.muted)
+            Spacer(minLength: 12)
+            Text(value)
+                .font(.system(size: 14))
+                .foregroundStyle(WhaleTheme.ink)
+                .multilineTextAlignment(.trailing)
+        }
+        .frame(minHeight: 24)
+    }
+
+    private var divider: some View {
+        Divider().overlay(WhaleTheme.glassStroke)
     }
 }
 
@@ -120,16 +252,17 @@ private struct PermissionSettingsRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.subheadline.weight(.semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(WhaleTheme.accent)
                 .frame(width: 30, height: 30)
-                .background(WhaleTheme.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: 8))
+                .background(WhaleTheme.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.subheadline)
+                    .font(.system(size: 15))
+                    .foregroundStyle(WhaleTheme.ink)
                 Text(statusText)
-                    .font(.caption2)
+                    .font(.system(size: 11))
                     .foregroundStyle(statusColor)
             }
 
@@ -138,20 +271,22 @@ private struct PermissionSettingsRow: View {
             switch status {
             case "granted":
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(WhaleTheme.success)
             case "denied":
                 Button("设置", action: onOpenSettings)
-                    .font(.caption.weight(.semibold))
+                    .font(.system(size: 12, weight: .semibold))
+                    .tint(WhaleTheme.accent)
             case "unavailable":
                 Text("不可用")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 11))
+                    .foregroundStyle(WhaleTheme.muted)
             default:
                 Button("授权", action: onRequest)
-                    .font(.caption.weight(.semibold))
+                    .font(.system(size: 12, weight: .semibold))
+                    .tint(WhaleTheme.accent)
             }
         }
-        .padding(.vertical, 2)
+        .frame(minHeight: 42)
     }
 
     private var statusText: String {
@@ -165,10 +300,10 @@ private struct PermissionSettingsRow: View {
 
     private var statusColor: Color {
         switch status {
-        case "granted": return .green
-        case "denied": return .red
-        case "unavailable": return .secondary
-        default: return .orange
+        case "granted": return WhaleTheme.success
+        case "denied": return WhaleTheme.danger
+        case "unavailable": return WhaleTheme.muted
+        default: return WhaleTheme.warm
         }
     }
 }

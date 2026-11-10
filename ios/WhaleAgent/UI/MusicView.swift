@@ -24,7 +24,7 @@ struct MusicView: View {
                 .padding(.bottom, 32)
             }
             .scrollIndicators(.hidden)
-            .background(WhaleTheme.background)
+            .background(WhaleTheme.pageGradient)
             .navigationTitle("音乐")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -214,10 +214,10 @@ struct MusicView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 18)
-        .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(WhaleTheme.line, lineWidth: 1)
+                .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
         }
     }
 
@@ -289,10 +289,10 @@ struct MusicView: View {
             }
         }
         .padding(.horizontal, 14)
-        .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(WhaleTheme.line, lineWidth: 1)
+                .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
         }
     }
 
