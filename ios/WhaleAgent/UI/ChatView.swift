@@ -1,3 +1,4 @@
+import MapKit
 import SwiftUI
 
 struct ChatView: View {
@@ -22,7 +23,8 @@ struct ChatView: View {
         .background(SwipeBackEnabler().frame(width: 0, height: 0))
         .navigationTitle("对话")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(.thinMaterial, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 8) {
@@ -153,7 +155,7 @@ struct ChatView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
-        .background(WhaleTheme.background)
+        .background(.thinMaterial)
     }
 
     private func suggestion(_ text: String) -> some View {
@@ -257,10 +259,14 @@ struct ChatView: View {
                     .padding(.bottom, 8)
             }
         }
-        .background(WhaleTheme.background)
+        .background {
+            Rectangle()
+                .fill(.regularMaterial)
+                .ignoresSafeArea(edges: .bottom)
+        }
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(WhaleTheme.line)
+                .fill(WhaleTheme.glassStroke)
                 .frame(height: 0.5)
         }
         .onChange(of: voice.transcript) { _, text in
@@ -338,12 +344,16 @@ private struct MessageRow: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                Label(message.text, systemImage: "iphone.gen3")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(WhaleTheme.accent)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(WhaleTheme.accentSoft, in: Capsule())
+                if message.places.isEmpty {
+                    Label(message.text, systemImage: "iphone.gen3")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(WhaleTheme.accent)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(WhaleTheme.accentSoft, in: Capsule())
+                } else {
+                    PlaceMapCard(places: message.places, statusText: message.detail ?? message.text)
+                }
             }
         }
     }
@@ -357,6 +367,100 @@ private struct MessageRow: View {
                 .font(.system(size: 12))
                 .foregroundStyle(WhaleTheme.muted)
         }
+    }
+}
+
+private struct PlaceMapCard: View {
+    let places: [PlaceSummary]
+    let statusText: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Label("已标记 \(places.count) 个地点", systemImage: "mappin.and.ellipse")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                Spacer(minLength: 8)
+                Text(statusText)
+                    .font(.system(size: 11))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .lineLimit(1)
+            }
+
+            Map(initialPosition: .region(region), interactionModes: []) {
+                ForEach(places) { place in
+                    Marker(place.name, coordinate: place.coordinate)
+                        .tint(WhaleTheme.accent)
+                }
+            }
+            .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
+            .frame(height: 168)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+            }
+            .accessibilityLabel("地图，已标记 \(places.count) 个候选地点")
+
+            if let first = places.first {
+                HStack(spacing: 8) {
+                    Text(first.name)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .lineLimit(1)
+                    Text(first.distanceText)
+                        .font(.system(size: 12))
+                        .foregroundStyle(WhaleTheme.muted)
+                    Spacer(minLength: 8)
+                    Button(action: openInMaps) {
+                        Label("打开地图", systemImage: "map")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(WhaleTheme.accent)
+                            .padding(.horizontal, 10)
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .whaleCard(padding: 12)
+    }
+
+    private var region: MKCoordinateRegion {
+        let latitudes = places.map(\.latitude)
+        let longitudes = places.map(\.longitude)
+        guard
+            let minLat = latitudes.min(),
+            let maxLat = latitudes.max(),
+            let minLon = longitudes.min(),
+            let maxLon = longitudes.max()
+        else {
+            return MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: 31.2304, longitude: 121.4737),
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            )
+        }
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(
+                latitude: (minLat + maxLat) / 2,
+                longitude: (minLon + maxLon) / 2
+            ),
+            span: MKCoordinateSpan(
+                latitudeDelta: max((maxLat - minLat) * 1.6, 0.004),
+                longitudeDelta: max((maxLon - minLon) * 1.6, 0.004)
+            )
+        )
+    }
+
+    private func openInMaps() {
+        let items = places.prefix(10).map { place -> MKMapItem in
+            let item = MKMapItem(placemark: MKPlacemark(coordinate: place.coordinate))
+            item.name = place.name
+            return item
+        }
+        MKMapItem.openMaps(with: items, launchOptions: [
+            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeWalking
+        ])
     }
 }
 

@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import SwiftUI
 
@@ -29,6 +30,49 @@ struct NativeActionRecord: Identifiable, Equatable {
         case "get_weather": return "cloud.sun.fill"
         case "get_activity_summary": return "figure.walk"
         default: return "sparkles"
+        }
+    }
+}
+
+struct PlaceSummary: Identifiable, Equatable {
+    let placeId: String
+    let name: String
+    let address: String
+    let latitude: Double
+    let longitude: Double
+    let distanceMeters: Double
+
+    var id: String { placeId }
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+
+    var distanceText: String {
+        if distanceMeters < 1_000 {
+            return "\(Int(distanceMeters.rounded())) 米"
+        }
+        return String(format: "%.1f 公里", distanceMeters / 1_000)
+    }
+
+    static func list(from data: JSONValue?) -> [PlaceSummary] {
+        guard let rows = data?.objectValue?["places"]?.arrayValue else { return [] }
+        return rows.compactMap { row in
+            guard
+                let object = row.objectValue,
+                let placeId = object.optionalString("placeId"),
+                let name = object.optionalString("name"),
+                let latitude = object.optionalDouble("latitude"),
+                let longitude = object.optionalDouble("longitude")
+            else { return nil }
+            return PlaceSummary(
+                placeId: placeId,
+                name: name,
+                address: object.optionalString("address") ?? "",
+                latitude: latitude,
+                longitude: longitude,
+                distanceMeters: object.optionalDouble("distanceMeters") ?? 0
+            )
         }
     }
 }

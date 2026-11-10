@@ -14,6 +14,7 @@ struct ChatMessage: Identifiable, Equatable {
     let role: ChatRole
     let text: String
     var detail: String?
+    var places: [PlaceSummary] = []
     let createdAt = Date()
 }
 
@@ -623,7 +624,8 @@ final class AppModel: ObservableObject {
             ChatMessage(
                 role: .tool,
                 text: "\(ToolPresentation.title(item.tool)) · \(result.status)",
-                detail: ToolPresentation.resultDetail(tool: item.tool, status: result.status, data: result.data, error: result.error)
+                detail: ToolPresentation.resultDetail(tool: item.tool, status: result.status, data: result.data, error: result.error),
+                places: item.tool == "search_places" ? PlaceSummary.list(from: result.data) : []
             )
         )
         await submitIfComplete()
