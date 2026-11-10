@@ -1,19 +1,66 @@
 {
   "date": "2026-11-10",
-  "status": "submitted",
+  "status": "generated-and-visually-reviewed; awaiting-user-design-review",
   "provider": "danqing-mcp",
   "tool": "nano_banana_2",
   "model": "Gemini 3.1 Flash Image Preview",
   "authentication": "Native MCP OAuth; credentials managed locally by Codex",
-  "taskId": "2ca5e3e3336c46368857f045c2049318",
+  "selectedTaskId": "de3d8d7060c547f9957ef06e6e260fc2",
   "resolution": "2K",
   "aspectRatio": "9:16",
-  "creditsReported": 35,
-  "promptFile": "imagegen-prompt.txt",
+  "totalCreditsReported": 105,
+  "promptFile": "imagegen-prompt-v3.txt",
+  "selectedImage": "home-dark-danqing-v3.jpg",
+  "selectedDimensions": {
+    "width": 1536,
+    "height": 2752,
+    "format": "JPEG"
+  },
+  "generations": [
+    {
+      "version": 1,
+      "taskId": "2ca5e3e3336c46368857f045c2049318",
+      "credits": 35,
+      "image": "home-dark-danqing-v1.jpg",
+      "prompt": "imagegen-prompt.txt",
+      "selected": false,
+      "review": "Large framed conversation panel and outer presentation margins remain."
+    },
+    {
+      "version": 2,
+      "taskId": "204c724213de4171baafce136533f4ba",
+      "credits": 35,
+      "image": "home-dark-danqing-v2.jpg",
+      "prompt": "imagegen-refinement-v2.txt",
+      "reference": "Version 1 generated image",
+      "selected": false,
+      "review": "Framing was not correctly removed; center text has insufficient contrast."
+    },
+    {
+      "version": 3,
+      "taskId": "de3d8d7060c547f9957ef06e6e260fc2",
+      "credits": 35,
+      "image": "home-dark-danqing-v3.jpg",
+      "prompt": "imagegen-prompt-v3.txt",
+      "selected": true,
+      "review": "Open conversation canvas, necessary home controls, one composer, no permanent bottom tabs."
+    }
+  ],
+  "visualChecks": {
+    "homeTaskAndSettingsVisible": true,
+    "singleVoiceEntry": true,
+    "permanentBottomTabsAbsent": true,
+    "largeConversationCardAbsent": true,
+    "outerDevicePresentationFrameAbsent": true,
+    "ChineseLabelsReadable": true
+  },
+  "nativeChecks": "Not performed; reconstruct using actual iOS controls, 402x874 reference points, runtime safe areas and dynamic fonts.",
+  "credentialValuesStoredInProject": false,
   "referenceImagesUploaded": false,
   "notes": [
     "Reference navigation structure and palette are described in the prompt.",
-    "One image task submitted; polling must reuse the same task ID.",
+    "Three sequential tasks were submitted, each reporting 35 credits. Only version 3 is selected for presentation.",
     "The generated bitmap is a visual reference, not a native iOS build."
-  ]
+  ],
+  "previewImage": "home-dark-danqing-v3-preview.jpg"
 }
