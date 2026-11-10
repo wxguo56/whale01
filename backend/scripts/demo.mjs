@@ -6,6 +6,7 @@ const dataDir = fileURLToPath(new URL("../data/demo/", import.meta.url));
 const env = {
   ...process.env,
   MODEL_MODE: "mock",
+  EXECUTION_MODE: "mock",
   OPERATION_LOG_PATH: join(dataDir, "operations.jsonl"),
   REMINDERS_PATH: join(dataDir, "reminders.json")
 };
