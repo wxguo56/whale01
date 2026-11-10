@@ -27,7 +27,7 @@ enum WhaleTheme {
     static let muted = Color(light: 0x6B6B70, dark: 0xB9BDD0)
     static let background = Color(light: 0xF6F8FC, dark: 0x101725)
     static let card = Color(light: 0xFFFFFF, dark: 0x1B2434)
-    static let cardSolid = Color(light: 0xEDF1F8, dark: 0x272E45)
+    static let cardSolid = Color(light: 0xE3E9F5, dark: 0x232A42)
     static let soft = Color(light: 0xEEF0FA, dark: 0x232A42)
     static let line = Color(light: 0xE1E3F2, dark: 0x34405C)
     static let glassStroke = Color(uiColor: UIColor { traits in
