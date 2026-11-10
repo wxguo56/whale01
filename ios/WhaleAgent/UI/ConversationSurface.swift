@@ -395,12 +395,12 @@ struct ConversationSurface: View {
                 return
             }
             let url = FileManager.default.temporaryDirectory
-                .appendingPathComponent("whale-ocr-\(UUID().uuidString).img")
+                .appendingPathComponent("whale-ocr-\(UUID().uuidString).jpg")
             try data.write(to: url, options: .atomic)
             await model.ingestDocument(url: url, label: "照片")
             try? FileManager.default.removeItem(at: url)
         } catch {
-            importError = error.localizedDescription
+            importError = photoImportMessage(error)
         }
     }
 
@@ -420,5 +420,16 @@ struct ConversationSurface: View {
         case .failure(let error):
             importError = error.localizedDescription
         }
+    }
+
+    private func photoImportMessage(_ error: Error) -> String {
+        let ns = error as NSError
+        if ns.domain == NSURLErrorDomain {
+            return "照片读取失败：当前网络不可用。若这张照片只存在 iCloud，请先联网下载原图，或改用“从文件识别”选择本机图片。"
+        }
+        if ns.domain.contains("Photo") || ns.domain.contains("Cloud") {
+            return "照片读取失败：\(error.localizedDescription)。请在相册中先下载到本机后重试。"
+        }
+        return "照片读取失败：\(error.localizedDescription)"
     }
 }

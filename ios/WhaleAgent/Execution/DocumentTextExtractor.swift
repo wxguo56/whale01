@@ -1,7 +1,6 @@
 import Foundation
 import PDFKit
 import UIKit
-import UniformTypeIdentifiers
 import Vision
 
 struct ExtractedDocument: Sendable {
@@ -28,21 +27,17 @@ enum DocumentTextExtractor {
     }
 
     private static func extractSync(url: URL) throws -> ExtractedDocument {
-        let type = UTType(filenameExtension: url.pathExtension)
-        if type?.conforms(to: .pdf) == true {
-            return try extractPDF(url: url)
+        if let document = PDFDocument(url: url), document.pageCount > 0 {
+            return try extractPDF(document: document)
         }
-        if type?.conforms(to: .image) == true {
+        if CGImageSourceCreateWithURL(url as CFURL, nil) != nil {
             let text = try recognizeImage(url: url)
             return finish(text: text, pageCount: 1, kind: "image")
         }
         throw ToolExecutionError(code: "unsupported_document", message: "只支持图片和 PDF")
     }
 
-    private static func extractPDF(url: URL) throws -> ExtractedDocument {
-        guard let document = PDFDocument(url: url) else {
-            throw ToolExecutionError(code: "pdf_open_failed", message: "PDF 无法打开")
-        }
+    private static func extractPDF(document: PDFDocument) throws -> ExtractedDocument {
         let pageCount = min(document.pageCount, maxPDFPages)
         guard pageCount > 0 else {
             throw ToolExecutionError(code: "empty_pdf", message: "PDF 没有可识别的页面")

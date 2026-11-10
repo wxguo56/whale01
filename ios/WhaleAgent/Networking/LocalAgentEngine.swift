@@ -130,7 +130,7 @@ actor LocalAgentEngine: AgentTransport {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = 120
         configuration.timeoutIntervalForResource = 180
-        configuration.waitsForConnectivity = true
+        configuration.waitsForConnectivity = false
         session = URLSession(configuration: configuration)
 
         let loaded = Self.loadTools()
@@ -321,7 +321,7 @@ actor LocalAgentEngine: AgentTransport {
         request.setValue("Bearer \(LocalAgentConfig.apiKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONEncoder().encode(requestBody)
 
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await sendModelRequest(request)
         guard let http = response as? HTTPURLResponse else { throw LocalAgentError.invalidResponse }
         guard (200..<300).contains(http.statusCode) else {
             let body = String(data: data, encoding: .utf8) ?? ""
@@ -335,6 +335,19 @@ actor LocalAgentEngine: AgentTransport {
             throw error
         } catch {
             throw LocalAgentError.model("模型响应解析失败：\(error.localizedDescription)")
+        }
+    }
+
+    private func sendModelRequest(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        do {
+            return try await session.data(for: request)
+        } catch let error as URLError where [
+            URLError.timedOut,
+            URLError.networkConnectionLost,
+            URLError.cannotConnectToHost
+        ].contains(error.code) {
+            try await Task.sleep(nanoseconds: 700_000_000)
+            return try await session.data(for: request)
         }
     }
 

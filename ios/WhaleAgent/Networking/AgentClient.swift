@@ -27,7 +27,7 @@ actor AgentClient: AgentTransport {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = 180
         configuration.timeoutIntervalForResource = 300
-        configuration.waitsForConnectivity = true
+        configuration.waitsForConnectivity = false
         session = URLSession(configuration: configuration)
     }
 
