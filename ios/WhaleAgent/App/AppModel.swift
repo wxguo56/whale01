@@ -38,7 +38,6 @@ struct ChatMessage: Identifiable, Equatable, Codable {
 final class AppModel: ObservableObject {
     @Published var backendURL: String
     @Published var agentMode: String
-    @Published var input = ""
     @Published private(set) var messages: [ChatMessage] = []
     @Published private(set) var pending: [PendingTool] = []
     @Published private(set) var isBusy = false
@@ -343,14 +342,6 @@ final class AppModel: ObservableObject {
         permissionsSnapshot = permissions.snapshot()
     }
 
-    func preparePrompt(_ text: String) {
-        input = text
-    }
-
-    func send() async {
-        await send(text: input)
-    }
-
     func send(text rawText: String, displayText: String? = nil, speakReply: Bool = false) async {
         let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isBusy else { return }
@@ -375,7 +366,6 @@ final class AppModel: ObservableObject {
         }
         speech.stop()
         speakReplyForActiveTurn = speakReply && voiceReplyEnabled
-        input = ""
         errorText = nil
         presentedConfirmation = nil
         currentGoal = displayText ?? text
@@ -598,7 +588,6 @@ final class AppModel: ObservableObject {
         autoStarted = []
         presentedConfirmation = nil
         errorText = nil
-        input = ""
         currentGoal = nil
         setMessages([])
     }

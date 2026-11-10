@@ -7,6 +7,7 @@ struct RootView: View {
     @StateObject private var model = AppModel()
     @State private var page: AppTab? = .conversation
     @State private var showMusic = false
+    @State private var keyboardVisible = false
     @State private var settingsDetailOpen = false
     @AppStorage("whale.appearance") private var appearance = "system"
     @Environment(\.scenePhase) private var scenePhase
@@ -42,7 +43,7 @@ struct RootView: View {
             .scrollPosition(id: $page)
             .scrollIndicators(.hidden)
             .scrollDisabled(
-                settingsDetailOpen || showMusic || model.presentedConfirmation != nil
+                settingsDetailOpen || showMusic || model.presentedConfirmation != nil || keyboardVisible
             )
             .background(WhaleTheme.pageGradient)
         }
@@ -95,6 +96,12 @@ struct RootView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .whaleOpenChat)) { _ in
             go(.conversation)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            keyboardVisible = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            keyboardVisible = false
         }
     }
 

@@ -10,6 +10,7 @@ struct ConversationSurface: View {
 
     @StateObject private var voice = VoiceInputController()
     @FocusState private var inputFocused: Bool
+    @State private var draft = ""
     @State private var showPhotoPicker = false
     @State private var photoItem: PhotosPickerItem?
     @State private var showFileImporter = false
@@ -37,7 +38,7 @@ struct ConversationSurface: View {
         }
         .onChange(of: voice.transcript) { _, text in
             guard !text.isEmpty else { return }
-            model.input = text
+            draft = text
         }
         .onChange(of: voice.isRecording) { wasRecording, isRecording in
             guard wasRecording, !isRecording else { return }
@@ -169,34 +170,44 @@ struct ConversationSurface: View {
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.leading, 44)
-                        .id("busy")
                     }
+
+                    Color.clear
+                        .frame(height: 1)
+                        .id(Self.bottomAnchor)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 18)
                 .padding(.bottom, 20)
             }
-            .scrollDismissesKeyboard(.immediately)
+            .defaultScrollAnchor(.bottom)
+            .scrollDismissesKeyboard(.interactively)
             .onTapGesture { inputFocused = false }
-            .onChange(of: model.messages.count) {
-                scrollToBottom(proxy)
+            .onChange(of: model.messages.count) { _, _ in
+                pinToBottom(proxy)
             }
-            .onChange(of: model.pending.count) {
-                scrollToBottom(proxy)
+            .onChange(of: model.pending.count) { _, _ in
+                pinToBottom(proxy)
             }
-            .onChange(of: model.isBusy) {
-                if model.isBusy {
-                    withAnimation { proxy.scrollTo("busy", anchor: .bottom) }
-                }
+            .onChange(of: model.isBusy) { _, busy in
+                if busy { pinToBottom(proxy) }
+            }
+            .onAppear {
+                DispatchQueue.main.async { pinToBottom(proxy, animated: false) }
             }
         }
     }
 
-    private func scrollToBottom(_ proxy: ScrollViewProxy) {
-        if let last = model.pending.last {
-            withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
-        } else if let last = model.messages.last {
-            withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+    private static let bottomAnchor = "conversationBottom"
+
+    /// Keeps the newest message pinned. Only content changes move the list;
+    /// typing never does, so the scroll position stays put while composing.
+    private func pinToBottom(_ proxy: ScrollViewProxy, animated: Bool = true) {
+        let scroll = { proxy.scrollTo(Self.bottomAnchor, anchor: .bottom) }
+        if animated {
+            withAnimation(.easeOut(duration: 0.22), scroll)
+        } else {
+            scroll()
         }
     }
 
@@ -274,7 +285,7 @@ struct ConversationSurface: View {
                 .opacity(model.isBusy ? 0.45 : 1)
                 .accessibilityLabel(voice.isRecording ? "停止语音输入" : "语音输入")
 
-                TextField("告诉鲸鱼你想做什么", text: $model.input, axis: .vertical)
+                TextField("告诉鲸鱼你想做什么", text: $draft, axis: .vertical)
                     .lineLimit(1...4)
                     .focused($inputFocused)
                     .padding(.horizontal, 15)
@@ -308,9 +319,9 @@ struct ConversationSurface: View {
                         .frame(width: 44, height: 44)
                         .background(WhaleTheme.accent, in: Circle())
                 }
-                .disabled(model.isBusy || model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(model.isBusy || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .opacity(
-                    model.isBusy || model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    model.isBusy || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         ? 0.45 : 1
                 )
                 .accessibilityLabel("发送")
@@ -371,18 +382,20 @@ struct ConversationSurface: View {
     }
 
     private func submit() {
-        guard !model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
         if voice.isRecording {
             voice.stop()
         }
         inputFocused = false
-        Task { await model.send() }
+        draft = ""
+        Task { await model.send(text: text) }
     }
 
     private func send(_ text: String) {
-        model.input = text
+        draft = ""
         inputFocused = false
-        Task { await model.send() }
+        Task { await model.send(text: text) }
     }
 
     private func ingestPhoto() async {
