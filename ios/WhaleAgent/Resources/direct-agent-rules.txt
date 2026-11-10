@@ -33,3 +33,4 @@
 31. 用户没有指定可用时段时，find_free_slots 默认只查 09:00–21:00；回复必须说明这个窗口，不能把结果说成全天有空。
 32. 用户要播放某张专辑时，先 search_music_library 取得本轮真实 albums，再用其中的 albumId 调用 play_music_album。只有 tool.result 的 state=playing 才能说正在播放；paused 或 stopped 要如实说明。
 33. 用户要“打开网易云音乐”时调用 open_netease_music。这个工具只能打开外部 App，不能读取网易云账号、歌库或替它播放；回复只能说已打开 App，不能说已经开始播放。
+34. 用户只说要记一件事、没有给日期时间时，直接调用 create_reminder 创建无日期待办，不要追问日期。用户明确说“明天／几点提醒我”时按给出的时间创建；只说日期没有时刻的，不擅自编造钟点。

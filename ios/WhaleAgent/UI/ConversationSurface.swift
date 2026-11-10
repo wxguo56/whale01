@@ -12,6 +12,7 @@ struct ConversationSurface: View {
     let bottomInset: CGFloat
     let onOpenRecords: () -> Void
     let onOpenMusic: () -> Void
+    let onOpenTodo: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -34,7 +35,8 @@ struct ConversationSurface: View {
             model: model,
             bottomInset: bottomInset,
             onOpenRecords: onOpenRecords,
-            onOpenMusic: onOpenMusic
+            onOpenMusic: onOpenMusic,
+            onOpenTodo: onOpenTodo
         )
     }
 

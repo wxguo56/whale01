@@ -84,6 +84,8 @@ struct SettingsView: View {
                 .padding(.bottom, WhaleTabBar.height + 40)
             }
             .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
+            .onTapGesture { hideKeyboard() }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $showDeveloper) {
                 DeveloperSettingsView(model: model)
@@ -101,6 +103,15 @@ struct SettingsView: View {
                 await refreshNotificationStatus()
             }
         }
+    }
+
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 
     // MARK: - Header
@@ -879,6 +890,7 @@ struct DeveloperSettingsView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle("开发设置")
         .navigationBarTitleDisplayMode(.inline)
     }

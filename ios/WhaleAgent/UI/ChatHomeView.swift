@@ -9,6 +9,7 @@ struct ConversationTabView: View {
     let onOpenRecords: () -> Void
     let onOpenSettings: () -> Void
     let onOpenMusic: () -> Void
+    let onOpenTodo: () -> Void
 
     @State private var browsingStarter = false
 
@@ -27,6 +28,7 @@ struct ConversationTabView: View {
                         bottomInset: bottomInset,
                         onOpenRecords: onOpenRecords,
                         onOpenMusic: onOpenMusic,
+                        onOpenTodo: onOpenTodo,
                         onResumeConversation: model.messages.isEmpty ? nil : { goToConversation() }
                     )
                     .transition(.opacity)
@@ -35,7 +37,8 @@ struct ConversationTabView: View {
                         model: model,
                         bottomInset: bottomInset,
                         onOpenRecords: onOpenRecords,
-                        onOpenMusic: onOpenMusic
+                        onOpenMusic: onOpenMusic,
+                        onOpenTodo: onOpenTodo
                     )
                     .transition(.opacity)
                     .overlay(alignment: .leading) {

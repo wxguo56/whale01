@@ -718,6 +718,52 @@ final class AppModel: ObservableObject {
         await refreshPlayback()
     }
 
+    // MARK: - Reminders (real EventKit data)
+
+    func loadTodoReminders(includeCompleted: Bool) async throws -> [TodoReminder] {
+        guard await permissions.request("reminder") else {
+            refreshPermissions()
+            throw ToolExecutionError(
+                code: "permission_denied",
+                message: "没有提醒事项权限。请到 设置 › 隐私与安全性 › 提醒事项 中允许鲸鱼访问。",
+                permission: "reminder"
+            )
+        }
+        refreshPermissions()
+        let data = try await router.listReminders(includeCompleted: includeCompleted)
+        let rows = data.objectValue?["reminders"]?.arrayValue ?? []
+        return rows.compactMap(TodoReminder.init(json:))
+    }
+
+    func createTodoReminder(title: String, dueAt: Date?) async throws -> TodoReminder {
+        guard await permissions.request("reminder") else {
+            refreshPermissions()
+            throw ToolExecutionError(
+                code: "permission_denied",
+                message: "没有提醒事项权限。请到 设置 › 隐私与安全性 › 提醒事项 中允许鲸鱼访问。",
+                permission: "reminder"
+            )
+        }
+        refreshPermissions()
+        let data = try await router.createReminder(title: title, dueAt: dueAt)
+        guard let item = TodoReminder(json: data) else {
+            throw ToolExecutionError(code: "reminder_decode_failed", message: "提醒已写入，但返回内容无法读取，请下拉刷新确认。")
+        }
+        return item
+    }
+
+    func setTodoReminder(_ item: TodoReminder, completed: Bool) async throws -> TodoReminder {
+        let data = try await router.updateReminder(recordId: item.id, completed: completed)
+        guard let updated = TodoReminder(json: data) else {
+            throw ToolExecutionError(code: "reminder_decode_failed", message: "状态已更新，但返回内容无法读取，请下拉刷新确认。")
+        }
+        return updated
+    }
+
+    func deleteTodoReminder(_ item: TodoReminder) async throws {
+        _ = try await router.deleteReminder(recordId: item.id)
+    }
+
     func requestMusicAccess() async {
         await requestPermission("music")
     }

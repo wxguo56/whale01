@@ -8,6 +8,7 @@ struct WhaleHomeCanvas: View {
     let bottomInset: CGFloat
     let onOpenRecords: () -> Void
     let onOpenMusic: () -> Void
+    let onOpenTodo: () -> Void
     var onResumeConversation: (() -> Void)? = nil
 
     var body: some View {
@@ -144,12 +145,12 @@ struct WhaleHomeCanvas: View {
 
             quickCard(
                 title: "事情待办",
-                subtitle: "摘要·提醒",
+                subtitle: "新增·勾选",
                 icon: "square.stack.3d.up.fill",
                 tint: WhaleTheme.moon,
                 soft: WhaleTheme.blueSoft
             ) {
-                send("把今天的对话和任务整理成 3 条可执行待办。")
+                onOpenTodo()
             }
 
             quickCard(

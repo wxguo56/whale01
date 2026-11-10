@@ -457,6 +457,45 @@ final class NativeToolRouter {
         ])
     }
 
+    func listReminders(includeCompleted: Bool) async throws -> JSONValue {
+        try await eventKit.listReminders(arguments: [
+            "includeCompleted": .bool(includeCompleted),
+            "timezone": .string(TimeZone.current.identifier),
+            "limit": .number(100)
+        ])
+    }
+
+    func createReminder(title: String, dueAt: Date? = nil, notes: String? = nil) async throws -> JSONValue {
+        var arguments: [String: JSONValue] = [
+            "title": .string(title),
+            "timezone": .string(TimeZone.current.identifier)
+        ]
+        if let dueAt {
+            arguments["dueAt"] = .string(ToolDate.iso(dueAt))
+        }
+        if let notes, !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            arguments["notes"] = .string(notes)
+        }
+        return try await eventKit.createReminder(
+            arguments: arguments,
+            operationId: "todo-ui-\(UUID().uuidString)"
+        )
+    }
+
+    func updateReminder(recordId: String, completed: Bool) async throws -> JSONValue {
+        try await eventKit.updateReminder(arguments: [
+            "recordId": .string(recordId),
+            "completed": .bool(completed),
+            "timezone": .string(TimeZone.current.identifier)
+        ])
+    }
+
+    func deleteReminder(recordId: String) async throws -> JSONValue {
+        try await eventKit.deleteReminder(arguments: [
+            "recordId": .string(recordId)
+        ])
+    }
+
     func searchMusic(query: String?) async throws -> JSONValue {
         var arguments: [String: JSONValue] = ["limit": .number(25)]
         if let query {

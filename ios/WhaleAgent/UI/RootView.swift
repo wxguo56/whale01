@@ -8,6 +8,7 @@ struct RootView: View {
     @StateObject private var keyboard = KeyboardObserver()
     @State private var page: AppTab? = .conversation
     @State private var showMusic = false
+    @State private var showTodo = false
     @State private var settingsDetailOpen = false
     @State private var contentBottom: CGFloat = 0
     @AppStorage("whale.appearance") private var appearance = "system"
@@ -24,7 +25,8 @@ struct RootView: View {
                             bottomInset: ConversationComposerBar.reservedHeight + WhaleTabBar.height + keyboardOverlap,
                             onOpenRecords: { go(.records) },
                             onOpenSettings: { go(.settings) },
-                            onOpenMusic: { showMusic = true }
+                            onOpenMusic: { showMusic = true },
+                            onOpenTodo: { showTodo = true }
                         )
                         .frame(width: proxy.size.width, height: proxy.size.height)
                         .id(AppTab.conversation)
@@ -47,7 +49,7 @@ struct RootView: View {
                 .scrollPosition(id: $page)
                 .scrollIndicators(.hidden)
                 .scrollDisabled(
-                    settingsDetailOpen || showMusic || model.presentedConfirmation != nil || keyboard.isVisible
+                    settingsDetailOpen || showMusic || showTodo || model.presentedConfirmation != nil || keyboard.isVisible
                 )
                 .background(WhaleBackdrop())
 
@@ -81,6 +83,9 @@ struct RootView: View {
         }
         .sheet(isPresented: $showMusic) {
             MusicView(model: model, showsClose: true)
+        }
+        .sheet(isPresented: $showTodo) {
+            TodoView(model: model)
         }
         .animation(.easeInOut(duration: 0.2), value: model.playback.track?.trackId)
         .preferredColorScheme(colorScheme)
