@@ -642,7 +642,7 @@ final class EventKitExecutor {
             }
             end = EKRecurrenceEnd(end: until)
         } else if let count = object.optionalInt("count") {
-            end = EKRecurrenceEnd(recurrenceEndWithOccurrenceCount: max(1, min(count, 365)))
+            end = EKRecurrenceEnd(occurrenceCount: max(1, min(count, 365)))
         }
         return EKRecurrenceRule(
             recurrenceWith: frequency,
