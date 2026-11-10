@@ -72,8 +72,13 @@ struct SettingsView: View {
                 }
 
                 Section("语音") {
+                    Toggle("自动播报回复", isOn: Binding(
+                        get: { model.voiceReplyEnabled },
+                        set: { model.setVoiceReply($0) }
+                    ))
+                    LabeledContent("播报引擎", value: "系统中文语音")
                     LabeledContent("语音引擎", value: XfyunConfig.statusText)
-                    Text("讯飞未配置时使用系统听写；两种方式都需要麦克风权限，识别结果不会伪造。")
+                    Text("语音对话的回复会自动播报；开始录音、发送新消息或点消息旁的停止按钮会立刻打断。讯飞合成尚未接入，当前播报使用系统中文语音。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

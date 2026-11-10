@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-10",
+  "status": "submitted",
+  "provider": "danqing-mcp",
+  "tool": "nano_banana_2",
+  "model": "Gemini 3.1 Flash Image Preview",
+  "authentication": "Native MCP OAuth; credentials managed locally by Codex",
+  "taskId": "2ca5e3e3336c46368857f045c2049318",
+  "resolution": "2K",
+  "aspectRatio": "9:16",
+  "creditsReported": 35,
+  "promptFile": "imagegen-prompt.txt",
+  "referenceImagesUploaded": false,
+  "notes": [
+    "Reference navigation structure and palette are described in the prompt.",
+    "One image task submitted; polling must reuse the same task ID.",
+    "The generated bitmap is a visual reference, not a native iOS build."
+  ]
+}

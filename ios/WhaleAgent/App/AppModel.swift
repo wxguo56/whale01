@@ -48,8 +48,12 @@ final class AppModel: ObservableObject {
     @Published private(set) var isMusicBusy = false
     @Published private(set) var musicDidLoad = false
     @Published private(set) var isExecutingTool = false
+    @Published private(set) var isSpeakingReply = false
+    @Published private(set) var speakingMessageId: String?
+    @Published var voiceReplyEnabled: Bool
 
     let permissions = PermissionCenter()
+    let speech = SpeechPlaybackController()
     private let remoteClient = AgentClient()
     private let localEngine = LocalAgentEngine()
     private var client: AgentTransport {
@@ -65,6 +69,8 @@ final class AppModel: ObservableObject {
     private var dashboardLoaded = false
     private var didAttemptResume = false
     private var composerObserver: AnyCancellable?
+    private var speechInterruptObserver: AnyCancellable?
+    private var speakReplyForActiveTurn = false
 
     private static let activeTurnKey = "whale.activeTurnId"
     private static let conversationKey = "whale.conversationId"
@@ -74,6 +80,7 @@ final class AppModel: ObservableObject {
         Self.migrateDirectModeIfNeeded()
         backendURL = BackendConfig.currentBaseURLString
         agentMode = UserDefaults.standard.string(forKey: "whale.agentMode") ?? "local"
+        voiceReplyEnabled = UserDefaults.standard.object(forKey: SpeechPlaybackController.enabledKey) as? Bool ?? true
         conversationId = UserDefaults.standard.string(forKey: Self.conversationKey)
         router = NativeToolRouter(permissions: permissions)
         messages = [
@@ -86,6 +93,32 @@ final class AppModel: ObservableObject {
                 guard let text = note.userInfo?["text"] as? String else { return }
                 self?.messages.append(ChatMessage(role: .tool, text: "短信／邮件草稿", detail: text))
             }
+        speech.setEnabled(voiceReplyEnabled)
+        speech.onStateChange = { [weak self] speaking in
+            self?.isSpeakingReply = speaking
+            if !speaking {
+                self?.speakingMessageId = nil
+            }
+        }
+        speechInterruptObserver = NotificationCenter.default.publisher(for: .whaleInterruptSpeech)
+            .sink { [weak self] _ in
+                self?.speech.stop()
+            }
+    }
+
+    func setVoiceReply(_ enabled: Bool) {
+        voiceReplyEnabled = enabled
+        speech.setEnabled(enabled)
+    }
+
+    func toggleSpeech(for message: ChatMessage) {
+        guard message.role == .assistant else { return }
+        if speech.isSpeaking, speakingMessageId == message.id.uuidString {
+            speech.stop()
+            return
+        }
+        speakingMessageId = message.id.uuidString
+        speech.speak(message.text)
     }
 
     var versionText: String {
@@ -204,9 +237,11 @@ final class AppModel: ObservableObject {
         await send(text: input)
     }
 
-    func send(text rawText: String, displayText: String? = nil) async {
+    func send(text rawText: String, displayText: String? = nil, speakReply: Bool = false) async {
         let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isBusy else { return }
+        speech.stop()
+        speakReplyForActiveTurn = speakReply && voiceReplyEnabled
         input = ""
         errorText = nil
         presentedConfirmation = nil
@@ -322,6 +357,8 @@ final class AppModel: ObservableObject {
     }
 
     func newConversation() {
+        speech.stop()
+        speakReplyForActiveTurn = false
         conversationId = nil
         activeTurnId = nil
         clearActiveTurn()
@@ -638,10 +675,17 @@ final class AppModel: ObservableObject {
         if messages.last?.role == .assistant && messages.last?.text == reply {
             return
         }
-        messages.append(ChatMessage(role: .assistant, text: reply))
+        let message = ChatMessage(role: .assistant, text: reply)
+        messages.append(message)
+        if speakReplyForActiveTurn {
+            speakReplyForActiveTurn = false
+            speakingMessageId = message.id.uuidString
+            speech.speak(reply)
+        }
     }
 
     private func fail(_ error: Error) {
+        speakReplyForActiveTurn = false
         let message: String
         if case AgentClientError.http(401, _) = error {
             message = "云后端拒绝请求，请检查开发设置中的云后端地址与构建令牌。"

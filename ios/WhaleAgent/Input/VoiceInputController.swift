@@ -40,6 +40,7 @@ final class VoiceInputController: ObservableObject {
 
     func start() async {
         guard !isRecording else { return }
+        NotificationCenter.default.post(name: .whaleInterruptSpeech, object: nil)
         errorText = nil
         transcript = ""
 

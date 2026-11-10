@@ -19,6 +19,7 @@ struct ChatView: View {
             inputBar
         }
         .background(WhaleTheme.background)
+        .background(SwipeBackEnabler().frame(width: 0, height: 0))
         .navigationTitle("对话")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -94,7 +95,11 @@ struct ChatView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 14) {
                     ForEach(model.messages) { message in
-                        MessageRow(message: message)
+                        MessageRow(
+                            message: message,
+                            isSpeaking: model.isSpeakingReply && model.speakingMessageId == message.id.uuidString,
+                            onToggleSpeech: { model.toggleSpeech(for: message) }
+                        )
                             .id(message.id)
                     }
 
@@ -280,6 +285,8 @@ struct ChatView: View {
 
 private struct MessageRow: View {
     let message: ChatMessage
+    var isSpeaking: Bool = false
+    var onToggleSpeech: () -> Void = {}
 
     var body: some View {
         Group {
@@ -307,10 +314,25 @@ private struct MessageRow: View {
                         .lineSpacing(4)
                         .foregroundStyle(WhaleTheme.ink)
                         .fixedSize(horizontal: false, vertical: true)
-                    if let detail = message.detail, !detail.isEmpty {
-                        Text(detail)
-                            .font(.system(size: 13))
-                            .foregroundStyle(WhaleTheme.muted)
+                    HStack(alignment: .bottom, spacing: 10) {
+                        if let detail = message.detail, !detail.isEmpty {
+                            Text(detail)
+                                .font(.system(size: 13))
+                                .foregroundStyle(WhaleTheme.muted)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            Spacer(minLength: 0)
+                        }
+                        Button(action: onToggleSpeech) {
+                            Image(systemName: isSpeaking ? "stop.circle.fill" : "speaker.wave.2")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(isSpeaking ? WhaleTheme.accent : WhaleTheme.muted)
+                                .frame(width: 32, height: 32)
+                                .background(WhaleTheme.card, in: Circle())
+                                .overlay(Circle().strokeBorder(WhaleTheme.line, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(isSpeaking ? "停止播报" : "朗读这条回复")
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

@@ -24,12 +24,14 @@ struct ConversationTabView: View {
                     Task { await model.send() }
                 },
                 onTalk: {
+                    model.speech.stop()
                     voice.reset()
                     voiceDraft = nil
                     voiceShouldSend = false
                     showVoice = true
                 },
                 onType: {
+                    model.speech.stop()
                     autoVoice = false
                     autoFocus = true
                     showChat = true
@@ -85,7 +87,7 @@ struct ConversationTabView: View {
             guard !text.isEmpty else { return }
             autoFocus = false
             showChat = true
-            Task { await model.send() }
+            Task { await model.send(speakReply: true) }
         } else {
             autoFocus = true
             showChat = true
