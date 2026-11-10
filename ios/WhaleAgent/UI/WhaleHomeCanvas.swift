@@ -124,48 +124,106 @@ struct WhaleHomeCanvas: View {
     // MARK: - Prompts
 
     private var suggestions: some View {
-        WhaleFlowLayout(spacing: 8, lineSpacing: 8) {
-            suggestion("附近找店", icon: "location.fill") {
+        LazyVGrid(
+            columns: [
+                GridItem(.flexible(), spacing: 10),
+                GridItem(.flexible(), spacing: 10)
+            ],
+            spacing: 10
+        ) {
+            quickCard(
+                title: "附近找店",
+                subtitle: "环境·预算·可订位",
+                icon: "mappin.and.ellipse",
+                tint: WhaleTheme.accent,
+                soft: WhaleTheme.accentSoft
+            ) {
                 send("帮我找附近安静、适合两个人吃饭的地方，按距离和价格筛选。")
             }
-            suggestion("今晚天气", icon: "cloud.sun.fill") {
-                send("查一下我所在地今晚到明天的天气。")
-            }
-            suggestion("整理待办", icon: "checklist") {
+
+            quickCard(
+                title: "事情待办",
+                subtitle: "摘要·提醒",
+                icon: "square.stack.3d.up.fill",
+                tint: WhaleTheme.moon,
+                soft: WhaleTheme.blueSoft
+            ) {
                 send("把今天的对话和任务整理成 3 条可执行待办。")
             }
-            suggestion(
-                model.playback.track == nil ? "我想听歌" : "继续听歌",
-                icon: model.playback.isPlaying ? "pause.fill" : "music.note"
+
+            quickCard(
+                title: "今晚天气",
+                subtitle: "温度·降雨·空气",
+                icon: "cloud.sun.rain.fill",
+                tint: WhaleTheme.coral,
+                soft: WhaleTheme.amberSoft
             ) {
-                if model.playback.track != nil {
-                    Task { await model.togglePlayback() }
-                } else {
-                    onOpenMusic()
-                }
+                send("查一下我所在地今晚到明天的天气。")
+            }
+
+            quickCard(
+                title: "音乐视听",
+                subtitle: "本机音乐",
+                icon: "music.note",
+                tint: WhaleTheme.rose,
+                soft: WhaleTheme.roseSoft
+            ) {
+                onOpenMusic()
             }
         }
     }
 
-    private func suggestion(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+    private func quickCard(
+        title: String,
+        subtitle: String,
+        icon: String,
+        tint: Color,
+        soft: Color,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.accent)
-                Text(title)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(WhaleTheme.ink)
-                    .lineLimit(1)
+            HStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(soft)
+                    .frame(width: 38, height: 38)
+                    .overlay {
+                        Image(systemName: icon)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(tint)
+                    }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .lineLimit(1)
+                    Text(subtitle)
+                        .font(.system(size: 10))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.muted.opacity(0.55))
             }
-            .padding(.horizontal, 13)
-            .frame(height: 38)
-            .background(.ultraThinMaterial, in: Capsule())
+            .padding(.horizontal, 10)
+            .frame(height: 66)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(WhaleTheme.card.opacity(0.88))
+            )
             .overlay {
-                Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
             }
+            .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(title)，\(subtitle)")
     }
 
     // MARK: - Real calendar

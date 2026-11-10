@@ -177,19 +177,16 @@ struct WhaleMarkView: View {
     var size: CGFloat = 38
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(WhaleTheme.auroraGradient)
-            Circle()
-                .strokeBorder(.white.opacity(0.46), lineWidth: 0.8)
-            Image("WhaleMascot")
-                .resizable()
-                .scaledToFit()
-                .padding(size * 0.12)
-        }
-        .frame(width: size, height: size)
-        .shadow(color: WhaleTheme.accent.opacity(0.25), radius: 10, y: 4)
-        .accessibilityHidden(true)
+        Image("WhaleLogo")
+            .resizable()
+            .scaledToFill()
+            .frame(width: size, height: size)
+            .clipShape(Circle())
+            .overlay {
+                Circle().strokeBorder(.white.opacity(0.5), lineWidth: 0.8)
+            }
+            .shadow(color: WhaleTheme.accent.opacity(0.22), radius: 10, y: 4)
+            .accessibilityHidden(true)
     }
 }
 

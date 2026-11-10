@@ -224,41 +224,81 @@ private struct MiniVinylView: View {
 
     private func vinyl(angle: Double) -> some View {
         ZStack {
+            ZStack {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color(white: 0.33), Color(white: 0.18), Color(white: 0.09)],
+                            center: UnitPoint(x: 0.40, y: 0.36),
+                            startRadius: 1,
+                            endRadius: diameter * 0.60
+                        )
+                    )
+
+                ForEach([0.92, 0.83, 0.74, 0.65, 0.56], id: \.self) { scale in
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.11), lineWidth: 0.55)
+                        .frame(width: diameter * scale, height: diameter * scale)
+                    Circle()
+                        .strokeBorder(Color.black.opacity(0.30), lineWidth: 0.45)
+                        .frame(width: diameter * scale - 0.9, height: diameter * scale - 0.9)
+                }
+
+                Circle()
+                    .trim(from: 0.02, to: 0.10)
+                    .stroke(Color.white.opacity(0.30), lineWidth: 1.2)
+                    .padding(2.2)
+                    .rotationEffect(.degrees(-54))
+
+                label
+                    .frame(width: diameter * 0.44, height: diameter * 0.44)
+                    .clipShape(Circle())
+                    .overlay {
+                        Circle().strokeBorder(Color.white.opacity(0.35), lineWidth: 0.6)
+                    }
+                    .shadow(color: .black.opacity(0.38), radius: 1.5, y: 0.5)
+
+                Circle()
+                    .fill(Color.black.opacity(0.82))
+                    .frame(width: 2.6, height: 2.6)
+            }
+            .rotationEffect(.degrees(angle))
+
+            Circle()
+                .fill(
+                    AngularGradient(
+                        stops: [
+                            .init(color: .white.opacity(0.28), location: 0.00),
+                            .init(color: .white.opacity(0.03), location: 0.14),
+                            .init(color: .clear, location: 0.33),
+                            .init(color: .white.opacity(0.09), location: 0.50),
+                            .init(color: .clear, location: 0.69),
+                            .init(color: .white.opacity(0.15), location: 0.86),
+                            .init(color: .white.opacity(0.28), location: 1.00)
+                        ],
+                        center: .center
+                    )
+                )
+                .blendMode(.screen)
+                .allowsHitTesting(false)
+
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [Color(white: 0.19), Color(white: 0.04)],
-                        center: .center,
-                        startRadius: 1,
-                        endRadius: diameter / 2
+                        colors: [.white.opacity(0.20), .clear],
+                        center: UnitPoint(x: 0.30, y: 0.24),
+                        startRadius: 0,
+                        endRadius: diameter * 0.52
                     )
                 )
-
-            ForEach([0.88, 0.76, 0.64, 0.52], id: \.self) { scale in
-                Circle()
-                    .strokeBorder(Color.white.opacity(0.08), lineWidth: 0.55)
-                    .frame(width: diameter * scale, height: diameter * scale)
-            }
+                .blendMode(.screen)
+                .allowsHitTesting(false)
 
             Circle()
-                .trim(from: 0.02, to: 0.11)
-                .stroke(Color.white.opacity(0.22), lineWidth: 1.1)
-                .padding(2.4)
-                .rotationEffect(.degrees(-52))
-
-            label
-                .frame(width: diameter * 0.44, height: diameter * 0.44)
-                .clipShape(Circle())
-
-            Circle()
-                .fill(Color.black.opacity(0.9))
-                .frame(width: 2.6, height: 2.6)
+                .strokeBorder(Color.white.opacity(0.24), lineWidth: 0.8)
+                .allowsHitTesting(false)
         }
-        .rotationEffect(.degrees(angle))
-        .overlay {
-            Circle().strokeBorder(Color.white.opacity(0.16), lineWidth: 0.7)
-        }
-        .shadow(color: Color.black.opacity(0.22), radius: 5, y: 2)
+        .shadow(color: Color.black.opacity(0.24), radius: 6, y: 3)
     }
 
     @ViewBuilder
