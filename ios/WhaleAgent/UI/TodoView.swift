@@ -231,6 +231,7 @@ struct TodoView: View {
     @ObservedObject var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var voice = VoiceInputController()
 
     @State private var filter: TodoFilter = .pending
     @State private var items: [TodoReminder] = []
@@ -290,6 +291,20 @@ struct TodoView: View {
                     Task { await reload() }
                 }
             }
+            .onChange(of: voice.isRecording) { wasRecording, isRecording in
+                guard wasRecording, !isRecording, voice.errorText == nil else { return }
+                let preview = voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !preview.isEmpty else { return }
+                Task {
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                    guard !voice.isRecording else { return }
+                    let text = voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !text.isEmpty else { return }
+                    draft = text
+                    submitText(text)
+                }
+            }
+            .onDisappear { voice.stop() }
         }
     }
 
@@ -518,7 +533,7 @@ struct TodoView: View {
     }
 
     private var hint: some View {
-        Text("直接写内容新增；输入「完成 买菜」勾掉，「删除 买菜」移除。长按待办也可以删除。")
+        Text("直接写内容新增，或点麦克风说一句；输入「完成 买菜」勾掉，「删除 买菜」移除。")
             .font(.system(size: 11))
             .foregroundStyle(WhaleTheme.muted.opacity(0.85))
             .fixedSize(horizontal: false, vertical: true)
@@ -537,12 +552,35 @@ struct TodoView: View {
 
     private var composer: some View {
         VStack(spacing: 7) {
+            if let voiceError = voice.errorText {
+                Label(voiceError, systemImage: "mic.slash.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(WhaleTheme.danger)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if voice.isRecording {
+                voiceStrip
+            }
             HStack(spacing: 8) {
-                Image(systemName: "plus")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.accent)
+                Button {
+                    composerFocused = false
+                    Task { await voice.toggle() }
+                } label: {
+                    Image(systemName: voice.isRecording ? "waveform" : "mic.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(voice.isRecording ? WhaleTheme.onAccent : WhaleTheme.accent)
+                        .frame(width: 38, height: 38)
+                        .background(
+                            voice.isRecording ? WhaleTheme.danger : WhaleTheme.accentSoft,
+                            in: Circle()
+                        )
+                }
+                .buttonStyle(.plain)
+                .disabled(isSubmitting)
+                .accessibilityLabel(voice.isRecording ? "停止语音输入" : "语音新增待办")
 
-                TextField("写一件事，或输入「完成 买菜」", text: $draft)
+                TextField("写一件事，或点麦克风说", text: $draft)
                     .font(.system(size: 14))
                     .focused($composerFocused)
                     .submitLabel(.done)
@@ -590,8 +628,43 @@ struct TodoView: View {
         .background(.ultraThinMaterial)
     }
 
+    private var voiceStrip: some View {
+        HStack(spacing: 9) {
+            Circle()
+                .fill(WhaleTheme.danger)
+                .frame(width: 8, height: 8)
+            Text(voice.transcript.isEmpty ? "正在听你说…" : voice.transcript)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(WhaleTheme.ink)
+                .lineLimit(2)
+            Spacer(minLength: 6)
+            Button {
+                voice.stop()
+            } label: {
+                Text("停止")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.danger)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(WhaleTheme.danger.opacity(0.1), in: Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 11)
+        .padding(.vertical, 8)
+        .background(WhaleTheme.card.opacity(0.9), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .strokeBorder(WhaleTheme.danger.opacity(0.22), lineWidth: 0.8)
+        )
+    }
+
     private func submitDraft() {
-        let raw = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        submitText(draft)
+    }
+
+    private func submitText(_ text: String) {
+        let raw = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !raw.isEmpty, !isSubmitting else { return }
         errorText = nil
         isSubmitting = true

@@ -19,9 +19,7 @@ final class EventKitExecutor {
             dueDate = nil
         }
 
-        guard let calendar = resolveReminderCalendar(arguments.optionalString("listId")) else {
-            throw ToolExecutionError(code: "reminder_calendar_missing", message: "没有可写的提醒事项列表")
-        }
+        let calendar = try resolveReminderCalendar(arguments.optionalString("listId"))
 
         let recurrence = try recurrenceRule(from: arguments)
         if recurrence != nil, dueDate == nil {
@@ -594,14 +592,50 @@ final class EventKitExecutor {
         return match?.eventIdentifier ?? match?.calendarItemIdentifier
     }
 
-    private func resolveReminderCalendar(_ listId: String?) -> EKCalendar? {
+    private func resolveReminderCalendar(_ listId: String?) throws -> EKCalendar {
+        store.refreshSourcesIfNecessary()
         if let listId, let calendar = store.calendar(withIdentifier: listId), calendar.allowsContentModifications {
             return calendar
         }
         if let calendar = store.defaultCalendarForNewReminders(), calendar.allowsContentModifications {
             return calendar
         }
-        return store.calendars(for: .reminder).first { $0.allowsContentModifications }
+        if let calendar = store.calendars(for: .reminder).first(where: { $0.allowsContentModifications }) {
+            return calendar
+        }
+        return try createLocalReminderCalendar()
+    }
+
+    private func createLocalReminderCalendar() throws -> EKCalendar {
+        store.refreshSourcesIfNecessary()
+        let preferredTypes: [EKSourceType] = [.local, .mobileMe, .calDAV]
+        var lastError: Error?
+        let existingTitles = Set(store.calendars(for: .reminder).map(\.title))
+        var title = "鲸鱼待办"
+        var suffix = 2
+        while existingTitles.contains(title) {
+            title = "鲸鱼待办 \(suffix)"
+            suffix += 1
+        }
+
+        for sourceType in preferredTypes {
+            guard let source = store.sources.first(where: { $0.sourceType == sourceType }) else { continue }
+            let calendar = EKCalendar(for: .reminder, eventStore: store)
+            calendar.title = title
+            calendar.source = source
+            do {
+                try store.saveCalendar(calendar, commit: true)
+                return calendar
+            } catch {
+                lastError = error
+            }
+        }
+
+        let detail = lastError?.localizedDescription ?? "系统没有可用的提醒事项账户"
+        throw ToolExecutionError(
+            code: "reminder_calendar_missing",
+            message: "没有可写的提醒事项列表，自动创建也失败了：\(detail)。请打开系统「提醒事项」App 新建一个列表后再试。"
+        )
     }
 
     private func recurrenceRule(from arguments: [String: JSONValue]) throws -> EKRecurrenceRule? {
