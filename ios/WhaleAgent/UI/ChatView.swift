@@ -1,6 +1,7 @@
 import MapKit
 import SwiftUI
 
+#if LEGACY_FULLSCREEN_CHAT
 struct ChatView: View {
     @ObservedObject var model: AppModel
     @Binding var startVoiceOnAppear: Bool
@@ -289,8 +290,9 @@ struct ChatView: View {
         }
     }
 }
+#endif
 
-private struct MessageRow: View {
+struct MessageRow: View {
     let message: ChatMessage
     var isSpeaking: Bool = false
     var onToggleSpeech: () -> Void = {}
@@ -379,7 +381,7 @@ private struct MessageRow: View {
     }
 }
 
-private struct PlaceMapCard: View {
+struct PlaceMapCard: View {
     let places: [PlaceSummary]
     let statusText: String
 
@@ -473,7 +475,7 @@ private struct PlaceMapCard: View {
     }
 }
 
-private struct PendingActionCard: View {
+struct PendingActionCard: View {
     let item: PendingTool
     let isBusy: Bool
     let onReview: () -> Void

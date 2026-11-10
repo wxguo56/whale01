@@ -7,7 +7,6 @@ struct RootView: View {
     @StateObject private var model = AppModel()
     @State private var page: AppTab? = .conversation
     @State private var showMusic = false
-    @State private var conversationDetailOpen = false
     @State private var settingsDetailOpen = false
     @AppStorage("whale.appearance") private var appearance = "system"
     @Environment(\.scenePhase) private var scenePhase
@@ -19,7 +18,6 @@ struct RootView: View {
                 HStack(spacing: 0) {
                     ConversationTabView(
                         model: model,
-                        isDetailOpen: $conversationDetailOpen,
                         onOpenRecords: { go(.records) },
                         onOpenSettings: { go(.settings) }
                     )
@@ -44,7 +42,7 @@ struct RootView: View {
             .scrollPosition(id: $page)
             .scrollIndicators(.hidden)
             .scrollDisabled(
-                conversationDetailOpen || settingsDetailOpen || showMusic || model.presentedConfirmation != nil
+                settingsDetailOpen || showMusic || model.presentedConfirmation != nil
             )
             .background(WhaleTheme.pageGradient)
         }

@@ -1,0 +1,333 @@
+import SwiftUI
+
+/// The single conversation surface. Sending, voice and results all stay on the
+/// home page; nothing is pushed and no voice sheet is presented.
+struct ConversationSurface: View {
+    @ObservedObject var model: AppModel
+    let onOpenRecords: () -> Void
+
+    @StateObject private var voice = VoiceInputController()
+    @FocusState private var inputFocused: Bool
+
+    private let suggestions: [(title: String, prompt: String)] = [
+        ("附近吃点什么", "找我附近两公里内的餐厅，帮我看看价格。"),
+        ("看看今天安排", "帮我看看今天和最近的日程安排。"),
+        ("定个提醒", "帮我定一个提醒。")
+    ]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if !model.backendOnline || model.errorText != nil {
+                connectionBanner
+            }
+
+            if model.messages.isEmpty {
+                homeCanvas
+            } else {
+                conversation
+            }
+
+            inputBar
+        }
+        .onChange(of: voice.transcript) { _, text in
+            guard !text.isEmpty else { return }
+            model.input = text
+        }
+        .onChange(of: voice.isRecording) { wasRecording, isRecording in
+            guard wasRecording, !isRecording else { return }
+            guard voice.errorText == nil else { return }
+            if !voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                inputFocused = true
+            }
+        }
+    }
+
+    // MARK: - Empty home
+
+    private var homeCanvas: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("今天想做点什么？")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .padding(.top, 28)
+
+                Text("说一句，我来办。写入系统前会先请你确认。")
+                    .font(.system(size: 14))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .padding(.top, 8)
+
+                WhaleFlowLayout(spacing: 8, lineSpacing: 8) {
+                    ForEach(suggestions.indices, id: \.self) { index in
+                        Button {
+                            send(suggestions[index].prompt)
+                        } label: {
+                            Text(suggestions[index].title)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(WhaleTheme.ink)
+                                .whaleChip()
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.top, 22)
+
+                if let recent = model.recentActions.first {
+                    recentCard(recent)
+                }
+
+                if model.isBusy {
+                    HStack(spacing: 10) {
+                        ProgressView().controlSize(.small)
+                        Text(model.statusLine)
+                            .font(.system(size: 13))
+                            .foregroundStyle(WhaleTheme.muted)
+                            .lineLimit(2)
+                    }
+                    .padding(.top, 20)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, WhaleTheme.pagePadding)
+            .padding(.bottom, 24)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private func recentCard(_ action: NativeActionRecord) -> some View {
+        Button(action: onOpenRecords) {
+            HStack(spacing: 12) {
+                WhaleIconTile(systemName: action.icon, size: 38)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("最近一次")
+                        .font(.system(size: 12))
+                        .foregroundStyle(WhaleTheme.muted)
+                    Text(action.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Text(action.isSuccess ? "已完成" : "待核对")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(action.isSuccess ? WhaleTheme.success : WhaleTheme.warm)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.muted)
+            }
+            .whaleCard(padding: 14)
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 20)
+        .accessibilityHint("打开任务与记录")
+    }
+
+    // MARK: - Conversation
+
+    private var conversation: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 14) {
+                    ForEach(model.messages) { message in
+                        MessageRow(
+                            message: message,
+                            isSpeaking: model.isSpeakingReply && model.speakingMessageId == message.id.uuidString,
+                            onToggleSpeech: { model.toggleSpeech(for: message) }
+                        )
+                        .id(message.id)
+                    }
+
+                    ForEach(model.pending) { item in
+                        PendingActionCard(item: item, isBusy: model.isBusy) {
+                            model.presentedConfirmation = item
+                        }
+                        .id(item.id)
+                    }
+
+                    if model.isBusy {
+                        HStack(spacing: 9) {
+                            ProgressView().scaleEffect(0.75)
+                            Text("鲸鱼正在处理…")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.leading, 44)
+                        .id("busy")
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 18)
+                .padding(.bottom, 20)
+            }
+            .scrollDismissesKeyboard(.immediately)
+            .onTapGesture { inputFocused = false }
+            .onChange(of: model.messages.count) {
+                scrollToBottom(proxy)
+            }
+            .onChange(of: model.pending.count) {
+                scrollToBottom(proxy)
+            }
+            .onChange(of: model.isBusy) {
+                if model.isBusy {
+                    withAnimation { proxy.scrollTo("busy", anchor: .bottom) }
+                }
+            }
+        }
+    }
+
+    private func scrollToBottom(_ proxy: ScrollViewProxy) {
+        if let last = model.pending.last {
+            withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+        } else if let last = model.messages.last {
+            withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+        }
+    }
+
+    private var connectionBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "wifi.exclamationmark")
+                .foregroundStyle(WhaleTheme.warm)
+            Text(model.errorText ?? "服务连接中断，请检查网络后重试。")
+                .font(.system(size: 12))
+                .foregroundStyle(WhaleTheme.muted)
+                .lineLimit(2)
+            Spacer()
+            Button("重试") {
+                Task {
+                    await model.health()
+                    model.refreshPermissions()
+                }
+            }
+            .font(.system(size: 12, weight: .semibold))
+            .tint(WhaleTheme.accent)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 9)
+        .background(WhaleTheme.warm.opacity(0.10))
+    }
+
+    // MARK: - Composer
+
+    private var inputBar: some View {
+        VStack(spacing: 0) {
+            if voice.isRecording {
+                voiceStrip
+            }
+
+            HStack(alignment: .bottom, spacing: 9) {
+                Button {
+                    inputFocused = false
+                    Task { await voice.toggle() }
+                } label: {
+                    Image(systemName: voice.isRecording ? "waveform" : "mic")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(voice.isRecording ? WhaleTheme.danger : WhaleTheme.ink)
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .disabled(model.isBusy)
+                .opacity(model.isBusy ? 0.45 : 1)
+                .accessibilityLabel(voice.isRecording ? "停止语音输入" : "语音输入")
+
+                TextField("告诉鲸鱼你想做什么", text: $model.input, axis: .vertical)
+                    .lineLimit(1...4)
+                    .focused($inputFocused)
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 11)
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+                    }
+                    .disabled(model.isBusy)
+                    .submitLabel(.send)
+                    .onSubmit { submit() }
+
+                if inputFocused {
+                    Button {
+                        inputFocused = false
+                    } label: {
+                        Image(systemName: "keyboard.chevron.compact.down")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(WhaleTheme.muted)
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("收起键盘")
+                }
+
+                Button(action: submit) {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(WhaleTheme.accent, in: Circle())
+                }
+                .disabled(model.isBusy || model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .opacity(
+                    model.isBusy || model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? 0.45 : 1
+                )
+                .accessibilityLabel("发送")
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 9)
+            .padding(.bottom, 10)
+
+            if let voiceError = voice.errorText {
+                Text(voiceError)
+                    .font(.system(size: 11))
+                    .foregroundStyle(WhaleTheme.warm)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+            }
+        }
+        .background {
+            Rectangle()
+                .fill(.regularMaterial)
+                .ignoresSafeArea(edges: .bottom)
+        }
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(WhaleTheme.glassStroke)
+                .frame(height: 0.5)
+        }
+    }
+
+    private var voiceStrip: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Circle()
+                .fill(WhaleTheme.danger)
+                .frame(width: 8, height: 8)
+                .padding(.top, 5)
+            Text(voice.transcript.isEmpty ? "正在听你说…" : voice.transcript)
+                .font(.system(size: 13))
+                .foregroundStyle(WhaleTheme.muted)
+                .lineLimit(3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button("停止") { voice.stop() }
+                .font(.system(size: 13, weight: .semibold))
+                .tint(WhaleTheme.danger)
+                .frame(minHeight: 32)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(WhaleTheme.danger.opacity(0.07))
+    }
+
+    private func submit() {
+        guard !model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        if voice.isRecording {
+            voice.stop()
+        }
+        inputFocused = false
+        Task { await model.send() }
+    }
+
+    private func send(_ text: String) {
+        model.input = text
+        inputFocused = false
+        Task { await model.send() }
+    }
+}

@@ -84,9 +84,7 @@ final class AppModel: ObservableObject {
         voiceReplyEnabled = UserDefaults.standard.object(forKey: SpeechPlaybackController.enabledKey) as? Bool ?? true
         conversationId = UserDefaults.standard.string(forKey: Self.conversationKey)
         router = NativeToolRouter(permissions: permissions)
-        messages = [
-            ChatMessage(role: .assistant, text: "你好，我是鲸鱼。告诉我想做什么，我会在获得你的确认后调用 iPhone 上的真实系统能力。")
-        ]
+        messages = []
         permissionsSnapshot = permissions.snapshot()
         composerObserver = NotificationCenter.default.publisher(for: .whaleComposerFinished)
             .receive(on: RunLoop.main)
@@ -369,9 +367,8 @@ final class AppModel: ObservableObject {
         autoStarted = []
         presentedConfirmation = nil
         errorText = nil
-        messages = [
-            ChatMessage(role: .assistant, text: "新对话已经开始。你可以继续安排提醒、日程、地点、短信或音乐。")
-        ]
+        input = ""
+        messages = []
     }
 
     private func persistActiveTurn() {
