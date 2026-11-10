@@ -200,7 +200,7 @@ struct ChatView: View {
                     Image(systemName: voice.isRecording ? "waveform" : "mic")
                         .font(.system(size: 20, weight: .medium))
                         .foregroundStyle(voice.isRecording ? WhaleTheme.danger : WhaleTheme.ink)
-                        .frame(width: 40, height: 44)
+                        .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)
                 .disabled(model.isBusy)
@@ -228,7 +228,7 @@ struct ChatView: View {
                         Image(systemName: "keyboard.chevron.compact.down")
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundStyle(.secondary)
-                            .frame(width: 32, height: 44)
+                            .frame(width: 44, height: 44)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("收起键盘")
@@ -240,7 +240,7 @@ struct ChatView: View {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 40, height: 40)
+                        .frame(width: 44, height: 44)
                         .background(WhaleTheme.accent, in: Circle())
                 }
                 .disabled(model.isBusy || model.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -316,7 +316,7 @@ private struct MessageRow: View {
             } else if message.role == .assistant {
                 VStack(alignment: .leading, spacing: 6) {
                     byline
-                    Text(message.text)
+                    Text(renderedMarkdown(message.text))
                         .font(.system(size: 17))
                         .lineSpacing(4)
                         .foregroundStyle(WhaleTheme.ink)
@@ -334,7 +334,7 @@ private struct MessageRow: View {
                             Image(systemName: isSpeaking ? "stop.circle.fill" : "speaker.wave.2")
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundStyle(isSpeaking ? WhaleTheme.accent : WhaleTheme.muted)
-                                .frame(width: 32, height: 32)
+                                .frame(width: 44, height: 44)
                                 .background(WhaleTheme.card, in: Circle())
                                 .overlay(Circle().strokeBorder(WhaleTheme.line, lineWidth: 1))
                         }
@@ -367,6 +367,15 @@ private struct MessageRow: View {
                 .font(.system(size: 12))
                 .foregroundStyle(WhaleTheme.muted)
         }
+    }
+
+    private func renderedMarkdown(_ text: String) -> AttributedString {
+        (try? AttributedString(
+            markdown: text,
+            options: AttributedString.MarkdownParsingOptions(
+                interpretedSyntax: .inlineOnlyPreservingWhitespace
+            )
+        )) ?? AttributedString(text)
     }
 }
 
