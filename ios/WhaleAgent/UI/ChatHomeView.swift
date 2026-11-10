@@ -1,27 +1,85 @@
 import SwiftUI
 
-/// Root conversation page. Everything happens here: the composer, the message
-/// list and voice input never push a detail screen or present a sheet.
+/// Root conversation page. The new-conversation screen and the running
+/// conversation are two states of the same tab; a left-edge swipe (or the
+/// header chevron) goes back to the starter without deleting the messages.
 struct ConversationTabView: View {
     @ObservedObject var model: AppModel
     let bottomInset: CGFloat
     let onOpenRecords: () -> Void
     let onOpenSettings: () -> Void
 
+    @State private var browsingStarter = false
+
+    private var showingStarter: Bool {
+        model.messages.isEmpty || browsingStarter
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             header
-            ConversationSurface(
-                model: model,
-                bottomInset: bottomInset,
-                onOpenRecords: onOpenRecords
-            )
+
+            ZStack {
+                if showingStarter {
+                    WhaleHomeCanvas(
+                        model: model,
+                        bottomInset: bottomInset,
+                        onOpenRecords: onOpenRecords,
+                        onResumeConversation: model.messages.isEmpty ? nil : { goToConversation() }
+                    )
+                    .transition(.opacity)
+                } else {
+                    ConversationSurface(
+                        model: model,
+                        bottomInset: bottomInset,
+                        onOpenRecords: onOpenRecords
+                    )
+                    .transition(.opacity)
+                    .overlay(alignment: .leading) {
+                        ConversationBackSwipe(isEnabled: true, onBack: goToStarter)
+                            .frame(width: 22)
+                            .frame(maxHeight: .infinity)
+                            .accessibilityHidden(true)
+                    }
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: showingStarter)
+        }
+        .onChange(of: model.messages.count) { oldCount, newCount in
+            if newCount > oldCount || newCount == 0 {
+                browsingStarter = false
+            }
+        }
+    }
+
+    private func goToStarter() {
+        guard !model.messages.isEmpty else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            browsingStarter = true
+        }
+    }
+
+    private func goToConversation() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            browsingStarter = false
         }
     }
 
     private var header: some View {
-        HStack(spacing: 11) {
-            WhaleMarkView(size: 40)
+        HStack(spacing: 10) {
+            if !showingStarter && !model.messages.isEmpty {
+                Button(action: goToStarter) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .whaleGlassCircle(size: 34)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("返回新对话")
+                .transition(.opacity)
+            }
+
+            WhaleMarkView(size: showingStarter ? 40 : 36)
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 7) {
@@ -50,7 +108,10 @@ struct ConversationTabView: View {
             Spacer(minLength: 6)
 
             Button {
-                model.newConversation()
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    browsingStarter = false
+                    model.newConversation()
+                }
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "square.and.pencil")
@@ -81,6 +142,7 @@ struct ConversationTabView: View {
                 .fill(WhaleTheme.glassStroke)
                 .frame(height: 0.5)
         }
+        .animation(.easeInOut(duration: 0.2), value: showingStarter)
     }
 
     private var statusText: String {
