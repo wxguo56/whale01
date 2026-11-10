@@ -44,7 +44,7 @@ struct ConversationTabView: View {
                     focusOnAppear: $autoFocus
                 )
             }
-            .fullScreenCover(isPresented: $showVoice, onDismiss: handleVoiceDismiss) {
+            .sheet(isPresented: $showVoice, onDismiss: handleVoiceDismiss) {
                 VoiceView(
                     voice: voice,
                     onSend: { text in
@@ -56,8 +56,18 @@ struct ConversationTabView: View {
                         voiceDraft = text
                         voiceShouldSend = false
                         showVoice = false
+                    },
+                    onCancel: {
+                        voiceDraft = nil
+                        voiceShouldSend = false
+                        showVoice = false
                     }
                 )
+                .presentationDetents([.height(460)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(30)
+                .presentationBackground(WhaleTheme.background)
+                .interactiveDismissDisabled(voice.isRecording)
             }
         }
     }
@@ -67,12 +77,12 @@ struct ConversationTabView: View {
             voiceDraft = nil
             voiceShouldSend = false
         }
-        guard let text = voiceDraft?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
-            return
-        }
+        guard let draft = voiceDraft else { return }
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         model.input = text
         autoVoice = false
         if voiceShouldSend {
+            guard !text.isEmpty else { return }
             autoFocus = false
             showChat = true
             Task { await model.send() }
