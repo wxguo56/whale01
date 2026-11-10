@@ -56,8 +56,8 @@ enum MerchantPriceExtractor {
                       amount <= 9_999 else { continue }
                 let context = contextText(in: ns, matchRange: result.range)
                 guard !context.isEmpty else { continue }
-                let kind = classify(context: context, fallback: fallbackKind)
-                let key = "\(amount)-\(kind)-\(context.prefix(24))"
+                let kind = fallbackKind
+                let key = "\(amount)-\(context.prefix(24))"
                 guard seen.insert(key).inserted else { continue }
                 rows.append(
                     MerchantPriceEvidence(
@@ -110,16 +110,6 @@ enum MerchantPriceExtractor {
         if haystack.contains(value) { return true }
         let core = value.components(separatedBy: CharacterSet(charactersIn: "（(")).first ?? value
         return core.count >= 2 && haystack.contains(core)
-    }
-
-    private static func classify(context: String, fallback: String) -> String {
-        if context.contains("人均") || context.contains("平均消费") || context.contains("均价") {
-            return "per_person"
-        }
-        if context.contains("套餐") || context.contains("团购") || context.contains("代金券") {
-            return "package"
-        }
-        return fallback
     }
 
     private static func contextText(in text: NSString, matchRange: NSRange) -> String {
