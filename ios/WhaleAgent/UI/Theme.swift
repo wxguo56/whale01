@@ -176,17 +176,37 @@ struct WhaleBackdrop: View {
 struct WhaleMarkView: View {
     var size: CGFloat = 38
 
+    private static let logoImage: UIImage? = {
+        if let image = UIImage(named: "WhaleLogo") { return image }
+        if let url = Bundle.main.url(forResource: "WhaleLogo", withExtension: "png"),
+           let image = UIImage(contentsOfFile: url.path) {
+            return image
+        }
+        return nil
+    }()
+
     var body: some View {
-        Image("WhaleLogo")
-            .resizable()
-            .scaledToFill()
-            .frame(width: size, height: size)
-            .clipShape(Circle())
-            .overlay {
-                Circle().strokeBorder(.white.opacity(0.5), lineWidth: 0.8)
+        Group {
+            if let logo = Self.logoImage {
+                Image(uiImage: logo)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                ZStack {
+                    Circle().fill(WhaleTheme.auroraGradient)
+                    Image(systemName: "fish.fill")
+                        .font(.system(size: size * 0.44, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.92))
+                }
             }
-            .shadow(color: WhaleTheme.accent.opacity(0.22), radius: 10, y: 4)
-            .accessibilityHidden(true)
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .overlay {
+            Circle().strokeBorder(.white.opacity(0.5), lineWidth: 0.8)
+        }
+        .shadow(color: WhaleTheme.accent.opacity(0.22), radius: 10, y: 4)
+        .accessibilityHidden(true)
     }
 }
 
