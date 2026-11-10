@@ -12,3 +12,4 @@ build-artifacts/
 ios/WhaleAgent.xcodeproj/
 ios/build/
 ios/DerivedData/
+tools/cloudflared.exe
