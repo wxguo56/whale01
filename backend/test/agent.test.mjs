@@ -416,3 +416,72 @@ test("设备模式下只把手机工具挂起，模型侧摘要先在后端执�
   assert.equal(done.status, "completed");
   assert.equal(done.reply, "已完成");
 });
+
+test("查日历空档后生成日程确认，确认前不写入", async () => {
+  let callIndex = 0;
+  const adapter = {
+    async chat() {
+      callIndex += 1;
+      if (callIndex === 1) {
+        return {
+          content: "",
+          toolCalls: [
+            {
+              id: "call_free_slots",
+              name: "find_free_slots",
+              arguments: JSON.stringify({
+                startAt: "2026-11-10T09:00:00+08:00",
+                endAt: "2026-11-10T12:00:00+08:00",
+                timezone: TIMEZONE,
+                durationMinutes: 60,
+                dayStart: "09:00",
+                dayEnd: "12:00",
+                limit: 3
+              })
+            }
+          ]
+        };
+      }
+      if (callIndex === 2) {
+        return {
+          content: "找到可选空档，先为你准备日程预览。",
+          toolCalls: [
+            {
+              id: "call_create_from_slot",
+              name: "create_calendar_event",
+              arguments: JSON.stringify({
+                title: "和产品对齐",
+                startAt: "2026-11-10T10:00:00+08:00",
+                endAt: "2026-11-10T11:00:00+08:00",
+                timezone: TIMEZONE
+              })
+            }
+          ]
+        };
+      }
+      return { content: "日程已写入。", toolCalls: [] };
+    }
+  };
+  const { agent, dir } = await createTestRuntime({ adapter });
+  const pending = await agent.start({
+    text: "明天上午找个空档安排和产品对齐",
+    now: FIXED_NOW,
+    timezone: TIMEZONE,
+    autoConfirm: false
+  });
+
+  assert.equal(pending.status, "awaiting_confirmation");
+  assert.equal(pending.pending[0].tool, "create_calendar_event");
+  const slotResult = pending.events.find(
+    (event) => event.type === "tool.result" && event.payload.tool === "find_free_slots"
+  );
+  assert.equal(slotResult.payload.status, "success");
+  assert.ok(slotResult.payload.data.count >= 1);
+  await assert.rejects(() => readFile(join(dir, "calendar.json"), "utf8"), /ENOENT/);
+
+  const done = await agent.confirm(pending.turnId, pending.pending[0].operationId, true);
+  assert.equal(done.status, "completed");
+  const records = JSON.parse(await readFile(join(dir, "calendar.json"), "utf8"));
+  assert.equal(records.length, 1);
+  assert.equal(records[0].title, "和产品对齐");
+});
