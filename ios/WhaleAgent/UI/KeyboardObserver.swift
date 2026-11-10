@@ -32,9 +32,7 @@ final class KeyboardObserver: ObservableObject {
                 object: nil,
                 queue: .main
             ) { [weak self] _ in
-                withAnimation(.easeOut(duration: 0.18)) {
-                    self?.top = nil
-                }
+                self?.top = nil
             }
         )
     }
@@ -61,8 +59,16 @@ final class KeyboardObserver: ObservableObject {
             return
         }
 
+        // Animate the first appearance so the composer rides up with the
+        // keyboard. Later frame changes (IME candidate bar, interactive
+        // dismissal) are applied directly so they track the keyboard instead
+        // of queueing overlapping animations.
         let duration = info[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double ?? 0.25
-        withAnimation(.easeOut(duration: duration)) {
+        if top == nil {
+            withAnimation(.easeOut(duration: duration)) {
+                top = frame.minY
+            }
+        } else {
             top = frame.minY
         }
     }
