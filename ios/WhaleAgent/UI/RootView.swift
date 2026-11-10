@@ -75,14 +75,6 @@ struct RootView: View {
         }
         .background(WhaleBackdrop())
         .tint(WhaleTheme.accent)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if let track = model.playback.track {
-                miniPlayer(track)
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 6)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
         .ignoresSafeArea(.keyboard, edges: page == .conversation ? .bottom : [])
         .sheet(item: $model.presentedConfirmation) { item in
             ConfirmationSheet(model: model, item: item)
@@ -148,70 +140,6 @@ struct RootView: View {
     private var keyboardOverlap: CGFloat {
         guard let top = keyboard.top, contentBottom > 0 else { return 0 }
         return max(0, contentBottom - top)
-    }
-
-    private func miniPlayer(_ track: MusicTrackItem) -> some View {
-        HStack(spacing: 12) {
-            Group {
-                if let image = track.artwork {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                } else {
-                    LinearGradient(
-                        colors: [WhaleTheme.accent.opacity(0.8), WhaleTheme.accentDeep],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .overlay {
-                        Image(systemName: "music.note")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.white)
-                    }
-                }
-            }
-                .frame(width: 38, height: 38)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            Button {
-                showMusic = true
-            } label: {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(track.title)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.ink)
-                        .lineLimit(1)
-                    Text(model.playback.isPlaying ? "正在播放" : "已暂停")
-                        .font(.system(size: 11))
-                        .foregroundStyle(WhaleTheme.muted)
-                }
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-            Button {
-                Task { await model.togglePlayback() }
-            } label: {
-                Image(systemName: model.playback.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.ink)
-                    .frame(width: 44, height: 44)
-            }
-            Button {
-                Task { await model.playNext() }
-            } label: {
-                Image(systemName: "forward.end.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.muted)
-                    .frame(width: 44, height: 44)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
-        }
-        .shadow(color: Color.black.opacity(0.12), radius: 16, y: 6)
     }
 }
 

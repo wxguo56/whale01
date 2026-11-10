@@ -108,16 +108,25 @@ struct ConversationTabView: View {
                 }
             }
 
-            Spacer(minLength: 6)
-
-            Button(action: onOpenMusic) {
-                Image(systemName: "music.note")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.ink)
-                    .whaleGlassCircle(size: 38)
+            if let track = model.playback.track {
+                Spacer(minLength: 3)
+                Button(action: onOpenMusic) {
+                    MiniVinylView(track: track, isPlaying: model.playback.isPlaying)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("正在播放 \(track.title)，打开音乐")
+                Spacer(minLength: 2)
+            } else {
+                Spacer(minLength: 6)
+                Button(action: onOpenMusic) {
+                    Image(systemName: "music.note")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .whaleGlassCircle(size: 38)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("打开音乐")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("打开音乐")
 
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -162,7 +171,8 @@ struct ConversationTabView: View {
         if model.isBusy { return "正在处理…" }
         if !model.backendOnline { return "当前离线" }
         if let track = model.playback.track {
-            return track.isLocal ? "正在连接你的本机音乐" : "随时和我说"
+            let prefix = model.playback.isPlaying ? "正在播放" : "已暂停"
+            return "\(prefix) · \(track.title)"
         }
         return "说一句，鲸鱼来办"
     }
@@ -171,5 +181,103 @@ struct ConversationTabView: View {
         if model.isBusy || model.isExecutingTool { return WhaleTheme.coral }
         if !model.backendOnline { return WhaleTheme.warm }
         return WhaleTheme.success
+    }
+}
+
+/// Small spinning vinyl record shown in the header while music is active.
+/// It keeps playback controls out of the bottom safe area.
+private struct MiniVinylView: View {
+    let track: MusicTrackItem
+    let isPlaying: Bool
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var anchor = Date()
+    @State private var baseAngle: Double = 0
+
+    private let diameter: CGFloat = 38
+    private let degreesPerSecond: Double = 36
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !isPlaying || reduceMotion)) { context in
+            vinyl(angle: currentAngle(at: context.date))
+        }
+        .frame(width: diameter, height: diameter)
+        .contentShape(Circle())
+        .onChange(of: isPlaying) { _, playing in
+            if playing {
+                anchor = Date()
+            } else {
+                baseAngle = liveAngle(at: Date()).truncatingRemainder(dividingBy: 360)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+    }
+
+    private func currentAngle(at date: Date) -> Double {
+        guard isPlaying, !reduceMotion else { return baseAngle }
+        return liveAngle(at: date).truncatingRemainder(dividingBy: 360)
+    }
+
+    private func liveAngle(at date: Date) -> Double {
+        baseAngle + max(0, date.timeIntervalSince(anchor)) * degreesPerSecond
+    }
+
+    private func vinyl(angle: Double) -> some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color(white: 0.19), Color(white: 0.04)],
+                        center: .center,
+                        startRadius: 1,
+                        endRadius: diameter / 2
+                    )
+                )
+
+            ForEach([0.88, 0.76, 0.64, 0.52], id: \.self) { scale in
+                Circle()
+                    .strokeBorder(Color.white.opacity(0.08), lineWidth: 0.55)
+                    .frame(width: diameter * scale, height: diameter * scale)
+            }
+
+            Circle()
+                .trim(from: 0.02, to: 0.11)
+                .stroke(Color.white.opacity(0.22), lineWidth: 1.1)
+                .padding(2.4)
+                .rotationEffect(.degrees(-52))
+
+            label
+                .frame(width: diameter * 0.44, height: diameter * 0.44)
+                .clipShape(Circle())
+
+            Circle()
+                .fill(Color.black.opacity(0.9))
+                .frame(width: 2.6, height: 2.6)
+        }
+        .rotationEffect(.degrees(angle))
+        .overlay {
+            Circle().strokeBorder(Color.white.opacity(0.16), lineWidth: 0.7)
+        }
+        .shadow(color: Color.black.opacity(0.22), radius: 5, y: 2)
+    }
+
+    @ViewBuilder
+    private var label: some View {
+        if let image = track.artwork {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+        } else {
+            LinearGradient(
+                colors: [WhaleTheme.accent, WhaleTheme.accentDeep],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .overlay {
+                Image(systemName: "music.note")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.92))
+            }
+        }
     }
 }
