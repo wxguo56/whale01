@@ -129,6 +129,23 @@ export function updateTaskFromToolResult(task, toolName, result) {
     task.observations.push({ tool: toolName, status, handoff: data?.handoff ?? null });
   }
 
+  if (toolName === "search_merchant_prices" && status === "success") {
+    const evidence = Array.isArray(data?.evidence) ? data.evidence : [];
+    if (data?.priceDataAvailable === true && evidence.length) {
+      task.remaining = task.remaining.filter((item) => item !== "取得可核对的价格来源");
+      const unmatchedBranch = evidence.some((item) => item?.branchMatch !== "matched");
+      const label = "核对价格对应的分店";
+      if (unmatchedBranch && !task.remaining.includes(label)) task.remaining.push(label);
+    }
+    task.observations.push({
+      tool: toolName,
+      status,
+      evidenceCount: evidence.length,
+      verified: data?.verified === true,
+      source: data?.source ?? null
+    });
+  }
+
   return task;
 }
 

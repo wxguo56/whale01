@@ -51,6 +51,7 @@ struct OperationRecord: Identifiable, Equatable, Codable {
         case "get_weather": return "cloud.sun.fill"
         case "get_activity_summary": return "figure.walk"
         case "search_web", "fetch_web_content": return "safari.fill"
+        case "search_merchant_prices": return "yensign.circle.fill"
         case "list_memory", "set_memory", "delete_memory": return "brain.head.profile"
         case "ocr_document": return "doc.viewfinder"
         default: return "sparkles"
@@ -228,6 +229,7 @@ enum ToolPresentation {
         case "summarize_shared_content": return "doc.text"
         case "list_memory", "set_memory", "delete_memory": return "brain.head.profile"
         case "search_web", "fetch_web_content": return "safari"
+        case "search_merchant_prices": return "yensign.circle"
         default: return "sparkles"
         }
     }
@@ -297,6 +299,10 @@ enum ToolPresentation {
             return args.optionalString("query") ?? "搜索网页来源"
         case "fetch_web_content":
             return args.optionalString("url") ?? "读取网页正文"
+        case "search_merchant_prices":
+            return [args.optionalString("merchant"), args.optionalString("branch"), args.optionalString("city")]
+                .compactMap { $0 }
+                .joined(separator: " · ")
         default:
             return ToolCatalog.summary(pending)
         }
@@ -378,6 +384,9 @@ enum ToolPresentation {
             let title = object.optionalString("title") ?? "网页"
             let chars = object.optionalInt("charCount") ?? 0
             return "已读取「\(title)」· \(chars) 字"
+        case "search_merchant_prices":
+            let count = object.optionalInt("evidenceCount") ?? 0
+            return count == 0 ? "没有提取到可核对价格 · 未编造" : "找到 \(count) 条公开价格线索 · 未与商家核实"
         default:
             break
         }

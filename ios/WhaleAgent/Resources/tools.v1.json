@@ -529,6 +529,25 @@
           "maxChars": { "type": "integer", "minimum": 1000, "maximum": 12000 }
         }
       }
+    },
+    {
+      "name": "search_merchant_prices",
+      "version": "1.0",
+      "skill": "research",
+      "description": "按商户名（尽量带分店或城市）搜索公开网页价格证据。返回价格上下文、来源 URL、取得时间和分店匹配程度；verified 恒为 false，不能当实时报价。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["merchant"],
+        "additionalProperties": false,
+        "properties": {
+          "merchant": { "type": "string", "minLength": 2, "maxLength": 80 },
+          "branch": { "type": "string", "maxLength": 80 },
+          "city": { "type": "string", "maxLength": 40 },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 12 }
+        }
+      }
     }
   ]
 }

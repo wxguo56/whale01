@@ -27,6 +27,7 @@ test("工具目录覆盖系统操作、记录修改、记忆与公开信息能�
     "play_music",
     "prepare_message",
     "resume_music",
+    "search_merchant_prices",
     "search_music_library",
     "search_places",
     "search_web",
@@ -106,6 +107,23 @@ test("周期规则只接受日／周／月／年与合法星期", () => {
 test("未知工具不通过白名单校验", () => {
   assert.equal(registry.get("run_shell"), null);
   assert.equal(registry.validateArguments("run_shell", {}).ok, false);
+});
+
+test("商户价格工具要求商户名并支持分店、城市和条数限制", () => {
+  assert.equal(registry.validateArguments("search_merchant_prices", {}).ok, false);
+  assert.equal(
+    registry.validateArguments("search_merchant_prices", {
+      merchant: "海底捞",
+      branch: "西湖店",
+      city: "杭州",
+      limit: 5
+    }).ok,
+    true
+  );
+  assert.equal(
+    registry.validateArguments("search_merchant_prices", { merchant: "海底捞", limit: 20 }).ok,
+    false
+  );
 });
 
 test("写操作带有确认策略", () => {

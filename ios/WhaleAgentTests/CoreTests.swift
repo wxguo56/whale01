@@ -121,4 +121,44 @@ final class CoreTests: XCTestCase {
         ]
         XCTAssertEqual(LocalAgentEngine.trimmedHistory(history, limit: 10).count, 0)
     }
+
+    func testMerchantPriceExtractionSeparatesKindsAndMatchesBranch() {
+        let text = "海底捞西湖店 人均消费约 120 元，双人套餐 198 元，菜单价 68 元。"
+        let rows = MerchantPriceExtractor.extract(
+            text: text,
+            merchant: "海底捞",
+            branch: "西湖店",
+            city: "杭州",
+            sourceURL: "https://example.com/shop",
+            sourceTitle: "海底捞西湖店",
+            fetchedAt: "2026-11-10T12:00:00+08:00"
+        )
+        XCTAssertTrue(rows.contains { $0.kind == "per_person" && $0.amount == 120 })
+        XCTAssertTrue(rows.contains { $0.kind == "package" && $0.amount == 198 })
+        XCTAssertTrue(rows.allSatisfy { $0.branchMatch == "matched" })
+    }
+
+    func testMerchantPriceExtractionMarksUnverifiedBranchAndRejectsUnrelatedPage() {
+        let rows = MerchantPriceExtractor.extract(
+            text: "海底捞（滨江店）人均 110 元。",
+            merchant: "海底捞",
+            branch: "西湖店",
+            city: "杭州",
+            sourceURL: "https://example.com/other",
+            sourceTitle: "海底捞滨江店",
+            fetchedAt: "2026-11-10T12:00:00+08:00"
+        )
+        XCTAssertEqual(rows.first?.branchMatch, "unverified")
+
+        let unrelated = MerchantPriceExtractor.extract(
+            text: "另一家餐厅人均 80 元。",
+            merchant: "海底捞",
+            branch: "西湖店",
+            city: "杭州",
+            sourceURL: "https://example.com/unrelated",
+            sourceTitle: "另一家餐厅",
+            fetchedAt: "2026-11-10T12:00:00+08:00"
+        )
+        XCTAssertTrue(unrelated.isEmpty)
+    }
 }

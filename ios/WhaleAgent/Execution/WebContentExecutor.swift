@@ -13,7 +13,7 @@ struct WebContentExecutor {
         session = URLSession(configuration: configuration)
     }
 
-    func search(query: String, limit: Int = 6) async throws -> JSONValue {
+    func search(query: String, limit: Int = 6, timeout: TimeInterval = 25) async throws -> JSONValue {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             throw ToolExecutionError(code: "empty_query", message: "搜索关键词不能为空")
@@ -27,7 +27,7 @@ struct WebContentExecutor {
         guard let url = components.url else {
             throw ToolExecutionError(code: "invalid_query", message: "无法生成搜索地址")
         }
-        let html = try await load(url: url)
+        let html = try await load(url: url, timeout: timeout)
         let results = Self.parseSearchResults(html, limit: max(1, min(limit, 10)))
         if results.isEmpty {
             throw ToolExecutionError(
@@ -45,7 +45,7 @@ struct WebContentExecutor {
         ])
     }
 
-    func fetch(urlString: String, maxChars: Int = 6000) async throws -> JSONValue {
+    func fetch(urlString: String, maxChars: Int = 6000, timeout: TimeInterval = 25) async throws -> JSONValue {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let url = URL(string: trimmed),
               let scheme = url.scheme?.lowercased(),
@@ -53,7 +53,7 @@ struct WebContentExecutor {
               url.host != nil else {
             throw ToolExecutionError(code: "invalid_url", message: "只支持 http/https 链接")
         }
-        let (data, response) = try await loadData(url: url)
+        let (data, response) = try await loadData(url: url, timeout: timeout)
         guard let http = response as? HTTPURLResponse, (200..<400).contains(http.statusCode) else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
             throw ToolExecutionError(code: "http_error", message: "网页返回 HTTP \(status)，没有取得正文")
@@ -82,8 +82,8 @@ struct WebContentExecutor {
         ])
     }
 
-    private func load(url: URL) async throws -> String {
-        let (data, response) = try await loadData(url: url)
+    private func load(url: URL, timeout: TimeInterval = 25) async throws -> String {
+        let (data, response) = try await loadData(url: url, timeout: timeout)
         guard let http = response as? HTTPURLResponse, (200..<400).contains(http.statusCode) else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
             throw ToolExecutionError(code: "http_error", message: "网页返回 HTTP \(status)")
@@ -94,8 +94,8 @@ struct WebContentExecutor {
         return html
     }
 
-    private func loadData(url: URL) async throws -> (Data, URLResponse) {
-        var request = URLRequest(url: url, timeoutInterval: 25)
+    private func loadData(url: URL, timeout: TimeInterval = 25) async throws -> (Data, URLResponse) {
+        var request = URLRequest(url: url, timeoutInterval: timeout)
         request.httpMethod = "GET"
         request.setValue(
             "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",

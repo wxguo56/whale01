@@ -103,6 +103,20 @@ test("偏好可保存、读取和删除，搜索结果明确标注模拟", async
   assert.equal(search.data.simulated, true);
 });
 
+test("商户价格 Mock 明确不提供真实价格，也不冒充分店报价", async () => {
+  const executor = new MockDeviceExecutor({});
+  const result = await executor.execute({
+    tool: "search_merchant_prices",
+    arguments: { merchant: "海底捞", branch: "西湖店", city: "杭州" }
+  });
+  assert.equal(result.status, "success");
+  assert.equal(result.data.simulated, true);
+  assert.equal(result.data.verified, false);
+  assert.equal(result.data.priceDataAvailable, false);
+  assert.equal(result.data.evidence.length, 0);
+  assert.match(result.data.note, /不得把本结果当作价格依据/);
+});
+
 test("空档查询跳过占用时段并标注模拟来源", async () => {
   const executor = new MockDeviceExecutor({});
   const result = await executor.execute({

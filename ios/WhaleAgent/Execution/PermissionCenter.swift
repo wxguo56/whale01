@@ -44,7 +44,8 @@ final class PermissionCenter: ObservableObject {
         "set_memory": [],
         "delete_memory": [],
         "search_web": [],
-        "fetch_web_content": []
+        "fetch_web_content": [],
+        "search_merchant_prices": []
     ]
 
     @Published private(set) var statuses: [String: String] = [:]

@@ -34,7 +34,8 @@ const TOOL_PERMISSIONS = {
   set_memory: [],
   delete_memory: [],
   search_web: [],
-  fetch_web_content: []
+  fetch_web_content: [],
+  search_merchant_prices: []
 };
 
 export const DEVICE_TOOLS = new Set([
@@ -62,7 +63,8 @@ export const DEVICE_TOOLS = new Set([
   "set_memory",
   "delete_memory",
   "search_web",
-  "fetch_web_content"
+  "fetch_web_content",
+  "search_merchant_prices"
 ]);
 
 export function isDeviceTool(name) {

@@ -17,7 +17,7 @@ test("能力表区分实现、授权与模拟执行", () => {
     permissions: { reminder: "granted", calendarRead: "denied", music: "unknown" },
     executionMode: "mock"
   });
-  assert.equal(manifest.length, 26);
+  assert.equal(manifest.length, 27);
   assert.ok(manifest.every((item) => item.executionMode === "mock"));
 
   const reminder = manifest.find((item) => item.name === "create_reminder");

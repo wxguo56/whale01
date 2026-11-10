@@ -106,7 +106,8 @@ export class MockDeviceExecutor {
       "set_memory",
       "delete_memory",
       "search_web",
-      "fetch_web_content"
+      "fetch_web_content",
+      "search_merchant_prices"
     ];
   }
 
@@ -178,6 +179,8 @@ export class MockDeviceExecutor {
         return this.#searchWeb(args);
       case "fetch_web_content":
         return this.#fetchWebContent(args);
+      case "search_merchant_prices":
+        return this.#searchMerchantPrices(args);
       default:
         return {
           status: "unsupported",
@@ -764,6 +767,25 @@ export class MockDeviceExecutor {
       source: "mock_web",
       simulated: true,
       note: "模拟正文，不能作为价格或事实依据"
+    });
+  }
+
+  #searchMerchantPrices(args = {}) {
+    const merchant = String(args.merchant ?? "").trim();
+    if (!merchant) return this.#failure("empty_merchant", "商户名不能为空");
+    return this.#success({
+      merchant,
+      branch: args.branch ?? null,
+      city: args.city ?? null,
+      evidence: [],
+      evidenceCount: 0,
+      sources: [],
+      sourceCount: 0,
+      priceDataAvailable: false,
+      verified: false,
+      source: "mock_merchant_price",
+      simulated: true,
+      note: "Mock 环境不提供真实价格来源。不得把本结果当作价格依据；真机会读取公开网页并区分分店匹配程度。"
     });
   }
 

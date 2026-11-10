@@ -14,6 +14,7 @@ final class NativeToolRouter {
     private let music: MusicExecutor
     private let weather: WeatherExecutor
     private let web: WebContentExecutor
+    private let merchantPrice: MerchantPriceExecutor
     private let ledger: OperationLedger
 
     private static let executionTimeout: Double = 20
@@ -26,7 +27,9 @@ final class NativeToolRouter {
         message = MessageExecutor()
         music = MusicExecutor()
         weather = WeatherExecutor()
-        web = WebContentExecutor()
+        let webExecutor = WebContentExecutor()
+        web = webExecutor
+        merchantPrice = MerchantPriceExecutor(web: webExecutor)
         ledger = .shared
     }
 
@@ -591,6 +594,8 @@ final class NativeToolRouter {
                 urlString: try pending.arguments.requiredString("url"),
                 maxChars: pending.arguments.optionalInt("maxChars") ?? 6000
             )
+        case "search_merchant_prices":
+            return try await merchantPrice.search(arguments: pending.arguments)
         case "summarize_shared_content":
             throw ToolExecutionError(
                 code: "use_share_entry",

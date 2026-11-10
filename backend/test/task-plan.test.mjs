@@ -69,6 +69,57 @@ test("价格缺口未补齐时最终状态为部分完成", () => {
   assert.equal(finalizeTask(task).state, "completed_with_limits");
 });
 
+test("价格证据匹配分店后移除价格缺口", () => {
+  const task = buildTaskPlan("杭州西湖附近的海底捞多少钱");
+  updateTaskFromToolResult(task, "search_places", {
+    status: "success",
+    data: { count: 1, locationMode: "region", radiusApplied: false }
+  });
+  updateTaskFromToolResult(task, "search_merchant_prices", {
+    status: "success",
+    data: {
+      priceDataAvailable: true,
+      verified: false,
+      source: "public_web",
+      evidence: [{ amount: 120, kind: "per_person", branchMatch: "matched" }]
+    }
+  });
+  assert.deepEqual(task.remaining, []);
+  assert.equal(task.observations.at(-1).evidenceCount, 1);
+});
+
+test("价格证据分店未匹配时保留核对缺口", () => {
+  const task = buildTaskPlan("杭州西湖附近的海底捞多少钱");
+  updateTaskFromToolResult(task, "search_places", {
+    status: "success",
+    data: { count: 1, locationMode: "region", radiusApplied: false }
+  });
+  updateTaskFromToolResult(task, "search_merchant_prices", {
+    status: "success",
+    data: {
+      priceDataAvailable: true,
+      verified: false,
+      source: "public_web",
+      evidence: [{ amount: 120, kind: "per_person", branchMatch: "city_only" }]
+    }
+  });
+  assert.deepEqual(task.remaining, ["核对价格对应的分店"]);
+  assert.equal(finalizeTask(task).state, "completed_with_limits");
+});
+
+test("价格证据为空时不把缺口当作已补齐", () => {
+  const task = buildTaskPlan("附近烧烤多少钱");
+  updateTaskFromToolResult(task, "search_places", {
+    status: "success",
+    data: { count: 4, locationMode: "current", radiusMeters: null, radiusApplied: true }
+  });
+  updateTaskFromToolResult(task, "search_merchant_prices", {
+    status: "success",
+    data: { priceDataAvailable: false, verified: false, evidence: [] }
+  });
+  assert.deepEqual(task.remaining, ["取得可核对的价格来源"]);
+});
+
 test("明确地区附近搜索不建立当前位置约束", () => {
   const task = buildTaskPlan("查一下杭州西湖附近的咖啡店");
   assert.equal(task.constraints.locationMode, "region");

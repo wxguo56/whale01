@@ -134,6 +134,7 @@ enum ToolCatalog {
         case "delete_memory": return "删除偏好"
         case "search_web": return "搜索网页"
         case "fetch_web_content": return "读取网页"
+        case "search_merchant_prices": return "查商户价格"
         default: return name
         }
     }
@@ -185,6 +186,10 @@ enum ToolCatalog {
             return args.optionalString("query") ?? "网页搜索"
         case "fetch_web_content":
             return args.optionalString("url") ?? "读取网页正文"
+        case "search_merchant_prices":
+            return [args.optionalString("merchant"), args.optionalString("branch"), args.optionalString("city")]
+                .compactMap { $0 }
+                .joined(separator: " · ")
         default:
             return args.keys.sorted().map { "\($0)=\(args[$0]?.displayText ?? "")" }.joined(separator: "，")
         }
