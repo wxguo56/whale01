@@ -137,7 +137,7 @@ struct RootView: View {
                         .font(.system(size: 11))
                         .foregroundStyle(WhaleTheme.muted)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             }
             .buttonStyle(.plain)
             Button {
@@ -146,7 +146,7 @@ struct RootView: View {
                 Image(systemName: model.playback.isPlaying ? "pause.fill" : "play.fill")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(WhaleTheme.ink)
-                    .frame(width: 34, height: 34)
+                    .frame(width: 44, height: 44)
             }
             Button {
                 Task { await model.playNext() }
@@ -154,7 +154,7 @@ struct RootView: View {
                 Image(systemName: "forward.end.fill")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(WhaleTheme.muted)
-                    .frame(width: 30, height: 34)
+                    .frame(width: 44, height: 44)
             }
         }
         .padding(.horizontal, 12)

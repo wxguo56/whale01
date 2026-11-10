@@ -101,6 +101,10 @@ struct GlassCardStyle: ViewModifier {
     }
 }
 
+// GLASS 是设计方向（层次、半透明、hairline），不是 CSS blur 的像素级复刻。
+// 原生统一走系统 Material；Liquid Glass 是 iOS 26 SDK 的新 API，本工程
+// 以 iOS 17 为基线且 CI 使用旧 SDK，不能假装已接入。
+
 struct WhaleStatusPill: View {
     let text: String
     let color: Color
@@ -179,7 +183,7 @@ extension View {
         modifier(GlassChipStyle())
     }
 
-    func whaleGlassCircle(size: CGFloat = 40) -> some View {
+    func whaleGlassCircle(size: CGFloat = 44) -> some View {
         self
             .frame(width: size, height: size)
             .background(.ultraThinMaterial, in: Circle())
