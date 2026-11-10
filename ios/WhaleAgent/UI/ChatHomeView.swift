@@ -87,7 +87,7 @@ struct ConversationTabView: View {
             guard !text.isEmpty else { return }
             autoFocus = false
             showChat = true
-            Task { await model.send(speakReply: true) }
+            Task { await model.send(text: text, speakReply: true) }
         } else {
             autoFocus = true
             showChat = true
