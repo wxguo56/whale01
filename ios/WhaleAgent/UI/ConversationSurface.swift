@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 /// home page; nothing is pushed and no voice sheet is presented.
 struct ConversationSurface: View {
     @ObservedObject var model: AppModel
+    let keyboardTop: CGFloat?
     let onOpenRecords: () -> Void
 
     @StateObject private var voice = VoiceInputController()
@@ -14,6 +15,7 @@ struct ConversationSurface: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var showFileImporter = false
     @State private var importError: String?
+    @State private var pageBottom: CGFloat = 0
 
     private let suggestions: [(title: String, prompt: String)] = [
         ("附近吃点什么", "找我附近两公里内的餐厅，帮我看看价格。"),
@@ -34,7 +36,14 @@ struct ConversationSurface: View {
             }
 
             composer
+                .padding(.bottom, keyboardInset)
         }
+        .background {
+            GeometryReader { geo in
+                Color.clear.preference(key: PageBottomKey.self, value: geo.frame(in: .global).maxY)
+            }
+        }
+        .onPreferenceChange(PageBottomKey.self) { pageBottom = $0 }
         .onChange(of: voice.isRecording) { wasRecording, isRecording in
             guard wasRecording, !isRecording else { return }
             guard voice.errorText == nil else { return }
@@ -187,6 +196,9 @@ struct ConversationSurface: View {
             .onChange(of: model.isBusy) { _, busy in
                 if busy { pinToBottom(proxy) }
             }
+            .onChange(of: keyboardInset) { _, _ in
+                DispatchQueue.main.async { pinToBottom(proxy, animated: false) }
+            }
             .onAppear {
                 DispatchQueue.main.async { pinToBottom(proxy, animated: false) }
             }
@@ -194,6 +206,11 @@ struct ConversationSurface: View {
     }
 
     private static let bottomAnchor = "conversationBottom"
+
+    private var keyboardInset: CGFloat {
+        guard let keyboardTop, pageBottom > 0 else { return 0 }
+        return max(0, pageBottom - keyboardTop)
+    }
 
     /// Keeps the newest message pinned. Only content changes move the list;
     /// typing never does, so the scroll position stays put while composing.
@@ -355,7 +372,7 @@ private struct ConversationComposer: View {
 
                 TextField("告诉鲸鱼你想做什么", text: $draft)
                     .lineLimit(1)
-                    .frame(minHeight: 22)
+                    .frame(height: 22)
                     .focused($focused)
                     .padding(.horizontal, 15)
                     .padding(.vertical, 11)
@@ -368,18 +385,19 @@ private struct ConversationComposer: View {
                     .submitLabel(.send)
                     .onSubmit { submit() }
 
-                if focused {
-                    Button {
-                        focused = false
-                    } label: {
-                        Image(systemName: "keyboard.chevron.compact.down")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundStyle(WhaleTheme.muted)
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("收起键盘")
+                Button {
+                    focused = false
+                } label: {
+                    Image(systemName: "keyboard.chevron.compact.down")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .frame(width: 44, height: 44)
                 }
+                .buttonStyle(.plain)
+                .opacity(focused ? 1 : 0)
+                .allowsHitTesting(focused)
+                .accessibilityHidden(!focused)
+                .accessibilityLabel("收起键盘")
 
                 Button(action: submit) {
                     Image(systemName: "arrow.up")
@@ -467,5 +485,13 @@ private struct ConversationComposer: View {
         focused = false
         draft = ""
         Task { await model.send(text: text) }
+    }
+}
+
+private struct PageBottomKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }

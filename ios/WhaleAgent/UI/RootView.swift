@@ -5,9 +5,9 @@ import UIKit
 @MainActor
 struct RootView: View {
     @StateObject private var model = AppModel()
+    @StateObject private var keyboard = KeyboardObserver()
     @State private var page: AppTab? = .conversation
     @State private var showMusic = false
-    @State private var keyboardVisible = false
     @State private var settingsDetailOpen = false
     @AppStorage("whale.appearance") private var appearance = "system"
     @Environment(\.scenePhase) private var scenePhase
@@ -19,6 +19,7 @@ struct RootView: View {
                 HStack(spacing: 0) {
                     ConversationTabView(
                         model: model,
+                        keyboardTop: keyboard.top,
                         onOpenRecords: { go(.records) },
                         onOpenSettings: { go(.settings) }
                     )
@@ -43,7 +44,7 @@ struct RootView: View {
             .scrollPosition(id: $page)
             .scrollIndicators(.hidden)
             .scrollDisabled(
-                settingsDetailOpen || showMusic || model.presentedConfirmation != nil || keyboardVisible
+                settingsDetailOpen || showMusic || model.presentedConfirmation != nil || keyboard.isVisible
             )
             .background(WhaleTheme.pageGradient)
         }
@@ -57,6 +58,7 @@ struct RootView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .ignoresSafeArea(.keyboard, edges: page == .conversation ? .bottom : [])
         .sheet(item: $model.presentedConfirmation) { item in
             ConfirmationSheet(model: model, item: item)
         }
@@ -96,12 +98,6 @@ struct RootView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .whaleOpenChat)) { _ in
             go(.conversation)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-            keyboardVisible = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-            keyboardVisible = false
         }
     }
 

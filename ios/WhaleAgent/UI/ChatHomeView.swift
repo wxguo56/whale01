@@ -4,13 +4,18 @@ import SwiftUI
 /// list and voice input never push a detail screen or present a sheet.
 struct ConversationTabView: View {
     @ObservedObject var model: AppModel
+    let keyboardTop: CGFloat?
     let onOpenRecords: () -> Void
     let onOpenSettings: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             header
-            ConversationSurface(model: model, onOpenRecords: onOpenRecords)
+            ConversationSurface(
+                model: model,
+                keyboardTop: keyboardTop,
+                onOpenRecords: onOpenRecords
+            )
         }
     }
 
