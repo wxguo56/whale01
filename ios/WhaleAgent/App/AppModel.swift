@@ -863,9 +863,10 @@ final class AppModel: ObservableObject {
 
     private func friendlyFailureMessage(_ error: Error) -> String {
         let ns = error as NSError
-        guard ns.domain == NSURLErrorDomain, let code = URLError.Code(rawValue: ns.code) else {
+        guard ns.domain == NSURLErrorDomain else {
             return error.localizedDescription
         }
+        let code = URLError.Code(rawValue: ns.code)
         switch code {
         case .notConnectedToInternet:
             return "手机当前没有可用网络，本轮没有发送到模型服务。请连接 Wi-Fi 或蜂窝网络后重试。"
