@@ -65,7 +65,7 @@ final class AppModel: ObservableObject {
     private static let conversationKey = "whale.conversationId"
 
     init() {
-        backendURL = UserDefaults.standard.string(forKey: BackendConfig.storageKey) ?? BackendConfig.defaultBaseURL
+        backendURL = BackendConfig.currentBaseURLString
         apiToken = BackendConfig.authToken
         conversationId = UserDefaults.standard.string(forKey: Self.conversationKey)
         router = NativeToolRouter(permissions: permissions)
