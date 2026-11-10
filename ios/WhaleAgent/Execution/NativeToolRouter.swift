@@ -13,6 +13,7 @@ final class NativeToolRouter {
     private let message: MessageExecutor
     private let music: MusicExecutor
     private let weather: WeatherExecutor
+    private let web: WebContentExecutor
     private let ledger: OperationLedger
 
     private static let executionTimeout: Double = 20
@@ -25,10 +26,17 @@ final class NativeToolRouter {
         message = MessageExecutor()
         music = MusicExecutor()
         weather = WeatherExecutor()
+        web = WebContentExecutor()
         ledger = .shared
     }
 
     func execute(_ pending: PendingTool) async -> ToolResultPayload {
+        let result = await executeInternal(pending)
+        await recordAction(pending, result: result)
+        return result
+    }
+
+    private func executeInternal(_ pending: PendingTool) async -> ToolResultPayload {
         if let cached = await ledger.outcome(for: pending.operationId) {
             return ToolResultPayload(
                 toolCallId: pending.toolCallId,
@@ -121,6 +129,25 @@ final class NativeToolRouter {
                 )
             )
         }
+    }
+
+    private func recordAction(_ pending: PendingTool, result: ToolResultPayload) async {
+        let detail = ToolPresentation.resultDetail(
+            tool: pending.tool,
+            status: result.status,
+            data: result.data,
+            error: result.error
+        )
+        await ledger.recordAction(
+            OperationRecord(
+                id: pending.operationId,
+                tool: pending.tool,
+                status: result.status,
+                title: ToolPresentation.title(pending.tool),
+                detail: detail,
+                source: pending.source ?? "chat"
+            )
+        )
     }
 
     private func pendingWrite(for pending: PendingTool) -> PendingWrite? {
@@ -266,14 +293,72 @@ final class NativeToolRouter {
         try await music.playbackState(arguments: [:])
     }
 
+    private func listMemories() -> JSONValue {
+        let rows = MemoryStore.shared.list().map { preference in
+            JSONValue.object([
+                "id": .string(preference.id),
+                "key": .string(preference.key),
+                "value": .string(preference.value),
+                "updatedAt": .string(ToolDate.iso(preference.updatedAt))
+            ])
+        }
+        return .object([
+            "memories": .array(rows),
+            "count": .number(Double(rows.count)),
+            "source": .string("memory"),
+            "note": .string("偏好只用于建议，不构成长期操作授权")
+        ])
+    }
+
+    private func setMemory(_ arguments: [String: JSONValue]) throws -> JSONValue {
+        let key = try arguments.requiredString("key")
+        let value = try arguments.requiredString("value")
+        do {
+            let preference = try MemoryStore.shared.set(key: key, value: value)
+            return .object([
+                "id": .string(preference.id),
+                "key": .string(preference.key),
+                "value": .string(preference.value),
+                "updatedAt": .string(ToolDate.iso(preference.updatedAt)),
+                "source": .string("memory"),
+                "note": .string("已保存为可编辑偏好，不是长期操作授权")
+            ])
+        } catch {
+            throw ToolExecutionError(code: "memory_invalid", message: error.localizedDescription)
+        }
+    }
+
+    private func deleteMemory(_ arguments: [String: JSONValue]) throws -> JSONValue {
+        let id = arguments.optionalString("id") ?? arguments.optionalString("key")
+        guard let id, !id.isEmpty else {
+            throw ToolExecutionError(code: "missing_memory_reference", message: "需要偏好 id 或 key")
+        }
+        let deleted = MemoryStore.shared.delete(id: id)
+        return .object([
+            "id": .string(id),
+            "deleted": .bool(deleted),
+            "source": .string("memory")
+        ])
+    }
+
     private func route(_ pending: PendingTool) async throws -> JSONValue {
         switch pending.tool {
         case "create_reminder":
             return try await eventKit.createReminder(arguments: pending.arguments, operationId: pending.operationId)
+        case "list_reminders":
+            return try await eventKit.listReminders(arguments: pending.arguments)
+        case "update_reminder":
+            return try await eventKit.updateReminder(arguments: pending.arguments)
+        case "delete_reminder":
+            return try await eventKit.deleteReminder(arguments: pending.arguments)
         case "list_calendar_events":
             return try eventKit.listCalendarEvents(arguments: pending.arguments)
         case "create_calendar_event":
             return try eventKit.createCalendarEvent(arguments: pending.arguments, operationId: pending.operationId)
+        case "update_calendar_event":
+            return try eventKit.updateCalendarEvent(arguments: pending.arguments)
+        case "delete_calendar_event":
+            return try eventKit.deleteCalendarEvent(arguments: pending.arguments)
         case "get_weather":
             return try await weather.query(arguments: pending.arguments)
         case "get_activity_summary":
@@ -296,6 +381,27 @@ final class NativeToolRouter {
             return try await music.skip(arguments: pending.arguments)
         case "get_playback_state":
             return try await music.playbackState(arguments: pending.arguments)
+        case "list_memory":
+            return listMemories()
+        case "set_memory":
+            return try setMemory(pending.arguments)
+        case "delete_memory":
+            return try deleteMemory(pending.arguments)
+        case "search_web":
+            return try await web.search(
+                query: try pending.arguments.requiredString("query"),
+                limit: pending.arguments.optionalInt("limit") ?? 6
+            )
+        case "fetch_web_content":
+            return try await web.fetch(
+                urlString: try pending.arguments.requiredString("url"),
+                maxChars: pending.arguments.optionalInt("maxChars") ?? 6000
+            )
+        case "summarize_shared_content":
+            throw ToolExecutionError(
+                code: "use_share_entry",
+                message: "分享内容由 App 的分享入口直接处理；本机模式不单独调用摘要工具"
+            )
         default:
             throw ToolExecutionError(
                 code: "unsupported_tool",

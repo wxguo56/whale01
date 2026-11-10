@@ -350,6 +350,7 @@ actor LocalAgentEngine: AgentTransport {
             .sorted { $0.key < $1.key }
             .map { "- \($0.key)：\($0.value)" }
             .joined(separator: "\n")
+        let memoryText = MemoryStore.shared.snapshotText()
 
         return """
         \(baseline)
@@ -369,6 +370,10 @@ actor LocalAgentEngine: AgentTransport {
 
         ## 当前授权状态
         \(permissionText.isEmpty ? "尚未读取" : permissionText)
+
+        ## 用户明确保存的偏好
+        \(memoryText)
+        - 偏好只用于建议和默认选择，不代表用户授权执行任何写操作。
         """
     }
 
@@ -459,7 +464,7 @@ actor LocalAgentEngine: AgentTransport {
             let data = try? Data(contentsOf: url),
             let contract = try? JSONDecoder().decode(ToolContract.self, from: data)
         else { return [] }
-        return contract.tools
+        return contract.tools.filter { $0.name != "summarize_shared_content" }
     }
 
     private func loadText(_ name: String) -> String? {

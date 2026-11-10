@@ -8,13 +8,32 @@ enum AppTab: Hashable {
     case settings
 }
 
-struct NativeActionRecord: Identifiable, Equatable {
-    let id = UUID()
+struct OperationRecord: Identifiable, Equatable, Codable {
+    let id: String
     let tool: String
     let status: String
     let title: String
     let detail: String
-    let createdAt = Date()
+    let createdAt: Date
+    let source: String
+
+    init(
+        id: String,
+        tool: String,
+        status: String,
+        title: String,
+        detail: String,
+        createdAt: Date = Date(),
+        source: String = "chat"
+    ) {
+        self.id = id
+        self.tool = tool
+        self.status = status
+        self.title = title
+        self.detail = detail
+        self.createdAt = createdAt
+        self.source = source
+    }
 
     var isSuccess: Bool { status == "success" }
 
@@ -22,19 +41,24 @@ struct NativeActionRecord: Identifiable, Equatable {
         if !isSuccess { return "exclamationmark.triangle.fill" }
         switch tool {
         case "create_reminder": return "bell.badge.fill"
-        case "create_calendar_event", "list_calendar_events": return "calendar"
+        case "list_reminders", "update_reminder", "delete_reminder": return "bell.badge"
+        case "create_calendar_event", "list_calendar_events", "update_calendar_event", "delete_calendar_event":
+            return "calendar"
         case "search_places", "open_navigation": return "map.fill"
         case "prepare_message": return "message.fill"
         case "search_music_library", "play_music", "pause_music", "resume_music", "skip_music_track":
             return "music.note"
         case "get_weather": return "cloud.sun.fill"
         case "get_activity_summary": return "figure.walk"
+        case "search_web", "fetch_web_content": return "safari.fill"
+        case "list_memory", "set_memory", "delete_memory": return "brain.head.profile"
+        case "ocr_document": return "doc.viewfinder"
         default: return "sparkles"
         }
     }
 }
 
-struct PlaceSummary: Identifiable, Equatable {
+struct PlaceSummary: Identifiable, Equatable, Codable {
     let placeId: String
     let name: String
     let address: String
@@ -190,7 +214,9 @@ enum ToolPresentation {
     static func icon(_ tool: String) -> String {
         switch tool {
         case "create_reminder": return "bell.badge"
-        case "list_calendar_events", "create_calendar_event": return "calendar"
+        case "list_reminders", "update_reminder", "delete_reminder": return "bell.badge"
+        case "list_calendar_events", "create_calendar_event", "update_calendar_event", "delete_calendar_event":
+            return "calendar"
         case "get_weather": return "cloud.sun"
         case "get_activity_summary": return "figure.walk"
         case "search_places": return "mappin.and.ellipse"
@@ -200,6 +226,8 @@ enum ToolPresentation {
         case "play_music", "pause_music", "resume_music", "skip_music_track", "get_playback_state":
             return "music.note"
         case "summarize_shared_content": return "doc.text"
+        case "list_memory", "set_memory", "delete_memory": return "brain.head.profile"
+        case "search_web", "fetch_web_content": return "safari"
         default: return "sparkles"
         }
     }
@@ -212,11 +240,28 @@ enum ToolPresentation {
                 args.optionalString("title"),
                 formatDateTime(args.optionalString("dueAt"))
             )
+        case "list_reminders":
+            if let start = args.optionalString("startAt"), let end = args.optionalString("endAt") {
+                return formatDateRange(start: start, end: end)
+            }
+            return "查询系统提醒事项"
+        case "update_reminder":
+            return join(
+                args.optionalString("newTitle") ?? args.optionalString("title") ?? args.optionalString("recordId"),
+                formatDateTime(args.optionalString("dueAt")),
+                args.optionalBool("completed") == true ? "标记完成" : nil
+            )
+        case "delete_reminder":
+            return join(args.optionalString("title") ?? args.optionalString("recordId"), "删除系统提醒")
         case "create_calendar_event":
             return join(
                 args.optionalString("title"),
                 formatDateRange(start: args.optionalString("startAt"), end: args.optionalString("endAt"))
             )
+        case "update_calendar_event":
+            return join(args.optionalString("title") ?? args.optionalString("eventId"), "修改系统日程")
+        case "delete_calendar_event":
+            return join(args.optionalString("title") ?? args.optionalString("eventId"), "删除系统日程")
         case "list_calendar_events":
             return formatDateRange(start: args.optionalString("startAt"), end: args.optionalString("endAt"))
         case "search_places":
@@ -236,6 +281,14 @@ enum ToolPresentation {
             return join(args.optionalString("locationName"), formatDate(args.optionalString("startAt")))
         case "get_activity_summary":
             return "读取今天的步数、活动能量与锻炼时间"
+        case "set_memory":
+            return join(args.optionalString("key"), args.optionalString("value"))
+        case "delete_memory":
+            return args.optionalString("key") ?? "删除一条偏好"
+        case "search_web":
+            return args.optionalString("query") ?? "搜索网页来源"
+        case "fetch_web_content":
+            return args.optionalString("url") ?? "读取网页正文"
         default:
             return ToolCatalog.summary(pending)
         }
@@ -245,6 +298,14 @@ enum ToolPresentation {
         switch tool {
         case "create_reminder":
             return "确认后会立即写入系统“提醒事项”，并设置到点提醒。"
+        case "update_reminder":
+            return "确认后会修改系统里的同一条提醒；不会另建一条。"
+        case "delete_reminder":
+            return "确认后会从系统“提醒事项”删除这条记录。"
+        case "update_calendar_event":
+            return "确认后会修改系统日历中的同一条日程。"
+        case "delete_calendar_event":
+            return "确认后会从系统日历删除这条日程。"
         case "create_calendar_event":
             return "确认后会立即写入系统日历，不会先创建模拟事件。"
         case "open_navigation":
@@ -264,6 +325,20 @@ enum ToolPresentation {
         case "list_calendar_events":
             let count = object.optionalInt("count") ?? 0
             return count == 0 ? "已读取系统日历 · 这段时间没有安排" : "已读取系统日历 · \(count) 项"
+        case "list_reminders":
+            let count = object.optionalInt("count") ?? 0
+            return count == 0 ? "已读取系统提醒 · 当前没有匹配项" : "已读取系统提醒 · \(count) 项"
+        case "update_reminder":
+            let time = formatDateTime(object.optionalString("dueAt")).map { " · \($0)" } ?? ""
+            let completed = object.optionalBool("completed") == true ? " · 已完成" : ""
+            return "已修改系统提醒\(time)\(completed)"
+        case "delete_reminder":
+            return "已从系统提醒事项删除"
+        case "update_calendar_event":
+            let time = formatDateTime(object.optionalString("startAt")).map { " · \($0)" } ?? ""
+            return "已修改系统日程\(time)"
+        case "delete_calendar_event":
+            return "已从系统日历删除"
         case "search_places":
             let count = object.optionalInt("count") ?? 0
             return count == 0 ? "没有找到候选地点 · 未打开地图" : "找到 \(count) 个候选地点 · 未打开地图"
@@ -279,6 +354,17 @@ enum ToolPresentation {
             let time = formatDateTime(object.optionalString("startAt")).map { " · \($0)" } ?? ""
             let conflicts = object.optionalInt("conflictCount") ?? 0
             return conflicts > 0 ? "已写入系统日历\(time) · 与 \(conflicts) 个日程重叠" : "已写入系统日历\(time)"
+        case "set_memory":
+            return "已保存偏好 · 可随时修改或删除"
+        case "delete_memory":
+            return object.optionalBool("deleted") == true ? "已删除该偏好" : "没有找到这条偏好"
+        case "search_web":
+            let count = object.optionalInt("count") ?? 0
+            return count == 0 ? "没有找到网页来源" : "找到 \(count) 个网页来源 · 需再读正文"
+        case "fetch_web_content":
+            let title = object.optionalString("title") ?? "网页"
+            let chars = object.optionalInt("charCount") ?? 0
+            return "已读取「\(title)」· \(chars) 字"
         default:
             break
         }

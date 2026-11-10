@@ -48,6 +48,9 @@ targets:
       - sdk: MusicKit.framework
       - sdk: WeatherKit.framework
       - sdk: Speech.framework
+      - sdk: Vision.framework
+      - sdk: PDFKit.framework
+      - sdk: PhotosUI.framework
       - target: WhaleAgentShare
         embed: true
   WhaleAgentSideload:
@@ -82,6 +85,9 @@ targets:
       - sdk: MusicKit.framework
       - sdk: WeatherKit.framework
       - sdk: Speech.framework
+      - sdk: Vision.framework
+      - sdk: PDFKit.framework
+      - sdk: PhotosUI.framework
       - target: WhaleAgentShareSideload
         embed: true
   WhaleAgentShare:

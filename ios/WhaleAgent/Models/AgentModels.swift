@@ -30,8 +30,25 @@ struct PendingTool: Codable, Identifiable, Sendable {
     let operationId: String
     let arguments: [String: JSONValue]
     let requiresConfirmation: Bool
+    let source: String?
 
     var id: String { toolCallId }
+
+    init(
+        tool: String,
+        toolCallId: String,
+        operationId: String,
+        arguments: [String: JSONValue],
+        requiresConfirmation: Bool,
+        source: String? = nil
+    ) {
+        self.tool = tool
+        self.toolCallId = toolCallId
+        self.operationId = operationId
+        self.arguments = arguments
+        self.requiresConfirmation = requiresConfirmation
+        self.source = source
+    }
 }
 
 struct ToolResultPayload: Codable, Sendable {
@@ -92,8 +109,13 @@ enum ToolCatalog {
     static func label(_ name: String) -> String {
         switch name {
         case "create_reminder": return "创建提醒"
+        case "list_reminders": return "查询提醒"
+        case "update_reminder": return "修改提醒"
+        case "delete_reminder": return "删除提醒"
         case "list_calendar_events": return "读取日历"
         case "create_calendar_event": return "创建日程"
+        case "update_calendar_event": return "修改日程"
+        case "delete_calendar_event": return "删除日程"
         case "get_weather": return "查询天气"
         case "get_activity_summary": return "运动摘要"
         case "search_places": return "搜索地点"
@@ -106,6 +128,11 @@ enum ToolCatalog {
         case "skip_music_track": return "切换歌曲"
         case "get_playback_state": return "播放状态"
         case "summarize_shared_content": return "总结分享内容"
+        case "list_memory": return "读取偏好"
+        case "set_memory": return "保存偏好"
+        case "delete_memory": return "删除偏好"
+        case "search_web": return "搜索网页"
+        case "fetch_web_content": return "读取网页"
         default: return name
         }
     }
@@ -115,8 +142,16 @@ enum ToolCatalog {
         switch pending.tool {
         case "create_reminder":
             return [args.optionalString("title"), args.optionalString("dueAt")].compactMap { $0 }.joined(separator: " · ")
+        case "update_reminder":
+            return [args.optionalString("title"), args.optionalString("dueAt")].compactMap { $0 }.joined(separator: " · ")
+        case "delete_reminder":
+            return [args.optionalString("recordId"), args.optionalString("title")].compactMap { $0 }.joined(separator: " · ")
+        case "list_reminders":
+            return [args.optionalString("startAt"), args.optionalString("endAt")].compactMap { $0 }.joined(separator: " → ")
         case "create_calendar_event":
             return [args.optionalString("title"), args.optionalString("startAt")].compactMap { $0 }.joined(separator: " · ")
+        case "update_calendar_event", "delete_calendar_event":
+            return [args.optionalString("eventId"), args.optionalString("title")].compactMap { $0 }.joined(separator: " · ")
         case "list_calendar_events":
             return [args.optionalString("startAt"), args.optionalString("endAt")].compactMap { $0 }.joined(separator: " → ")
         case "get_weather":
@@ -135,6 +170,14 @@ enum ToolCatalog {
             return args.optionalString("trackId") ?? "当前曲目"
         case "skip_music_track":
             return args.optionalString("direction") ?? "下一首"
+        case "set_memory":
+            return [args.optionalString("key"), args.optionalString("value")].compactMap { $0 }.joined(separator: "：")
+        case "delete_memory":
+            return args.optionalString("key") ?? args.optionalString("id") ?? "删除偏好"
+        case "search_web":
+            return args.optionalString("query") ?? "网页搜索"
+        case "fetch_web_content":
+            return args.optionalString("url") ?? "读取网页正文"
         default:
             return args.keys.sorted().map { "\($0)=\(args[$0]?.displayText ?? "")" }.joined(separator: "，")
         }

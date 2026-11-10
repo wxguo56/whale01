@@ -290,6 +290,185 @@
           "sessionId": { "type": "string", "minLength": 1, "maxLength": 120 }
         }
       }
+    },
+    {
+      "name": "list_reminders",
+      "version": "1.0",
+      "skill": "schedule",
+      "description": "查询系统提醒事项。可按时间区间、是否完成和列表过滤；没有到期时间的提醒在时间区间查询中不返回。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["eventkit"],
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {
+          "startAt": { "type": "string", "format": "date-time" },
+          "endAt": { "type": "string", "format": "date-time" },
+          "timezone": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "includeCompleted": { "type": "boolean" },
+          "listId": { "type": "string", "maxLength": 128 },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 100 }
+        }
+      }
+    },
+    {
+      "name": "update_reminder",
+      "version": "1.0",
+      "skill": "schedule",
+      "description": "修改已有的系统提醒。优先用 recordId；没有 recordId 时 title 只用于核对，改名用 newTitle。不得用新建提醒冒充修改。",
+      "requiresConfirmation": true,
+      "requiresAuthorization": ["eventkit"],
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {
+          "recordId": { "type": "string", "maxLength": 160 },
+          "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "newTitle": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "dueAt": { "type": "string", "format": "date-time" },
+          "timezone": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "completed": { "type": "boolean" },
+          "notes": { "type": "string", "maxLength": 2000 },
+          "listId": { "type": "string", "maxLength": 128 }
+        }
+      }
+    },
+    {
+      "name": "delete_reminder",
+      "version": "1.0",
+      "skill": "schedule",
+      "description": "删除已有的系统提醒。优先用 recordId；没有 recordId 时用标题和可选到期时间核对。",
+      "requiresConfirmation": true,
+      "requiresAuthorization": ["eventkit"],
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {
+          "recordId": { "type": "string", "maxLength": 160 },
+          "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "dueAt": { "type": "string", "format": "date-time" },
+          "timezone": { "type": "string", "minLength": 1, "maxLength": 64 }
+        }
+      }
+    },
+    {
+      "name": "update_calendar_event",
+      "version": "1.0",
+      "skill": "schedule",
+      "description": "修改已有的系统日历事件。必须先用查询取得 eventId；不得用新建日程冒充修改。",
+      "requiresConfirmation": true,
+      "requiresAuthorization": ["eventkit"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["eventId"],
+        "additionalProperties": false,
+        "properties": {
+          "eventId": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "startAt": { "type": "string", "format": "date-time" },
+          "endAt": { "type": "string", "format": "date-time" },
+          "timezone": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "location": { "type": "string", "maxLength": 200 },
+          "calendarId": { "type": "string", "maxLength": 128 },
+          "notes": { "type": "string", "maxLength": 2000 }
+        }
+      }
+    },
+    {
+      "name": "delete_calendar_event",
+      "version": "1.0",
+      "skill": "schedule",
+      "description": "删除已有的系统日历事件。必须先用查询取得 eventId。",
+      "requiresConfirmation": true,
+      "requiresAuthorization": ["eventkit"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["eventId"],
+        "additionalProperties": false,
+        "properties": {
+          "eventId": { "type": "string", "minLength": 1, "maxLength": 160 }
+        }
+      }
+    },
+    {
+      "name": "list_memory",
+      "version": "1.0",
+      "skill": "memory",
+      "description": "读取用户明确保存的偏好。偏好只用于建议，不是长期操作授权。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": { "type": "object", "required": [], "additionalProperties": false, "properties": {} }
+    },
+    {
+      "name": "set_memory",
+      "version": "1.0",
+      "skill": "memory",
+      "description": "保存一条用户明确说出的偏好；只能保存用户表达的内容，不得推断敏感属性。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["key", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "key": { "type": "string", "minLength": 1, "maxLength": 40 },
+          "value": { "type": "string", "minLength": 1, "maxLength": 500 }
+        }
+      }
+    },
+    {
+      "name": "delete_memory",
+      "version": "1.0",
+      "skill": "memory",
+      "description": "删除一条用户偏好。用 id 或 key 指定。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "maxLength": 80 },
+          "key": { "type": "string", "maxLength": 80 }
+        }
+      }
+    },
+    {
+      "name": "search_web",
+      "version": "1.0",
+      "skill": "research",
+      "description": "搜索公开网页来源。结果只有标题、链接和摘要，不能当作网页正文或价格依据；需要再调用 fetch_web_content。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["query"],
+        "additionalProperties": false,
+        "properties": {
+          "query": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 10 }
+        }
+      }
+    },
+    {
+      "name": "fetch_web_content",
+      "version": "1.0",
+      "skill": "research",
+      "description": "读取一个公开 http/https 网页的正文。返回来源 URL、取得时间和截断标记；失败时不得假装读过。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["url"],
+        "additionalProperties": false,
+        "properties": {
+          "url": { "type": "string", "minLength": 8, "maxLength": 2000 },
+          "maxChars": { "type": "integer", "minimum": 1000, "maximum": 12000 }
+        }
+      }
     }
   ]
 }

@@ -15,6 +15,8 @@ struct SettingsView: View {
 
     @AppStorage("whale.appearance") private var appearance = "system"
     @State private var showDeveloper = false
+    @State private var memoryKey = ""
+    @State private var memoryValue = ""
 
     private let permissionRows: [PermissionRowSpec] = [
         PermissionRowSpec(key: "reminder", title: "提醒事项", icon: "bell.badge"),
@@ -35,6 +37,7 @@ struct SettingsView: View {
                     identityCard
                     appearanceCard
                     voiceCard
+                    memoryCard
                     permissionCard
                     performanceCard
                     developerCard
@@ -51,7 +54,10 @@ struct SettingsView: View {
             .onChange(of: showDeveloper) { _, open in
                 isDetailOpen = open
             }
-            .task { model.refreshPermissions() }
+            .task {
+                model.refreshPermissions()
+                model.reloadMemories()
+            }
         }
     }
 
@@ -159,6 +165,69 @@ struct SettingsView: View {
                     .frame(minHeight: 40)
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    private var memoryCard: some View {
+        card("记忆偏好") {
+            if model.memories.isEmpty {
+                Text("还没有保存偏好。可以记住饮食、音乐、回复风格等；偏好只影响建议，不会变成长期操作授权。")
+                    .font(.system(size: 12))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                ForEach(model.memories) { preference in
+                    HStack(alignment: .top, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(preference.key)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(WhaleTheme.ink)
+                            Text(preference.value)
+                                .font(.system(size: 12))
+                                .foregroundStyle(WhaleTheme.muted)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer()
+                        Button {
+                            model.deleteMemory(preference)
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(WhaleTheme.danger)
+                                .frame(width: 34, height: 34)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("删除偏好 \(preference.key)")
+                    }
+                    divider
+                }
+            }
+
+            VStack(spacing: 8) {
+                TextField("偏好名称，例如：饮食", text: $memoryKey)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .font(.system(size: 13))
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 9)
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                HStack(spacing: 8) {
+                    TextField("内容，例如：不吃辣", text: $memoryValue)
+                        .font(.system(size: 13))
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 9)
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    Button("保存") {
+                        model.addMemory(key: memoryKey, value: memoryValue)
+                        memoryKey = ""
+                        memoryValue = ""
+                    }
+                    .font(.system(size: 13, weight: .semibold))
+                    .tint(WhaleTheme.accent)
+                    .disabled(memoryKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                              || memoryValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
         }
     }
 

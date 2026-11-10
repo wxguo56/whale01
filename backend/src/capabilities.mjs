@@ -4,13 +4,20 @@ const SKILL_LABELS = {
   health: "健康摘要",
   content: "分享内容",
   communication: "短信草稿",
-  music: "音乐"
+  music: "音乐",
+  memory: "记忆偏好",
+  research: "公开信息"
 };
 
 const TOOL_PERMISSIONS = {
   create_reminder: ["reminder"],
+  list_reminders: ["reminder"],
+  update_reminder: ["reminder"],
+  delete_reminder: ["reminder"],
   list_calendar_events: ["calendarRead"],
   create_calendar_event: ["calendarWrite"],
+  update_calendar_event: ["calendarWrite"],
+  delete_calendar_event: ["calendarWrite"],
   get_weather: ["location"],
   search_places: ["location"],
   open_navigation: ["location"],
@@ -21,13 +28,23 @@ const TOOL_PERMISSIONS = {
   resume_music: ["music"],
   skip_music_track: ["music"],
   get_playback_state: ["music"],
-  prepare_message: ["contacts", "messages"]
+  prepare_message: ["contacts", "messages"],
+  list_memory: [],
+  set_memory: [],
+  delete_memory: [],
+  search_web: [],
+  fetch_web_content: []
 };
 
 export const DEVICE_TOOLS = new Set([
   "create_reminder",
+  "list_reminders",
+  "update_reminder",
+  "delete_reminder",
   "list_calendar_events",
   "create_calendar_event",
+  "update_calendar_event",
+  "delete_calendar_event",
   "get_weather",
   "get_activity_summary",
   "search_places",
@@ -38,7 +55,12 @@ export const DEVICE_TOOLS = new Set([
   "pause_music",
   "resume_music",
   "skip_music_track",
-  "get_playback_state"
+  "get_playback_state",
+  "list_memory",
+  "set_memory",
+  "delete_memory",
+  "search_web",
+  "fetch_web_content"
 ]);
 
 export function isDeviceTool(name) {

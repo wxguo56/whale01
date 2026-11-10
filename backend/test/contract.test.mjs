@@ -7,14 +7,20 @@ import { isDeviceTool } from "../src/capabilities.mjs";
 const config = loadConfig({ MODEL_MODE: "mock" });
 const registry = ToolRegistry.fromFile(config.paths.tools, config.paths.toolDefinition);
 
-test("工具目录覆盖总纲要求的 9 个工具与 6 个音乐工具", () => {
+test("工具目录覆盖系统操作、记录修改、记忆与公开信息能力", () => {
   assert.deepEqual(registry.names().sort(), [
     "create_calendar_event",
     "create_reminder",
+    "delete_calendar_event",
+    "delete_memory",
+    "delete_reminder",
+    "fetch_web_content",
     "get_activity_summary",
     "get_playback_state",
     "get_weather",
     "list_calendar_events",
+    "list_memory",
+    "list_reminders",
     "open_navigation",
     "pause_music",
     "play_music",
@@ -22,8 +28,12 @@ test("工具目录覆盖总纲要求的 9 个工具与 6 个音乐工具", () =>
     "resume_music",
     "search_music_library",
     "search_places",
+    "search_web",
+    "set_memory",
     "skip_music_track",
-    "summarize_shared_content"
+    "summarize_shared_content",
+    "update_calendar_event",
+    "update_reminder"
   ]);
 });
 

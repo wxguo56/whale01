@@ -6,7 +6,7 @@ struct RecordsView: View {
 
     private struct DayGroup: Identifiable {
         let day: Date
-        let items: [NativeActionRecord]
+        let items: [OperationRecord]
         var id: Date { day }
     }
 
@@ -24,9 +24,12 @@ struct RecordsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    if groups.isEmpty {
+                    if groups.isEmpty && model.taskRecords.isEmpty {
                         emptyState
                     } else {
+                        if !model.taskRecords.isEmpty {
+                            taskSection
+                        }
                         ForEach(groups) { group in
                             Text(label(for: group.day))
                                 .font(.system(size: 13, weight: .medium))
@@ -45,6 +48,51 @@ struct RecordsView: View {
             }
             .scrollIndicators(.hidden)
         }
+    }
+
+    private var taskSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("最近任务")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(WhaleTheme.muted)
+                .padding(.top, 18)
+            ForEach(model.taskRecords.prefix(8)) { task in
+                taskCard(task)
+            }
+        }
+    }
+
+    private func taskCard(_ task: TaskRecord) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.triangle.branch")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.accent)
+                Text(task.goal)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .lineLimit(2)
+                Spacer()
+                Text(taskStatusText(task.status))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(taskStatusColor(task.status))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(taskStatusColor(task.status).opacity(0.12), in: Capsule())
+            }
+            HStack(spacing: 8) {
+                Text(task.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                if let reply = task.reply, !reply.isEmpty {
+                    Text("·")
+                    Text(reply)
+                        .lineLimit(1)
+                }
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(WhaleTheme.muted)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .whaleCard(padding: 15)
     }
 
     private var header: some View {
@@ -89,7 +137,7 @@ struct RecordsView: View {
         .padding(.horizontal, 24)
     }
 
-    private func recordCard(_ action: NativeActionRecord) -> some View {
+    private func recordCard(_ action: OperationRecord) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: action.icon)
@@ -125,6 +173,27 @@ struct RecordsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .whaleCard(padding: 17)
+    }
+
+    private func taskStatusText(_ status: String) -> String {
+        switch status {
+        case "completed": return "已完成"
+        case "completed_with_limits": return "部分完成"
+        case "awaiting_confirmation": return "待确认"
+        case "awaiting_tool_results": return "执行中"
+        case "failed": return "失败"
+        case "interrupted": return "已中断"
+        default: return "进行中"
+        }
+    }
+
+    private func taskStatusColor(_ status: String) -> Color {
+        switch status {
+        case "completed": return WhaleTheme.success
+        case "completed_with_limits", "awaiting_confirmation": return WhaleTheme.warm
+        case "failed", "interrupted": return WhaleTheme.danger
+        default: return WhaleTheme.accent
+        }
     }
 
     private func label(for day: Date) -> String {

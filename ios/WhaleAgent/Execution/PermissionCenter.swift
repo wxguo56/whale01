@@ -21,8 +21,13 @@ final class PermissionCenter: ObservableObject {
 
     static let toolPermissions: [String: [String]] = [
         "create_reminder": ["reminder"],
+        "list_reminders": ["reminder"],
+        "update_reminder": ["reminder"],
+        "delete_reminder": ["reminder"],
         "list_calendar_events": ["calendarRead"],
         "create_calendar_event": ["calendarWrite"],
+        "update_calendar_event": ["calendarWrite"],
+        "delete_calendar_event": ["calendarWrite"],
         "get_weather": ["location"],
         "search_places": ["location"],
         "open_navigation": ["location"],
@@ -33,7 +38,12 @@ final class PermissionCenter: ObservableObject {
         "resume_music": ["music"],
         "skip_music_track": ["music"],
         "get_playback_state": ["music"],
-        "prepare_message": ["contacts", "messages"]
+        "prepare_message": ["contacts", "messages"],
+        "list_memory": [],
+        "set_memory": [],
+        "delete_memory": [],
+        "search_web": [],
+        "fetch_web_content": []
     ]
 
     @Published private(set) var statuses: [String: String] = [:]

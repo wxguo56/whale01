@@ -34,6 +34,7 @@ export class MockDeviceExecutor {
     this.now = now;
     this.musicSessions = new Map();
     this.extraTracks = new Map();
+    this.memories = new Map();
   }
 
   seedTracks(tracks = []) {
@@ -84,6 +85,11 @@ export class MockDeviceExecutor {
       "list_calendar_events",
       "create_calendar_event",
       "create_reminder",
+      "list_reminders",
+      "update_reminder",
+      "delete_reminder",
+      "update_calendar_event",
+      "delete_calendar_event",
       "get_activity_summary",
       "search_places",
       "open_navigation",
@@ -94,7 +100,12 @@ export class MockDeviceExecutor {
       "pause_music",
       "resume_music",
       "skip_music_track",
-      "get_playback_state"
+      "get_playback_state",
+      "list_memory",
+      "set_memory",
+      "delete_memory",
+      "search_web",
+      "fetch_web_content"
     ];
   }
 
@@ -116,10 +127,20 @@ export class MockDeviceExecutor {
     switch (tool) {
       case "create_reminder":
         return this.#createReminder({ args, operationId, turnId });
+      case "list_reminders":
+        return this.#listReminders(args);
+      case "update_reminder":
+        return this.#updateReminder(args);
+      case "delete_reminder":
+        return this.#deleteReminder(args);
       case "list_calendar_events":
         return this.#listCalendarEvents(args);
       case "create_calendar_event":
         return this.#createCalendarEvent({ args, operationId, turnId });
+      case "update_calendar_event":
+        return this.#updateCalendarEvent(args);
+      case "delete_calendar_event":
+        return this.#deleteCalendarEvent(args);
       case "get_weather":
         return this.#getWeather(args);
       case "get_activity_summary":
@@ -144,6 +165,16 @@ export class MockDeviceExecutor {
         return this.#skipMusic(args, conversationId);
       case "get_playback_state":
         return this.#playbackState(conversationId);
+      case "list_memory":
+        return this.#listMemory();
+      case "set_memory":
+        return this.#setMemory(args);
+      case "delete_memory":
+        return this.#deleteMemory(args);
+      case "search_web":
+        return this.#searchWeb(args);
+      case "fetch_web_content":
+        return this.#fetchWebContent(args);
       default:
         return {
           status: "unsupported",
@@ -199,6 +230,103 @@ export class MockDeviceExecutor {
     });
   }
 
+  async #listReminders(args = {}) {
+    const records = await this.#readJson(this.remindersPath, []);
+    const includeCompleted = args.includeCompleted === true;
+    const start = args.startAt ? Date.parse(args.startAt) : null;
+    const end = args.endAt ? Date.parse(args.endAt) : null;
+    const limit = Math.max(1, Math.min(args.limit ?? 50, 100));
+    const reminders = records
+      .filter((record) => includeCompleted || !record.completed)
+      .filter((record) => {
+        if (start === null && end === null) return true;
+        if (!record.dueAt) return false;
+        const due = Date.parse(record.dueAt);
+        if (Number.isNaN(due)) return false;
+        if (start !== null && due < start) return false;
+        if (end !== null && due >= end) return false;
+        return true;
+      })
+      .sort((left, right) => {
+        if (!left.dueAt) return 1;
+        if (!right.dueAt) return -1;
+        return Date.parse(left.dueAt) - Date.parse(right.dueAt);
+      })
+      .slice(0, limit)
+      .map((record) => ({
+        recordId: record.recordId,
+        title: record.title,
+        dueAt: record.dueAt ?? null,
+        completed: record.completed === true,
+        listName: record.listName ?? "提醒事项",
+        notes: record.notes ?? null
+      }));
+    return this.#success({
+      reminders,
+      count: reminders.length,
+      source: "mock_reminders",
+      simulated: true
+    });
+  }
+
+  async #updateReminder(args = {}) {
+    const records = await this.#readJson(this.remindersPath, []);
+    const index = this.#findReminderIndex(records, args);
+    if (index < 0) return this.#failure("reminder_not_found", "没有找到匹配的提醒，请先查询确认");
+    const record = records[index];
+    if (args.newTitle) record.title = args.newTitle;
+    else if (args.recordId && args.title) record.title = args.title;
+    if (args.dueAt !== undefined) {
+      if (args.dueAt && Number.isNaN(Date.parse(args.dueAt))) {
+        return this.#failure("invalid_due_at", "dueAt 无法解析");
+      }
+      record.dueAt = args.dueAt || null;
+    }
+    if (args.completed !== undefined) {
+      record.completed = args.completed === true;
+      record.completionDate = record.completed ? new Date().toISOString() : null;
+    }
+    if (args.notes !== undefined) record.notes = args.notes;
+    if (args.listId) record.listName = args.listId;
+    records[index] = record;
+    await this.#writeJson(this.remindersPath, records);
+    return this.#success({
+      recordId: record.recordId,
+      title: record.title,
+      dueAt: record.dueAt ?? null,
+      completed: record.completed === true,
+      listName: record.listName ?? "提醒事项",
+      simulated: true
+    });
+  }
+
+  async #deleteReminder(args = {}) {
+    const records = await this.#readJson(this.remindersPath, []);
+    const index = this.#findReminderIndex(records, args);
+    if (index < 0) return this.#failure("reminder_not_found", "没有找到匹配的提醒，请先查询确认");
+    const [removed] = records.splice(index, 1);
+    await this.#writeJson(this.remindersPath, records);
+    return this.#success({
+      recordId: removed.recordId,
+      title: removed.title,
+      deleted: true,
+      simulated: true
+    });
+  }
+
+  #findReminderIndex(records, args = {}) {
+    if (args.recordId) return records.findIndex((record) => record.recordId === args.recordId);
+    if (!args.title) return -1;
+    const title = String(args.title).trim();
+    const expectedDue = args.dueAt ? Date.parse(args.dueAt) : null;
+    return records.findIndex((record) => {
+      if ((record.title ?? "").trim() !== title) return false;
+      if (expectedDue === null) return true;
+      if (!record.dueAt) return false;
+      return Math.abs(Date.parse(record.dueAt) - expectedDue) < 60_000;
+    });
+  }
+
   async #listCalendarEvents(args) {
     const start = Date.parse(args.startAt);
     const end = Date.parse(args.endAt);
@@ -249,6 +377,45 @@ export class MockDeviceExecutor {
       startAt: event.startAt,
       endAt: event.endAt,
       calendarId: event.calendarId,
+      simulated: true
+    });
+  }
+
+  async #updateCalendarEvent(args = {}) {
+    const records = await this.#readJson(this.calendarPath, []);
+    const index = records.findIndex((event) => event.eventId === args.eventId);
+    if (index < 0) return this.#failure("event_not_found", "没有找到这条日程，请先查询确认");
+    const event = records[index];
+    if (args.title) event.title = args.title;
+    if (args.startAt) {
+      if (Number.isNaN(Date.parse(args.startAt))) return this.#failure("invalid_time_range", "startAt 无法解析");
+      event.startAt = args.startAt;
+    }
+    if (args.endAt) {
+      if (Number.isNaN(Date.parse(args.endAt))) return this.#failure("invalid_time_range", "endAt 无法解析");
+      event.endAt = args.endAt;
+    }
+    if (Date.parse(event.endAt) <= Date.parse(event.startAt)) {
+      return this.#failure("invalid_time_range", "结束时间必须晚于开始时间");
+    }
+    if (args.location !== undefined) event.location = args.location;
+    if (args.notes !== undefined) event.notes = args.notes;
+    if (args.calendarId) event.calendarId = args.calendarId;
+    records[index] = event;
+    await this.#writeJson(this.calendarPath, records);
+    return this.#success({ ...event, simulated: true });
+  }
+
+  async #deleteCalendarEvent(args = {}) {
+    const records = await this.#readJson(this.calendarPath, []);
+    const index = records.findIndex((event) => event.eventId === args.eventId);
+    if (index < 0) return this.#failure("event_not_found", "没有找到这条日程，请先查询确认");
+    const [removed] = records.splice(index, 1);
+    await this.#writeJson(this.calendarPath, records);
+    return this.#success({
+      eventId: removed.eventId,
+      title: removed.title,
+      deleted: true,
       simulated: true
     });
   }
@@ -448,6 +615,69 @@ export class MockDeviceExecutor {
       audioOutput: false,
       note: "模拟播放状态，没有真实音频输出"
     };
+  }
+
+  #listMemory() {
+    const memories = [...this.memories.values()];
+    return this.#success({
+      memories,
+      count: memories.length,
+      source: "mock_memory",
+      simulated: true,
+      note: "偏好只用于建议，不构成长期操作授权"
+    });
+  }
+
+  #setMemory(args = {}) {
+    const key = String(args.key ?? "").trim();
+    const value = String(args.value ?? "").trim();
+    if (!key || !value) return this.#failure("memory_invalid", "偏好名称和内容不能为空");
+    if (key.length > 40 || value.length > 500) {
+      return this.#failure("memory_invalid", "偏好名称最多 40 个字符，内容最多 500 个字符");
+    }
+    const id = key.toLowerCase();
+    const memory = { id, key, value, updatedAt: new Date().toISOString(), simulated: true };
+    this.memories.set(id, memory);
+    return this.#success(memory);
+  }
+
+  #deleteMemory(args = {}) {
+    const id = args.id ?? args.key ?? "";
+    const deleted = this.memories.delete(String(id).toLowerCase());
+    return this.#success({ id, deleted, simulated: true });
+  }
+
+  #searchWeb(args = {}) {
+    const query = String(args.query ?? "").trim();
+    if (!query) return this.#failure("empty_query", "搜索关键词不能为空");
+    return this.#success({
+      query,
+      results: [
+        {
+          title: `模拟搜索结果：${query}`,
+          url: "https://example.com/mock-result",
+          snippet: "这是模拟结果，不代表真实网页内容；真实运行时会读取公开网页。"
+        }
+      ],
+      count: 1,
+      source: "mock_search",
+      simulated: true,
+      note: "模拟结果，不能作为价格或事实依据"
+    });
+  }
+
+  #fetchWebContent(args = {}) {
+    return this.#success({
+      url: args.url,
+      finalURL: args.url,
+      title: "模拟网页",
+      text: "这是模拟网页正文，仅用于演示工具闭环，不代表真实网页已经读取。",
+      charCount: 30,
+      truncated: false,
+      source: "mock_web",
+      simulated: true,
+      note: "模拟正文，不能作为价格或事实依据"
+    });
   }
 
   #success(data, deduplicated = false) {

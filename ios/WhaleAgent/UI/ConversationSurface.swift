@@ -1,4 +1,6 @@
+import PhotosUI
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// The single conversation surface. Sending, voice and results all stay on the
 /// home page; nothing is pushed and no voice sheet is presented.
@@ -8,6 +10,10 @@ struct ConversationSurface: View {
 
     @StateObject private var voice = VoiceInputController()
     @FocusState private var inputFocused: Bool
+    @State private var showPhotoPicker = false
+    @State private var photoItem: PhotosPickerItem?
+    @State private var showFileImporter = false
+    @State private var importError: String?
 
     private let suggestions: [(title: String, prompt: String)] = [
         ("附近吃点什么", "找我附近两公里内的餐厅，帮我看看价格。"),
@@ -39,6 +45,17 @@ struct ConversationSurface: View {
             if !voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 inputFocused = true
             }
+        }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $photoItem, matching: .images, photoLibrary: .shared())
+        .onChange(of: photoItem) { _, _ in
+            Task { await ingestPhoto() }
+        }
+        .fileImporter(
+            isPresented: $showFileImporter,
+            allowedContentTypes: [.pdf, .image],
+            allowsMultipleSelection: false
+        ) { result in
+            handleImportedFile(result)
         }
     }
 
@@ -94,7 +111,7 @@ struct ConversationSurface: View {
         .scrollIndicators(.hidden)
     }
 
-    private func recentCard(_ action: NativeActionRecord) -> some View {
+    private func recentCard(_ action: OperationRecord) -> some View {
         Button(action: onOpenRecords) {
             HStack(spacing: 12) {
                 WhaleIconTile(systemName: action.icon, size: 38)
@@ -215,6 +232,34 @@ struct ConversationSurface: View {
             }
 
             HStack(alignment: .bottom, spacing: 9) {
+                Menu {
+                    Button {
+                        showPhotoPicker = true
+                    } label: {
+                        Label("从照片识别", systemImage: "photo")
+                    }
+                    Button {
+                        showFileImporter = true
+                    } label: {
+                        Label("从文件识别 PDF/图片", systemImage: "doc")
+                    }
+                } label: {
+                    Group {
+                        if model.isExtractingDocument {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "paperclip")
+                                .font(.system(size: 19, weight: .medium))
+                                .foregroundStyle(WhaleTheme.ink)
+                        }
+                    }
+                    .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .disabled(model.isBusy || model.isExtractingDocument)
+                .opacity(model.isBusy || model.isExtractingDocument ? 0.45 : 1)
+                .accessibilityLabel("导入照片或文件识别文字")
+
                 Button {
                     inputFocused = false
                     Task { await voice.toggle() }
@@ -282,6 +327,15 @@ struct ConversationSurface: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
             }
+
+            if let importError {
+                Text(importError)
+                    .font(.system(size: 11))
+                    .foregroundStyle(WhaleTheme.warm)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+            }
         }
         .background {
             Rectangle()
@@ -329,5 +383,42 @@ struct ConversationSurface: View {
         model.input = text
         inputFocused = false
         Task { await model.send() }
+    }
+
+    private func ingestPhoto() async {
+        guard let item = photoItem else { return }
+        photoItem = nil
+        importError = nil
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else {
+                importError = "没有读到照片数据，请换一张图片。"
+                return
+            }
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("whale-ocr-\(UUID().uuidString).img")
+            try data.write(to: url, options: .atomic)
+            await model.ingestDocument(url: url, label: "照片")
+            try? FileManager.default.removeItem(at: url)
+        } catch {
+            importError = error.localizedDescription
+        }
+    }
+
+    private func handleImportedFile(_ result: Result<[URL], Error>) {
+        importError = nil
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            let access = url.startAccessingSecurityScopedResource()
+            Task {
+                defer {
+                    if access { url.stopAccessingSecurityScopedResource() }
+                }
+                let label = url.pathExtension.lowercased() == "pdf" ? "PDF" : "图片"
+                await model.ingestDocument(url: url, label: label)
+            }
+        case .failure(let error):
+            importError = error.localizedDescription
+        }
     }
 }

@@ -52,3 +52,53 @@ test("操作日志在重启后可读，started 状态可被识别", async () => 
   assert.equal(entry.status, "started");
   assert.equal(entry.tool, "create_reminder");
 });
+
+test("提醒可查询、改期、标记完成并删除，不会新增重复记录", async () => {
+  const { dir } = await createTestRuntime();
+  const remindersPath = join(dir, "reminders.json");
+  const executor = new MockDeviceExecutor({ remindersPath });
+  const created = await executor.execute({
+    tool: "create_reminder",
+    arguments: { title: "交报告", dueAt: "2026-11-11T15:00:00+08:00", timezone: "Asia/Shanghai" },
+    operationId: "op_reminder_lifecycle",
+    turnId: "turn_test"
+  });
+  assert.equal(created.status, "success");
+
+  const listed = await executor.execute({ tool: "list_reminders", arguments: {} });
+  assert.equal(listed.data.count, 1);
+
+  const updated = await executor.execute({
+    tool: "update_reminder",
+    arguments: { recordId: created.data.recordId, dueAt: "2026-11-11T16:00:00+08:00", completed: true }
+  });
+  assert.equal(updated.status, "success");
+  assert.equal(updated.data.completed, true);
+  const recordsAfterUpdate = JSON.parse(await readFile(remindersPath, "utf8"));
+  assert.equal(recordsAfterUpdate.length, 1);
+
+  const deleted = await executor.execute({
+    tool: "delete_reminder",
+    arguments: { recordId: created.data.recordId }
+  });
+  assert.equal(deleted.data.deleted, true);
+  const remaining = JSON.parse(await readFile(remindersPath, "utf8"));
+  assert.equal(remaining.length, 0);
+});
+
+test("偏好可保存、读取和删除，搜索结果明确标注模拟", async () => {
+  const executor = new MockDeviceExecutor({});
+  const saved = await executor.execute({
+    tool: "set_memory",
+    arguments: { key: "饮食", value: "不吃辣" }
+  });
+  assert.equal(saved.status, "success");
+  const listed = await executor.execute({ tool: "list_memory", arguments: {} });
+  assert.equal(listed.data.count, 1);
+  const removed = await executor.execute({ tool: "delete_memory", arguments: { key: "饮食" } });
+  assert.equal(removed.data.deleted, true);
+
+  const search = await executor.execute({ tool: "search_web", arguments: { query: "杭州烧烤" } });
+  assert.equal(search.status, "success");
+  assert.equal(search.data.simulated, true);
+});
