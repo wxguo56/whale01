@@ -179,7 +179,7 @@ final class SystemMusicLibrary {
 
         queue = items
         player.setQueue(with: MPMediaItemCollection(items: items))
-        player.prepareToPlay()
+        try await player.prepareToPlay()
         player.play()
         try await Task.sleep(nanoseconds: 900_000_000)
 
@@ -196,7 +196,7 @@ final class SystemMusicLibrary {
 
         queue = [item]
         player.setQueue(with: MPMediaItemCollection(items: [item]))
-        player.prepareToPlay()
+        try await player.prepareToPlay()
         player.play()
         try await Task.sleep(nanoseconds: 900_000_000)
 
