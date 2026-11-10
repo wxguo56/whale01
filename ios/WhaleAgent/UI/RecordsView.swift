@@ -3,6 +3,7 @@ import SwiftUI
 struct RecordsView: View {
     @ObservedObject var model: AppModel
     var onBackToChat: () -> Void = {}
+    @State private var filter = "all"
 
     private struct DayGroup: Identifiable {
         let day: Date
@@ -12,9 +13,20 @@ struct RecordsView: View {
 
     private var groups: [DayGroup] {
         let calendar = Calendar.current
-        let grouped = Dictionary(grouping: model.recentActions) { calendar.startOfDay(for: $0.createdAt) }
+        let grouped = Dictionary(grouping: filteredActions) { calendar.startOfDay(for: $0.createdAt) }
         return grouped.keys.sorted(by: >).map { day in
             DayGroup(day: day, items: grouped[day]?.sorted { $0.createdAt > $1.createdAt } ?? [])
+        }
+    }
+
+    private var filteredActions: [OperationRecord] {
+        switch filter {
+        case "success":
+            return model.recentActions.filter(\.isSuccess)
+        case "review":
+            return model.recentActions.filter { !$0.isSuccess }
+        default:
+            return model.recentActions
         }
     }
 
@@ -27,6 +39,10 @@ struct RecordsView: View {
                     if groups.isEmpty && model.taskRecords.isEmpty {
                         emptyState
                     } else {
+                        summaryCard
+                            .padding(.top, 14)
+                        filterRow
+                            .padding(.top, 12)
                         if !model.taskRecords.isEmpty {
                             taskSection
                         }
@@ -44,10 +60,73 @@ struct RecordsView: View {
                     }
                 }
                 .padding(.horizontal, WhaleTheme.pagePadding)
-                .padding(.bottom, 28)
+                .padding(.bottom, WhaleTabBar.height + 34)
             }
             .scrollIndicators(.hidden)
         }
+    }
+
+    private var recentWeekActions: [OperationRecord] {
+        let start = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? .distantPast
+        return model.recentActions.filter { $0.createdAt >= start }
+    }
+
+    private var summaryCard: some View {
+        let actions = recentWeekActions
+        let done = actions.filter(\.isSuccess).count
+        let review = actions.count - done
+        return HStack(spacing: 0) {
+            summaryMetric("\(actions.count)", label: "最近 7 天", tint: WhaleTheme.ink)
+            summaryDivider
+            summaryMetric("\(done)", label: "已完成", tint: WhaleTheme.success)
+            summaryDivider
+            summaryMetric("\(review)", label: "待核对", tint: WhaleTheme.coral)
+        }
+        .whaleCard(padding: 16)
+    }
+
+    private func summaryMetric(_ value: String, label: String, tint: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundStyle(tint)
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(WhaleTheme.muted)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var summaryDivider: some View {
+        Rectangle()
+            .fill(WhaleTheme.line)
+            .frame(width: 0.5, height: 30)
+    }
+
+    private var filterRow: some View {
+        HStack(spacing: 8) {
+            filterChip("all", title: "全部")
+            filterChip("success", title: "已完成")
+            filterChip("review", title: "待核对")
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func filterChip(_ key: String, title: String) -> some View {
+        Button {
+            withAnimation(.snappy(duration: 0.22)) { filter = key }
+        } label: {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(filter == key ? WhaleTheme.onAccent : WhaleTheme.muted)
+                .padding(.horizontal, 12)
+                .frame(height: 30)
+                .background(
+                    filter == key ? WhaleTheme.accent : WhaleTheme.soft.opacity(0.75),
+                    in: Capsule()
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     private var taskSection: some View {

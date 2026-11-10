@@ -21,7 +21,7 @@ struct RootView: View {
                     HStack(spacing: 0) {
                         ConversationTabView(
                             model: model,
-                            bottomInset: ConversationComposerBar.reservedHeight + keyboardOverlap,
+                            bottomInset: ConversationComposerBar.reservedHeight + WhaleTabBar.height + keyboardOverlap,
                             onOpenRecords: { go(.records) },
                             onOpenSettings: { go(.settings) }
                         )
@@ -48,13 +48,19 @@ struct RootView: View {
                 .scrollDisabled(
                     settingsDetailOpen || showMusic || model.presentedConfirmation != nil || keyboard.isVisible
                 )
-                .background(WhaleTheme.pageGradient)
+                .background(WhaleBackdrop())
 
-                ConversationComposerBar(model: model)
-                    .padding(.bottom, keyboardOverlap)
-                    .opacity(page == .conversation ? 1 : 0)
-                    .allowsHitTesting(page == .conversation)
-                    .accessibilityHidden(page != .conversation)
+                VStack(spacing: 0) {
+                    if page == .conversation {
+                        ConversationComposerBar(model: model)
+                    }
+                    if !keyboard.isVisible && !settingsDetailOpen {
+                        WhaleTabBar(selection: $page)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
+                .padding(.bottom, keyboardOverlap)
+                .animation(.easeInOut(duration: 0.18), value: keyboard.isVisible)
             }
             .background {
                 GeometryReader { geo in
@@ -66,7 +72,7 @@ struct RootView: View {
             }
             .onPreferenceChange(ContentBottomKey.self) { contentBottom = $0 }
         }
-        .background(WhaleTheme.pageGradient.ignoresSafeArea())
+        .background(WhaleBackdrop())
         .tint(WhaleTheme.accent)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if let track = model.playback.track {
@@ -253,7 +259,7 @@ private struct ConfirmationSheet: View {
                 }
                 .padding(20)
             }
-            .background(WhaleTheme.pageGradient)
+            .background(WhaleBackdrop())
             .navigationTitle("确认操作")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -12,12 +12,6 @@ struct ConversationSurface: View {
     let bottomInset: CGFloat
     let onOpenRecords: () -> Void
 
-    private let suggestions: [(title: String, prompt: String)] = [
-        ("附近吃点什么", "找我附近两公里内的餐厅，帮我看看价格。"),
-        ("看看今天安排", "帮我看看今天和最近的日程安排。"),
-        ("定个提醒", "帮我定一个提醒。")
-    ]
-
     var body: some View {
         VStack(spacing: 0) {
             if !model.backendOnline || model.errorText != nil {
@@ -35,82 +29,11 @@ struct ConversationSurface: View {
     // MARK: - Empty home
 
     private var homeCanvas: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("今天想做点什么？")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                    .foregroundStyle(WhaleTheme.ink)
-                    .padding(.top, 28)
-
-                Text("说一句，我来办。写入系统前会先请你确认。")
-                    .font(.system(size: 14))
-                    .foregroundStyle(WhaleTheme.muted)
-                    .padding(.top, 8)
-
-                WhaleFlowLayout(spacing: 8, lineSpacing: 8) {
-                    ForEach(suggestions.indices, id: \.self) { index in
-                        Button {
-                            send(suggestions[index].prompt)
-                        } label: {
-                            Text(suggestions[index].title)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(WhaleTheme.ink)
-                                .whaleChip()
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.top, 22)
-
-                if let recent = model.recentActions.first {
-                    recentCard(recent)
-                }
-
-                if model.isBusy {
-                    HStack(spacing: 10) {
-                        ProgressView().controlSize(.small)
-                        Text(model.statusLine)
-                            .font(.system(size: 13))
-                            .foregroundStyle(WhaleTheme.muted)
-                            .lineLimit(2)
-                    }
-                    .padding(.top, 20)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, WhaleTheme.pagePadding)
-            .padding(.bottom, 24 + bottomInset)
-        }
-        .scrollIndicators(.hidden)
-        .onTapGesture { dismissKeyboard() }
-    }
-
-    private func recentCard(_ action: OperationRecord) -> some View {
-        Button(action: onOpenRecords) {
-            HStack(spacing: 12) {
-                WhaleIconTile(systemName: action.icon, size: 38)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("最近一次")
-                        .font(.system(size: 12))
-                        .foregroundStyle(WhaleTheme.muted)
-                    Text(action.title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.ink)
-                        .lineLimit(1)
-                }
-                Spacer()
-                Text(action.isSuccess ? "已完成" : "待核对")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(action.isSuccess ? WhaleTheme.success : WhaleTheme.warm)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.muted)
-            }
-            .whaleCard(padding: 14)
-        }
-        .buttonStyle(.plain)
-        .padding(.top, 20)
-        .accessibilityHint("打开任务与记录")
+        WhaleHomeCanvas(
+            model: model,
+            bottomInset: bottomInset,
+            onOpenRecords: onOpenRecords
+        )
     }
 
     // MARK: - Conversation

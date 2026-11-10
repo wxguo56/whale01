@@ -44,7 +44,7 @@ struct SettingsView: View {
                     aboutCard
                 }
                 .padding(.horizontal, WhaleTheme.pagePadding)
-                .padding(.bottom, 28)
+                .padding(.bottom, WhaleTabBar.height + 34)
             }
             .scrollIndicators(.hidden)
             .toolbar(.hidden, for: .navigationBar)
@@ -87,9 +87,7 @@ struct SettingsView: View {
 
     private var identityCard: some View {
         HStack(spacing: 14) {
-            Image(systemName: "waveform.circle.fill")
-                .font(.system(size: 44))
-                .foregroundStyle(WhaleTheme.accent)
+            WhaleMarkView(size: 48)
             VStack(alignment: .leading, spacing: 4) {
                 Text("鲸鱼")
                     .font(.system(size: 20, weight: .bold))

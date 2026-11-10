@@ -20,23 +20,30 @@ extension Color {
 }
 
 enum WhaleTheme {
-    static let accent = Color(light: 0x5856D6, dark: 0x8B8AF0)
-    static let accentDeep = Color(light: 0x433FC0, dark: 0x7B79E8)
-    static let accentSoft = Color(light: 0xECEBFB, dark: 0x2A2A4A)
-    static let ink = Color(light: 0x1D1D1F, dark: 0xF5F6FA)
-    static let muted = Color(light: 0x6B6B70, dark: 0xB9BDD0)
-    static let background = Color(light: 0xF6F8FC, dark: 0x101725)
-    static let card = Color(light: 0xFFFFFF, dark: 0x1B2434)
-    static let cardSolid = Color(light: 0xE3E9F5, dark: 0x232A42)
-    static let soft = Color(light: 0xEEF0FA, dark: 0x232A42)
-    static let line = Color(light: 0xE1E3F2, dark: 0x34405C)
+    // Abyss Aurora: deep-sea surfaces, mint aurora, moonlit blue and only a
+    // little coral for time/weather/attention states.
+    static let accent = Color(light: 0x128F86, dark: 0x62EAD6)
+    static let accentDeep = Color(light: 0x0B756F, dark: 0x3CCFC4)
+    static let accentSoft = Color(light: 0xDFF6F2, dark: 0x123B3D)
+    static let moon = Color(light: 0x2E73C8, dark: 0x78B9FF)
+    static let coral = Color(light: 0xD77B3D, dark: 0xFFB27A)
+    static let ink = Color(light: 0x102522, dark: 0xF2F8F7)
+    static let muted = Color(light: 0x647772, dark: 0xA6B9B6)
+    static let background = Color(light: 0xF2F8F7, dark: 0x071311)
+    static let card = Color(light: 0xFFFFFF, dark: 0x0D201E)
+    static let cardSolid = Color(light: 0xE7F1EE, dark: 0x142C29)
+    static let soft = Color(light: 0xE7F2EF, dark: 0x132724)
+    static let line = Color(light: 0xD8E6E2, dark: 0x25403C)
+    static let field = Color(light: 0xEAF3F0, dark: 0x0C1D1B)
+    static let chrome = Color(light: 0xF7FBFA, dark: 0x091714)
+    static let onAccent = Color(light: 0x062521, dark: 0x04211E)
     static let glassStroke = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
-            ? UIColor.white.withAlphaComponent(0.14)
-            : UIColor.white.withAlphaComponent(0.65)
+            ? UIColor.white.withAlphaComponent(0.16)
+            : UIColor.white.withAlphaComponent(0.72)
     })
-    static let warm = Color(light: 0xE9A23B, dark: 0xF0B45C)
-    static let success = Color(light: 0x2E9E6B, dark: 0x4FC08D)
+    static let warm = Color(light: 0xC68136, dark: 0xF3BC77)
+    static let success = Color(light: 0x168F68, dark: 0x54DFAF)
     static let danger = Color(light: 0xD34747, dark: 0xF07A7A)
 
     static let cardRadius: CGFloat = 20
@@ -45,16 +52,26 @@ enum WhaleTheme {
 
     static let pageGradient = LinearGradient(
         colors: [
-            Color(light: 0xDCE7F5, dark: 0x0E1220),
-            Color(light: 0xEDE4F2, dark: 0x161B2E),
-            Color(light: 0xF6E8E4, dark: 0x1E1A26)
+            Color(light: 0xE8F5F2, dark: 0x06110F),
+            Color(light: 0xEDF7F7, dark: 0x0A1A19),
+            Color(light: 0xF8FBF7, dark: 0x0B1714)
         ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
 
     static let heroGradient = LinearGradient(
-        colors: [accent, accentDeep],
+        colors: [
+            Color(light: 0x139C91, dark: 0x0B4647),
+            Color(light: 0x1D777C, dark: 0x103338),
+            Color(light: 0x315D74, dark: 0x0B2028)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    static let auroraGradient = LinearGradient(
+        colors: [accent, moon],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
@@ -69,10 +86,13 @@ extension View {
     func whalePrimaryButton() -> some View {
         self
             .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(.white)
+            .foregroundStyle(WhaleTheme.onAccent)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 52)
-            .background(WhaleTheme.accent, in: RoundedRectangle(cornerRadius: WhaleTheme.controlRadius, style: .continuous))
+            .background(
+                WhaleTheme.auroraGradient,
+                in: RoundedRectangle(cornerRadius: WhaleTheme.controlRadius, style: .continuous)
+            )
     }
 }
 
@@ -89,15 +109,83 @@ struct GlassCardStyle: ViewModifier {
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
                         .fill(WhaleTheme.cardSolid)
                 } else {
-                    RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .fill(.ultraThinMaterial)
+                    ZStack {
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .fill(WhaleTheme.card.opacity(0.56))
+                    }
                 }
             }
             .overlay {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
             }
-            .shadow(color: .black.opacity(0.06), radius: 12, y: 6)
+            .shadow(color: .black.opacity(0.12), radius: 18, y: 8)
+    }
+}
+
+/// Full-page atmosphere. The aurora stays behind content, so every card keeps
+/// a dark-to-mint edge and the header/footer can use opaque chrome.
+struct WhaleBackdrop: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        ZStack {
+            WhaleTheme.pageGradient
+
+            Circle()
+                .fill(WhaleTheme.accent.opacity(colorScheme == .dark ? 0.18 : 0.20))
+                .frame(width: 360, height: 360)
+                .blur(radius: 82)
+                .offset(x: -150, y: -300)
+
+            Circle()
+                .fill(WhaleTheme.moon.opacity(colorScheme == .dark ? 0.13 : 0.12))
+                .frame(width: 320, height: 320)
+                .blur(radius: 92)
+                .offset(x: 168, y: -150)
+
+            Ellipse()
+                .fill(WhaleTheme.accentDeep.opacity(colorScheme == .dark ? 0.13 : 0.08))
+                .frame(width: 420, height: 240)
+                .blur(radius: 110)
+                .offset(x: 80, y: 360)
+        }
+        .ignoresSafeArea()
+    }
+}
+
+struct WhaleMarkView: View {
+    var size: CGFloat = 38
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(WhaleTheme.auroraGradient)
+            Circle()
+                .strokeBorder(.white.opacity(0.46), lineWidth: 0.8)
+            Image("WhaleMascot")
+                .resizable()
+                .scaledToFit()
+                .padding(size * 0.12)
+        }
+        .frame(width: size, height: size)
+        .shadow(color: WhaleTheme.accent.opacity(0.25), radius: 10, y: 4)
+        .accessibilityHidden(true)
+    }
+}
+
+struct WhaleChromeBackground: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+            Rectangle()
+                .fill(WhaleTheme.chrome.opacity(reduceTransparency ? 1 : 0.82))
+        }
     }
 }
 

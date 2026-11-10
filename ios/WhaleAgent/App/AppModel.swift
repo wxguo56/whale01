@@ -23,6 +23,7 @@ struct ChatMessage: Identifiable, Equatable, Codable {
     var detail: String?
     var places: [PlaceSummary] = []
     var links: [ResultLink]? = nil
+    var weather: [WeatherDaySummary]? = nil
     var tool: String? = nil
     let createdAt: Date
 
@@ -33,6 +34,7 @@ struct ChatMessage: Identifiable, Equatable, Codable {
         detail: String? = nil,
         places: [PlaceSummary] = [],
         links: [ResultLink]? = nil,
+        weather: [WeatherDaySummary]? = nil,
         tool: String? = nil,
         createdAt: Date = Date()
     ) {
@@ -42,6 +44,7 @@ struct ChatMessage: Identifiable, Equatable, Codable {
         self.detail = detail
         self.places = places
         self.links = links
+        self.weather = weather
         self.tool = tool
         self.createdAt = createdAt
     }
@@ -898,6 +901,7 @@ final class AppModel: ObservableObject {
             places = []
         }
         let links = ToolResultLinks.extract(tool: item.tool, data: result.data)
+        let weather = item.tool == "get_weather" ? WeatherDaySummary.list(from: result.data) : []
         appendMessage(
             ChatMessage(
                 role: .tool,
@@ -905,6 +909,7 @@ final class AppModel: ObservableObject {
                 detail: ToolPresentation.resultDetail(tool: item.tool, status: result.status, data: result.data, error: result.error),
                 places: places,
                 links: links.isEmpty ? nil : links,
+                weather: weather.isEmpty ? nil : weather,
                 tool: item.tool
             )
         )

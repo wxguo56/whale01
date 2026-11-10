@@ -304,18 +304,28 @@ struct MessageRow: View {
                 HStack {
                     Spacer(minLength: 52)
                     Text(message.text)
-                        .font(.system(size: 16))
-                        .foregroundStyle(WhaleTheme.ink)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.white)
                         .textSelection(.enabled)
                         .padding(.horizontal, 15)
                         .padding(.vertical, 12)
-                        .background(WhaleTheme.soft, in: UnevenRoundedRectangle(
+                        .background(WhaleTheme.heroGradient, in: UnevenRoundedRectangle(
                             topLeadingRadius: 19,
                             bottomLeadingRadius: 19,
-                            bottomTrailingRadius: 5,
+                            bottomTrailingRadius: 6,
                             topTrailingRadius: 19,
                             style: .continuous
                         ))
+                        .overlay {
+                            UnevenRoundedRectangle(
+                                topLeadingRadius: 19,
+                                bottomLeadingRadius: 19,
+                                bottomTrailingRadius: 6,
+                                topTrailingRadius: 19,
+                                style: .continuous
+                            )
+                            .strokeBorder(.white.opacity(0.14), lineWidth: 0.8)
+                        }
                 }
             } else if message.role == .assistant {
                 VStack(alignment: .leading, spacing: 6) {
@@ -362,7 +372,9 @@ struct MessageRow: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                if message.places.isEmpty {
+                if message.tool == "get_weather", let weather = message.weather, !weather.isEmpty {
+                    WeatherResultCard(days: weather)
+                } else if message.places.isEmpty {
                     if let links = message.links, !links.isEmpty {
                         ToolLinkCard(
                             title: message.text,
@@ -393,13 +405,16 @@ struct MessageRow: View {
     }
 
     private var byline: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(WhaleTheme.accent)
-                .frame(width: 6, height: 6)
+        HStack(spacing: 7) {
+            WhaleMarkView(size: 22)
             Text("鲸鱼")
-                .font(.system(size: 12))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(WhaleTheme.muted)
+            if let tool = message.tool, !tool.isEmpty {
+                Text("· \(ToolPresentation.title(tool))")
+                    .font(.system(size: 10))
+                    .foregroundStyle(WhaleTheme.muted.opacity(0.7))
+            }
         }
     }
 
@@ -410,6 +425,100 @@ struct MessageRow: View {
                 interpretedSyntax: .inlineOnlyPreservingWhitespace
             )
         )) ?? AttributedString(text)
+    }
+}
+
+struct WeatherResultCard: View {
+    let days: [WeatherDaySummary]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            HStack(spacing: 7) {
+                Image(systemName: "cloud.sun.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.coral)
+                Text("逐日预报")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                Spacer()
+                Text("Open-Meteo")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(WhaleTheme.soft, in: Capsule())
+            }
+
+            if let today = days.first {
+                HStack(alignment: .center, spacing: 14) {
+                    Image(systemName: today.icon)
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(WhaleTheme.coral, WhaleTheme.moon)
+                        .font(.system(size: 37, weight: .medium))
+                        .frame(width: 54, height: 54)
+                        .background(WhaleTheme.coral.opacity(0.09), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(today.dayLabel)
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .tracking(0.7)
+                            .foregroundStyle(WhaleTheme.muted)
+                        Text(today.summary)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundStyle(WhaleTheme.ink)
+                        HStack(spacing: 8) {
+                            Text(today.temperatureText)
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundStyle(WhaleTheme.ink)
+                            if let rain = today.precipitationText {
+                                Text(rain)
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(WhaleTheme.moon)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(WhaleTheme.moon.opacity(0.1), in: Capsule())
+                            }
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+
+                if !today.advice.isEmpty {
+                    Text(today.advice)
+                        .font(.system(size: 11))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 1)
+                }
+            }
+
+            if days.count > 1 {
+                Rectangle()
+                    .fill(WhaleTheme.line)
+                    .frame(height: 0.5)
+
+                HStack(spacing: 0) {
+                    ForEach(Array(days.prefix(4))) { day in
+                        VStack(spacing: 5) {
+                            Text(day.dayLabel)
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(WhaleTheme.muted)
+                                .lineLimit(1)
+                            Image(systemName: day.icon)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(WhaleTheme.coral)
+                            Text(day.temperatureText)
+                                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                .foregroundStyle(WhaleTheme.ink)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+        }
+        .whaleCard(padding: 15)
     }
 }
 
@@ -438,7 +547,7 @@ struct PlaceMapCard: View {
                 }
             }
             .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
-            .frame(height: 168)
+            .frame(height: 178)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -451,28 +560,51 @@ struct PlaceMapCard: View {
             }
             .accessibilityLabel("地图，已标记 \(places.count) 个候选地点")
 
-            if let first = places.first {
-                HStack(spacing: 8) {
-                    Text(first.name)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.ink)
-                        .lineLimit(1)
-                    if first.distanceMeters > 0 {
-                        Text(first.distanceText)
-                            .font(.system(size: 12))
+            ForEach(Array(places.prefix(3))) { place in
+                HStack(spacing: 10) {
+                    Image(systemName: place.id == places.first?.id ? "star.fill" : "mappin")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(place.id == places.first?.id ? WhaleTheme.onAccent : WhaleTheme.muted)
+                        .frame(width: 22, height: 22)
+                        .background(
+                            place.id == places.first?.id ? WhaleTheme.accent : WhaleTheme.soft,
+                            in: Circle()
+                        )
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(place.name)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(WhaleTheme.ink)
+                            .lineLimit(1)
+                        if !place.address.isEmpty {
+                            Text(place.address)
+                                .font(.system(size: 10))
+                                .foregroundStyle(WhaleTheme.muted)
+                                .lineLimit(1)
+                        }
+                    }
+                    Spacer(minLength: 6)
+                    if place.distanceMeters > 0 {
+                        Text(place.distanceText)
+                            .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(WhaleTheme.muted)
                     }
-                    Spacer(minLength: 8)
-                    Button(action: openInMaps) {
-                        Label("打开地图", systemImage: "map")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(WhaleTheme.accent)
-                            .padding(.horizontal, 10)
-                            .frame(minHeight: 44)
-                    }
-                    .buttonStyle(.plain)
                 }
+                .frame(minHeight: 34)
             }
+
+            HStack(spacing: 7) {
+                Image(systemName: "map.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(places.count > 1 ? "在系统地图查看全部 \(places.count) 个地点" : "在系统地图查看路线")
+                    .font(.system(size: 11, weight: .semibold))
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 10, weight: .bold))
+            }
+            .foregroundStyle(WhaleTheme.accent)
+            .frame(minHeight: 34)
+            .padding(.horizontal, 10)
+            .background(WhaleTheme.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .whaleCard(padding: 12)
         .contentShape(Rectangle())

@@ -150,6 +150,88 @@ struct CalendarEventPreview: Identifiable, Equatable {
     }
 }
 
+struct WeatherDaySummary: Identifiable, Equatable, Codable {
+    let date: String
+    let condition: String
+    let summary: String
+    let minimumC: Double?
+    let maximumC: Double?
+    let precipitationChance: Double?
+    let advice: String
+
+    var id: String { date }
+
+    init?(json: JSONValue) {
+        guard let object = json.objectValue else { return nil }
+        let date = object.optionalString("date") ?? ""
+        let summary = object.optionalString("summary") ?? ""
+        guard !date.isEmpty, !summary.isEmpty else { return nil }
+        let temperatures = object.optionalObject("temperatureC")
+        self.date = date
+        self.condition = object.optionalString("condition") ?? "unknown"
+        self.summary = summary
+        self.minimumC = temperatures?.optionalDouble("min")
+        self.maximumC = temperatures?.optionalDouble("max")
+        self.precipitationChance = object.optionalDouble("precipitationChance")
+        self.advice = object.optionalString("advice") ?? ""
+    }
+
+    static func list(from data: JSONValue?) -> [WeatherDaySummary] {
+        guard let object = data?.objectValue else { return [] }
+        if let days = object["days"]?.arrayValue, !days.isEmpty {
+            return days.compactMap { WeatherDaySummary(json: $0) }
+        }
+        return WeatherDaySummary(json: .object(object)).map { [$0] } ?? []
+    }
+
+    var temperatureText: String {
+        switch (minimumC, maximumC) {
+        case let (low?, high?):
+            return "\(Self.degrees(low))° / \(Self.degrees(high))°"
+        case let (nil, high?):
+            return "最高 \(Self.degrees(high))°"
+        case let (low?, nil):
+            return "最低 \(Self.degrees(low))°"
+        default:
+            return "暂无温度"
+        }
+    }
+
+    var precipitationText: String? {
+        guard let precipitationChance else { return nil }
+        return "降水 \(Int(precipitationChance.rounded()))%"
+    }
+
+    var dayLabel: String {
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.dateFormat = "yyyy-MM-dd"
+        guard let parsed = parser.date(from: date) else { return date }
+        let calendar = Calendar.current
+        if calendar.isDateInToday(parsed) { return "今天" }
+        if calendar.isDateInTomorrow(parsed) { return "明天" }
+        return parsed.formatted(.dateTime.month().day().weekday(.abbreviated))
+    }
+
+    var icon: String {
+        switch condition {
+        case "clear": return "sun.max.fill"
+        case "partlyCloudy": return "cloud.sun.fill"
+        case "cloudy": return "cloud.fill"
+        case "fog": return "cloud.fog.fill"
+        case "drizzle", "rain": return "cloud.drizzle.fill"
+        case "heavyRain", "showers": return "cloud.heavyrain.fill"
+        case "snow": return "cloud.snow.fill"
+        case "thunderstorm": return "cloud.bolt.rain.fill"
+        default: return "cloud.sun.fill"
+        }
+    }
+
+    private static func degrees(_ value: Double) -> String {
+        String(format: "%.0f", value)
+    }
+}
+
 struct MusicTrackItem: Identifiable, Equatable {
     let trackId: String
     let title: String

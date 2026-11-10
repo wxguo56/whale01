@@ -20,21 +20,31 @@ struct ConversationTabView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 10) {
-            Image("WhaleMascot")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 38, height: 29)
-                .accessibilityHidden(true)
+        HStack(spacing: 11) {
+            WhaleMarkView(size: 40)
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text("鲸鱼")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.ink)
-                Text(statusText)
-                    .font(.system(size: 12))
-                    .foregroundStyle(WhaleTheme.muted)
-                    .lineLimit(1)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 7) {
+                    Text("鲸鱼")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundStyle(WhaleTheme.ink)
+                    Text("BETA")
+                        .font(.system(size: 8, weight: .black, design: .rounded))
+                        .tracking(0.7)
+                        .foregroundStyle(WhaleTheme.accent)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(WhaleTheme.accent.opacity(0.11), in: Capsule())
+                }
+                HStack(spacing: 5) {
+                    Circle()
+                        .fill(statusColor)
+                        .frame(width: 6, height: 6)
+                    Text(statusText)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .lineLimit(1)
+                }
             }
 
             Spacer(minLength: 6)
@@ -42,41 +52,50 @@ struct ConversationTabView: View {
             Button {
                 model.newConversation()
             } label: {
-                Image(systemName: "square.and.pencil")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(WhaleTheme.ink)
-                    .whaleGlassCircle()
+                HStack(spacing: 6) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("新对话")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundStyle(WhaleTheme.ink)
+                .padding(.horizontal, 12)
+                .frame(height: 38)
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay {
+                    Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+                }
             }
             .buttonStyle(.plain)
             .accessibilityLabel("开启新会话")
-
-            Button(action: onOpenRecords) {
-                Image(systemName: "clock")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(WhaleTheme.ink)
-                    .whaleGlassCircle()
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("任务与记录")
-
-            Button(action: onOpenSettings) {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(WhaleTheme.ink)
-                    .whaleGlassCircle()
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("设置")
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 4)
-        .padding(.bottom, 2)
+        .padding(.horizontal, 18)
+        .padding(.top, 8)
+        .padding(.bottom, 9)
+        .background {
+            WhaleChromeBackground()
+                .ignoresSafeArea(edges: .top)
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(WhaleTheme.glassStroke)
+                .frame(height: 0.5)
+        }
     }
 
     private var statusText: String {
         if model.isExecutingTool { return "正在执行设备操作…" }
         if model.isBusy { return "正在处理…" }
         if !model.backendOnline { return "当前离线" }
-        return "随时和我说"
+        if let track = model.playback.track {
+            return track.isLocal ? "正在连接你的本机音乐" : "随时和我说"
+        }
+        return "说一句，鲸鱼来办"
+    }
+
+    private var statusColor: Color {
+        if model.isBusy || model.isExecutingTool { return WhaleTheme.coral }
+        if !model.backendOnline { return WhaleTheme.warm }
+        return WhaleTheme.success
     }
 }

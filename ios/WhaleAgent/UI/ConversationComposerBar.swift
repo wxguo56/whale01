@@ -70,10 +70,10 @@ struct ConversationComposerBar: View {
                     .focused($focused)
                     .padding(.horizontal, 15)
                     .padding(.vertical, 11)
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .background(WhaleTheme.field, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+                            .strokeBorder(WhaleTheme.line, lineWidth: 0.8)
                     }
                     .disabled(model.isBusy)
                     .submitLabel(.send)
@@ -96,9 +96,10 @@ struct ConversationComposerBar: View {
                 Button(action: submit) {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(WhaleTheme.onAccent)
                         .frame(width: 44, height: 44)
-                        .background(WhaleTheme.accent, in: Circle())
+                        .background(WhaleTheme.auroraGradient, in: Circle())
+                        .shadow(color: WhaleTheme.accent.opacity(0.22), radius: 8, y: 3)
                 }
                 .disabled(model.isBusy || isDraftEmpty)
                 .opacity(model.isBusy || isDraftEmpty ? 0.45 : 1)
@@ -127,13 +128,12 @@ struct ConversationComposerBar: View {
             }
         }
         .background {
-            Rectangle()
-                .fill(.regularMaterial)
+            WhaleChromeBackground()
                 .ignoresSafeArea(edges: .bottom)
         }
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(WhaleTheme.glassStroke)
+                .fill(WhaleTheme.line.opacity(0.7))
                 .frame(height: 0.5)
         }
         .photosPicker(
