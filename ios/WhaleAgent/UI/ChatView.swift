@@ -1,5 +1,6 @@
 import MapKit
 import SwiftUI
+import UIKit
 
 #if LEGACY_FULLSCREEN_CHAT
 struct ChatView: View {
@@ -305,6 +306,7 @@ struct MessageRow: View {
                     Text(message.text)
                         .font(.system(size: 16))
                         .foregroundStyle(WhaleTheme.ink)
+                        .textSelection(.enabled)
                         .padding(.horizontal, 15)
                         .padding(.vertical, 12)
                         .background(WhaleTheme.soft, in: UnevenRoundedRectangle(
@@ -323,6 +325,7 @@ struct MessageRow: View {
                         .lineSpacing(4)
                         .foregroundStyle(WhaleTheme.ink)
                         .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
                     HStack(alignment: .bottom, spacing: 10) {
                         if let detail = message.detail, !detail.isEmpty {
                             Text(detail)
@@ -332,6 +335,19 @@ struct MessageRow: View {
                         } else {
                             Spacer(minLength: 0)
                         }
+                        Button {
+                            UIPasteboard.general.string = message.text
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(WhaleTheme.muted)
+                                .frame(width: 44, height: 44)
+                                .background(WhaleTheme.card, in: Circle())
+                                .overlay(Circle().strokeBorder(WhaleTheme.line, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("复制这条回复")
+
                         Button(action: onToggleSpeech) {
                             Image(systemName: isSpeaking ? "stop.circle.fill" : "speaker.wave.2")
                                 .font(.system(size: 15, weight: .medium))
@@ -356,6 +372,13 @@ struct MessageRow: View {
                 } else {
                     PlaceMapCard(places: message.places, statusText: message.detail ?? message.text)
                 }
+            }
+        }
+        .contextMenu {
+            Button {
+                UIPasteboard.general.string = message.text
+            } label: {
+                Label("复制文字", systemImage: "doc.on.doc")
             }
         }
     }

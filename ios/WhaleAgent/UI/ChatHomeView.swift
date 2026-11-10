@@ -4,7 +4,7 @@ import SwiftUI
 /// list and voice input never push a detail screen or present a sheet.
 struct ConversationTabView: View {
     @ObservedObject var model: AppModel
-    let keyboardTop: CGFloat?
+    let bottomInset: CGFloat
     let onOpenRecords: () -> Void
     let onOpenSettings: () -> Void
 
@@ -13,7 +13,7 @@ struct ConversationTabView: View {
             header
             ConversationSurface(
                 model: model,
-                keyboardTop: keyboardTop,
+                bottomInset: bottomInset,
                 onOpenRecords: onOpenRecords
             )
         }

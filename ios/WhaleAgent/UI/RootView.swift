@@ -9,44 +9,62 @@ struct RootView: View {
     @State private var page: AppTab? = .conversation
     @State private var showMusic = false
     @State private var settingsDetailOpen = false
+    @State private var contentBottom: CGFloat = 0
     @AppStorage("whale.appearance") private var appearance = "system"
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { proxy in
-            ScrollView(.horizontal) {
-                HStack(spacing: 0) {
-                    ConversationTabView(
-                        model: model,
-                        keyboardTop: keyboard.top,
-                        onOpenRecords: { go(.records) },
-                        onOpenSettings: { go(.settings) }
-                    )
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                    .id(AppTab.conversation)
-
-                    RecordsView(model: model, onBackToChat: { go(.conversation) })
+            ZStack(alignment: .bottom) {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 0) {
+                        ConversationTabView(
+                            model: model,
+                            bottomInset: ConversationComposerBar.reservedHeight + keyboardOverlap,
+                            onOpenRecords: { go(.records) },
+                            onOpenSettings: { go(.settings) }
+                        )
                         .frame(width: proxy.size.width, height: proxy.size.height)
-                        .id(AppTab.records)
+                        .id(AppTab.conversation)
 
-                    SettingsView(
-                        model: model,
-                        isDetailOpen: $settingsDetailOpen,
-                        onBackToChat: { go(.conversation) }
-                    )
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                    .id(AppTab.settings)
+                        RecordsView(model: model, onBackToChat: { go(.conversation) })
+                            .frame(width: proxy.size.width, height: proxy.size.height)
+                            .id(AppTab.records)
+
+                        SettingsView(
+                            model: model,
+                            isDetailOpen: $settingsDetailOpen,
+                            onBackToChat: { go(.conversation) }
+                        )
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .id(AppTab.settings)
+                    }
+                    .scrollTargetLayout()
                 }
-                .scrollTargetLayout()
+                .scrollTargetBehavior(.paging)
+                .scrollPosition(id: $page)
+                .scrollIndicators(.hidden)
+                .scrollDisabled(
+                    settingsDetailOpen || showMusic || model.presentedConfirmation != nil || keyboard.isVisible
+                )
+                .background(WhaleTheme.pageGradient)
+
+                ConversationComposerBar(model: model)
+                    .padding(.bottom, keyboardOverlap)
+                    .opacity(page == .conversation ? 1 : 0)
+                    .allowsHitTesting(page == .conversation)
+                    .accessibilityHidden(page != .conversation)
             }
-            .scrollTargetBehavior(.paging)
-            .scrollPosition(id: $page)
-            .scrollIndicators(.hidden)
-            .scrollDisabled(
-                settingsDetailOpen || showMusic || model.presentedConfirmation != nil || keyboard.isVisible
-            )
-            .background(WhaleTheme.pageGradient)
+            .background {
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: ContentBottomKey.self,
+                        value: geo.frame(in: .global).maxY
+                    )
+                }
+            }
+            .onPreferenceChange(ContentBottomKey.self) { contentBottom = $0 }
         }
         .background(WhaleTheme.pageGradient.ignoresSafeArea())
         .tint(WhaleTheme.accent)
@@ -118,6 +136,11 @@ struct RootView: View {
         case "dark": return .dark
         default: return nil
         }
+    }
+
+    private var keyboardOverlap: CGFloat {
+        guard let top = keyboard.top, contentBottom > 0 else { return 0 }
+        return max(0, contentBottom - top)
     }
 
     private func miniPlayer(_ track: MusicTrackItem) -> some View {
@@ -241,5 +264,13 @@ private struct ConfirmationSheet: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+    }
+}
+
+private struct ContentBottomKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
