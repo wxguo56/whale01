@@ -46,6 +46,9 @@ struct SettingsView: View {
     @State private var memoryValue = ""
     @State private var microphoneStatus = "unknown"
     @State private var notificationStatus = "unknown"
+    @AppStorage("whale.profile.nickname") private var profileNickname = ""
+    @AppStorage("whale.profile.bio") private var profileBio = ""
+    @State private var showProfileEditor = false
 
     private let primaryPermissions: [SettingsRowSpec] = [
         SettingsRowSpec(key: "location", title: "位置", subtitle: "精确位置 · 使用期间", icon: "location.fill", tone: .mint),
@@ -84,6 +87,9 @@ struct SettingsView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $showDeveloper) {
                 DeveloperSettingsView(model: model)
+            }
+            .sheet(isPresented: $showProfileEditor) {
+                ProfileEditorSheet(model: model)
             }
             .onChange(of: showDeveloper) { _, open in
                 isDetailOpen = open
@@ -124,27 +130,40 @@ struct SettingsView: View {
     }
 
     private var profileCard: some View {
-        HStack(spacing: 12) {
-            WhaleMarkView(size: 46)
+        Button {
+            showProfileEditor = true
+        } label: {
+            HStack(spacing: 12) {
+                WhaleMarkView(size: 46)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text("本机账户")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.ink)
-                Text("数据留在设备 · 授权后才读取")
-                    .font(.system(size: 11))
-                    .foregroundStyle(WhaleTheme.muted)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(profileNickname.isEmpty ? "个人资料" : profileNickname)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .lineLimit(1)
+                    Text(profileBio.isEmpty ? "填写昵称和介绍，鲸鱼会更懂你" : profileBio)
+                        .font(.system(size: 11))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 8)
+
+                HStack(spacing: 7) {
+                    WhaleStatusPill(
+                        text: model.backendOnline ? "在线" : "离线",
+                        color: model.backendOnline ? WhaleTheme.success : WhaleTheme.warm
+                    )
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.muted.opacity(0.7))
+                }
             }
-
-            Spacer(minLength: 8)
-
-            WhaleStatusPill(
-                text: model.backendOnline ? "在线" : "离线",
-                color: model.backendOnline ? WhaleTheme.success : WhaleTheme.warm
-            )
+            .padding(15)
+            .background(cardBackground)
         }
-        .padding(15)
-        .background(cardBackground)
+        .buttonStyle(.plain)
+        .accessibilityLabel("编辑个人资料")
     }
 
     // MARK: - Permissions
@@ -862,5 +881,173 @@ struct DeveloperSettingsView: View {
         }
         .navigationTitle("开发设置")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct ProfileEditorSheet: View {
+    @ObservedObject var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+
+    @AppStorage("whale.profile.nickname") private var storedNickname = ""
+    @AppStorage("whale.profile.bio") private var storedBio = ""
+
+    @State private var nickname = ""
+    @State private var bio = ""
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case nickname, bio }
+    private let nicknameLimit = 20
+    private let bioLimit = 80
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    identity
+                    form
+                    note
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 14)
+                .padding(.bottom, 44)
+            }
+            .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
+            .background(WhaleBackdrop())
+            .navigationTitle("个人资料")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") { save() }
+                        .fontWeight(.semibold)
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完成") { focusedField = nil }
+                }
+            }
+            .onAppear {
+                nickname = storedNickname
+                bio = storedBio
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var identity: some View {
+        HStack(spacing: 14) {
+            WhaleMarkView(size: 62)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(displayName)
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .lineLimit(1)
+                Text("资料保存在这台设备，对话时作为上下文使用")
+                    .font(.system(size: 11))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .whaleCard(padding: 16)
+    }
+
+    private var form: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            fieldHeader("昵称", count: nickname.count, limit: nicknameLimit)
+
+            TextField("鲸鱼怎么称呼你", text: $nickname)
+                .font(.system(size: 15))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .focused($focusedField, equals: .nickname)
+                .submitLabel(.next)
+                .onSubmit { focusedField = .bio }
+                .onChange(of: nickname) { _, value in
+                    if value.count > nicknameLimit {
+                        nickname = String(value.prefix(nicknameLimit))
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 11)
+                .background(
+                    WhaleTheme.field,
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(WhaleTheme.line.opacity(0.8), lineWidth: 0.7)
+                }
+
+            Divider()
+                .overlay(WhaleTheme.line.opacity(0.7))
+                .padding(.vertical, 2)
+
+            fieldHeader("自我介绍", count: bio.count, limit: bioLimit)
+
+            TextField("例如：喜欢安静的小店，常在上海", text: $bio, axis: .vertical)
+                .font(.system(size: 15))
+                .lineLimit(3...5)
+                .focused($focusedField, equals: .bio)
+                .submitLabel(.done)
+                .onChange(of: bio) { _, value in
+                    if value.count > bioLimit {
+                        bio = String(value.prefix(bioLimit))
+                    }
+                }
+                .padding(12)
+                .background(
+                    WhaleTheme.field,
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(WhaleTheme.line.opacity(0.8), lineWidth: 0.7)
+                }
+        }
+        .whaleCard(padding: 16)
+    }
+
+    private var note: some View {
+        Label(
+            "昵称和自我介绍会同步到「记忆偏好」，用于称呼和对话理解；只保存在本机，对话时会作为上下文发送给鲸鱼模型。",
+            systemImage: "lock.shield"
+        )
+        .font(.system(size: 11))
+        .foregroundStyle(WhaleTheme.muted)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 2)
+    }
+
+    private var displayName: String {
+        let trimmed = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "未设置昵称" : trimmed
+    }
+
+    private func fieldHeader(_ title: String, count: Int, limit: Int) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(WhaleTheme.ink)
+            Spacer()
+            Text("\(count)/\(limit)")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(count >= limit ? WhaleTheme.coral : WhaleTheme.muted)
+        }
+    }
+
+    private func save() {
+        let name = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+        let intro = bio.trimmingCharacters(in: .whitespacesAndNewlines)
+        storedNickname = name
+        storedBio = intro
+        model.syncProfile(nickname: name, bio: intro)
+        dismiss()
     }
 }

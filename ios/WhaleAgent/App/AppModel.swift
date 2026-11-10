@@ -187,6 +187,24 @@ final class AppModel: ObservableObject {
         reloadMemories()
     }
 
+    /// Persists the locally edited profile into the model-visible memory so
+    /// the assistant can use the preferred name and self-introduction.
+    func syncProfile(nickname: String, bio: String) {
+        syncProfileMemory(key: "称呼", value: nickname)
+        syncProfileMemory(key: "自我介绍", value: bio)
+        reloadMemories()
+    }
+
+    private func syncProfileMemory(key: String, value: String) {
+        if value.isEmpty {
+            if let existing = memories.first(where: { $0.key == key }) {
+                _ = MemoryStore.shared.delete(id: existing.id)
+            }
+            return
+        }
+        _ = try? MemoryStore.shared.set(key: key, value: value)
+    }
+
     func clearActionHistory() async {
         await OperationLedger.shared.clearActions()
         await reloadRecentActions()
