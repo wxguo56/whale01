@@ -161,4 +161,13 @@ final class CoreTests: XCTestCase {
         )
         XCTAssertTrue(unrelated.isEmpty)
     }
+
+    @MainActor
+    func testCurrentLocationAddressKeepsRegionTogetherAndDeduplicates() {
+        let address = LocationExecutor.displayAddress(
+            region: [" 浙江省 ", "杭州市", "西湖区", "杭州市"],
+            detail: ["文三路", "文三路 90号"]
+        )
+        XCTAssertEqual(address, "浙江省杭州市西湖区 文三路 文三路 90号")
+    }
 }

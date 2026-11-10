@@ -168,6 +168,20 @@
       }
     },
     {
+      "name": "get_current_location",
+      "version": "1.0",
+      "skill": "travel",
+      "description": "读取手机当前定位并反向解析省市区和街道，用于回答“我在哪／当前位置”。定位被拒绝或失败时如实返回原因，不猜城市。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["location"],
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    {
       "name": "search_places",
       "version": "1.1",
       "skill": "travel",

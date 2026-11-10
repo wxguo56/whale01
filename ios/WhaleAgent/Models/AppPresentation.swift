@@ -44,7 +44,7 @@ struct OperationRecord: Identifiable, Equatable, Codable {
         case "list_reminders", "update_reminder", "delete_reminder": return "bell.badge"
         case "create_calendar_event", "list_calendar_events", "update_calendar_event", "delete_calendar_event":
             return "calendar"
-        case "search_places", "open_navigation": return "map.fill"
+        case "search_places", "open_navigation", "get_current_location": return "map.fill"
         case "prepare_message": return "message.fill"
         case "search_music_library", "play_music", "pause_music", "resume_music", "skip_music_track":
             return "music.note"
@@ -221,6 +221,7 @@ enum ToolPresentation {
         case "get_weather": return "cloud.sun"
         case "get_activity_summary": return "figure.walk"
         case "search_places": return "mappin.and.ellipse"
+        case "get_current_location": return "location.fill"
         case "open_navigation": return "location.north.line"
         case "prepare_message": return "message"
         case "search_music_library": return "music.note.list"
@@ -276,6 +277,8 @@ enum ToolPresentation {
             )
         case "search_places":
             return args.optionalString("query") ?? "搜索附近地点"
+        case "get_current_location":
+            return "读取手机当前位置"
         case "open_navigation":
             return "交给系统地图继续导航"
         case "prepare_message":
@@ -387,6 +390,14 @@ enum ToolPresentation {
         case "search_merchant_prices":
             let count = object.optionalInt("evidenceCount") ?? 0
             return count == 0 ? "没有提取到可核对价格 · 未编造" : "找到 \(count) 条公开价格线索 · 未与商家核实"
+        case "get_current_location":
+            if object.optionalBool("addressResolved") == true {
+                let address = object.optionalString("displayAddress") ?? "当前位置"
+                let accuracy = object.optionalInt("accuracyMeters") ?? 0
+                return "\(address) · 精度约 \(accuracy) 米"
+            }
+            let accuracy = object.optionalInt("accuracyMeters") ?? 0
+            return "已取得坐标 · 精度约 \(accuracy) 米 · 地址未解析"
         default:
             break
         }

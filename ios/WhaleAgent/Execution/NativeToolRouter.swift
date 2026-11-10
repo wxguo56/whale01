@@ -562,6 +562,8 @@ final class NativeToolRouter {
             return try await health.summary(arguments: pending.arguments)
         case "search_places":
             return try await location.searchPlaces(arguments: pending.arguments)
+        case "get_current_location":
+            return try await location.currentPlace(arguments: pending.arguments)
         case "open_navigation":
             return try location.openNavigation(arguments: pending.arguments)
         case "prepare_message":

@@ -7,6 +7,7 @@ final class CurrentLocationProvider: NSObject, CLLocationManagerDelegate {
     private var continuation: CheckedContinuation<CLLocation, Error>?
     private var timeoutTask: Task<Void, Never>?
     private var cached: CLLocation?
+    private var bestLocation: CLLocation?
 
     private let cacheLifetime: TimeInterval = 60
     private let acceptableAccuracy: CLLocationAccuracy = 300
@@ -14,7 +15,7 @@ final class CurrentLocationProvider: NSObject, CLLocationManagerDelegate {
     override init() {
         super.init()
         manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        manager.desiredAccuracy = kCLLocationAccuracyBest
     }
 
     func currentLocation() async throws -> CLLocation {
@@ -77,19 +78,25 @@ final class CurrentLocationProvider: NSObject, CLLocationManagerDelegate {
 
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
-            manager.requestLocation()
+            self.bestLocation = nil
+            manager.startUpdatingLocation()
             timeoutTask?.cancel()
             timeoutTask = Task { @MainActor [weak self] in
                 try? await Task.sleep(nanoseconds: 10_000_000_000)
                 guard !Task.isCancelled, let self else { return }
-                self.finish(
-                    .failure(
-                        ToolExecutionError(
-                            code: "location_timeout",
-                            message: "超过 10 秒没有取得有效位置；可以重试，或直接给我一个地区。"
+                if let best = self.bestLocation {
+                    self.cached = best
+                    self.finish(.success(best))
+                } else {
+                    self.finish(
+                        .failure(
+                            ToolExecutionError(
+                                code: "location_timeout",
+                                message: "超过 10 秒没有取得有效位置；可以重试，或直接给我一个地区。"
+                            )
                         )
                     )
-                )
+                }
             }
         }
     }
@@ -97,6 +104,8 @@ final class CurrentLocationProvider: NSObject, CLLocationManagerDelegate {
     private func finish(_ result: Result<CLLocation, Error>) {
         timeoutTask?.cancel()
         timeoutTask = nil
+        manager.stopUpdatingLocation()
+        bestLocation = nil
         guard let continuation else { return }
         self.continuation = nil
         continuation.resume(with: result)
@@ -106,30 +115,30 @@ final class CurrentLocationProvider: NSObject, CLLocationManagerDelegate {
         Task { @MainActor [weak self] in
             guard let self, let location = locations.last else { return }
             guard location.horizontalAccuracy >= 0 else {
-                self.finish(
-                    .failure(ToolExecutionError(code: "location_invalid", message: "系统返回的位置无效，请稍后重试。"))
-                )
+                if let best = self.bestLocation {
+                    self.cached = best
+                    self.finish(.success(best))
+                }
                 return
             }
-            guard location.horizontalAccuracy <= 500 else {
-                self.finish(
-                    .failure(
-                        ToolExecutionError(
-                            code: "location_accuracy_low",
-                            message: "定位精度不足（约 \(Int(location.horizontalAccuracy)) 米），没有把它当作当前位置；请到开阔处重试或给我一个地区。"
-                        )
-                    )
-                )
-                return
+            if self.bestLocation == nil || location.horizontalAccuracy < self.bestLocation!.horizontalAccuracy {
+                self.bestLocation = location
             }
-            self.cached = location
-            self.finish(.success(location))
+            if location.horizontalAccuracy <= 200 {
+                self.cached = location
+                self.finish(.success(location))
+            }
         }
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         Task { @MainActor [weak self] in
             guard let self else { return }
+            if let best = self.bestLocation {
+                self.cached = best
+                self.finish(.success(best))
+                return
+            }
             if let clError = error as? CLError, clError.code == .denied {
                 self.finish(
                     .failure(

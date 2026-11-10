@@ -135,6 +135,7 @@ enum ToolCatalog {
         case "search_web": return "搜索网页"
         case "fetch_web_content": return "读取网页"
         case "search_merchant_prices": return "查商户价格"
+        case "get_current_location": return "读取当前位置"
         default: return name
         }
     }
@@ -168,6 +169,8 @@ enum ToolCatalog {
             return args.optionalStringArray("metrics")?.joined(separator: "、") ?? "运动数据"
         case "search_places":
             return args.optionalString("query") ?? "附近地点"
+        case "get_current_location":
+            return "读取手机当前位置"
         case "open_navigation":
             return [args.optionalString("placeId"), args.optionalString("mode")].compactMap { $0 }.joined(separator: " · ")
         case "prepare_message":

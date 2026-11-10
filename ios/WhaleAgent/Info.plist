@@ -69,7 +69,7 @@
   <key>NSHealthUpdateUsageDescription</key>
   <string>用于在获得授权后写入健康数据。</string>
   <key>NSLocationWhenInUseUsageDescription</key>
-  <string>用于搜索附近地点、查询天气和打开地图导航。</string>
+	<string>用于回答当前位置、搜索附近地点、查询天气和打开地图导航。</string>
   <key>NSContactsUsageDescription</key>
   <string>用于在短信或邮件草稿中查找收件人。</string>
   <key>NSMicrophoneUsageDescription</key>

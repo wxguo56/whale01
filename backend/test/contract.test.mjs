@@ -17,6 +17,7 @@ test("工具目录覆盖系统操作、记录修改、记忆与公开信息能�
     "fetch_web_content",
     "find_free_slots",
     "get_activity_summary",
+    "get_current_location",
     "get_playback_state",
     "get_weather",
     "list_calendar_events",
@@ -124,6 +125,14 @@ test("商户价格工具要求商户名并支持分店、城市和条数限制",
     registry.validateArguments("search_merchant_prices", { merchant: "海底捞", limit: 20 }).ok,
     false
   );
+});
+
+test("当前位置工具要求定位授权且不接受额外参数", () => {
+  const tool = registry.get("get_current_location");
+  assert.equal(tool.skill, "travel");
+  assert.deepEqual(tool.requiresAuthorization, ["location"]);
+  assert.equal(registry.validateArguments("get_current_location", {}).ok, true);
+  assert.equal(registry.validateArguments("get_current_location", { region: "杭州" }).ok, false);
 });
 
 test("写操作带有确认策略", () => {

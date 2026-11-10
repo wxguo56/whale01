@@ -92,6 +92,7 @@ export class MockDeviceExecutor {
       "update_calendar_event",
       "delete_calendar_event",
       "get_activity_summary",
+      "get_current_location",
       "search_places",
       "open_navigation",
       "summarize_shared_content",
@@ -147,6 +148,8 @@ export class MockDeviceExecutor {
         return this.#deleteCalendarEvent(args);
       case "get_weather":
         return this.#getWeather(args);
+      case "get_current_location":
+        return this.#getCurrentLocation();
       case "get_activity_summary":
         return this.#getActivitySummary();
       case "search_places":
@@ -546,6 +549,26 @@ export class MockDeviceExecutor {
       note: "未读取健康数据，不能推断为 0 步",
       source: "mock_health",
       simulated: true
+    });
+  }
+
+  #getCurrentLocation() {
+    return this.#success({
+      displayAddress: "浙江省杭州市西湖区（模拟位置）",
+      name: "模拟位置",
+      street: "文三路",
+      district: "西湖区",
+      city: "杭州市",
+      province: "浙江省",
+      country: "中国",
+      latitude: 30.2741,
+      longitude: 120.1551,
+      accuracyMeters: 50,
+      locatedAt: "2026-11-10T12:00:00+08:00",
+      addressResolved: true,
+      source: "mock_location",
+      simulated: true,
+      note: "Mock 环境返回模拟位置，不能当作真实手机定位。"
     });
   }
 

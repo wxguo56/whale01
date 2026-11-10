@@ -6,6 +6,83 @@ import MapKit
 final class LocationExecutor {
     private let locationProvider = CurrentLocationProvider()
 
+    func currentPlace(arguments: [String: JSONValue]) async throws -> JSONValue {
+        let location = try await locationProvider.currentLocation()
+        let locatedAt = ToolDate.iso(location.timestamp)
+
+        do {
+            let placemark = try await reverseGeocode(location)
+            let displayAddress = Self.displayAddress(placemark)
+            return .object([
+                "displayAddress": .string(displayAddress.isEmpty ? "已取得坐标，但系统没有解析出地址" : displayAddress),
+                "name": placemark.name.map { JSONValue.string($0) } ?? .null,
+                "street": placemark.thoroughfare.map { JSONValue.string($0) } ?? .null,
+                "district": placemark.subLocality.map { JSONValue.string($0) } ?? .null,
+                "city": placemark.locality.map { JSONValue.string($0) } ?? .null,
+                "province": placemark.administrativeArea.map { JSONValue.string($0) } ?? .null,
+                "country": placemark.country.map { JSONValue.string($0) } ?? .null,
+                "latitude": .number(location.coordinate.latitude),
+                "longitude": .number(location.coordinate.longitude),
+                "accuracyMeters": .number(location.horizontalAccuracy.rounded()),
+                "locatedAt": .string(locatedAt),
+                "addressResolved": .bool(!displayAddress.isEmpty),
+                "source": .string("corelocation"),
+                "simulated": .bool(false),
+                "note": .string("位置来自手机本次定位，精度约 \(Int(location.horizontalAccuracy.rounded())) 米；地址由系统反向地理编码得到。")
+            ])
+        } catch {
+            return .object([
+                "displayAddress": .null,
+                "latitude": .number(location.coordinate.latitude),
+                "longitude": .number(location.coordinate.longitude),
+                "accuracyMeters": .number(location.horizontalAccuracy.rounded()),
+                "locatedAt": .string(locatedAt),
+                "addressResolved": .bool(false),
+                "source": .string("corelocation"),
+                "simulated": .bool(false),
+                "note": .string("已取得手机坐标，但反向地理编码失败：\(error.localizedDescription)。只能说明坐标和精度，不要编造街道或城市。")
+            ])
+        }
+    }
+
+    static func displayAddress(_ placemark: CLPlacemark) -> String {
+        displayAddress(
+            region: [placemark.administrativeArea, placemark.locality, placemark.subLocality],
+            detail: [placemark.thoroughfare, placemark.name]
+        )
+    }
+
+    static func displayAddress(region: [String?], detail: [String?]) -> String {
+        var seen = Set<String>()
+        let regionParts = region
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && seen.insert($0).inserted }
+        let detailParts = detail
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && seen.insert($0).inserted }
+        let regionText = regionParts.joined()
+        return ([regionText] + detailParts).filter { !$0.isEmpty }.joined(separator: " ")
+    }
+
+    private func reverseGeocode(_ location: CLLocation) async throws -> CLPlacemark {
+        let geocoder = CLGeocoder()
+        return try await withCheckedThrowingContinuation { continuation in
+            geocoder.reverseGeocodeLocation(location) { placemarks, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                guard let placemark = placemarks?.first else {
+                    continuation.resume(
+                        throwing: ToolExecutionError(code: "reverse_geocode_empty", message: "没有解析出当前位置地址")
+                    )
+                    return
+                }
+                continuation.resume(returning: placemark)
+            }
+        }
+    }
+
     func searchPlaces(arguments: [String: JSONValue]) async throws -> JSONValue {
         let query = try arguments.requiredString("query")
         let limit = min(max(arguments.optionalInt("limit") ?? 5, 1), 25)

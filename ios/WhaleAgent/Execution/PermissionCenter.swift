@@ -30,6 +30,7 @@ final class PermissionCenter: ObservableObject {
         "update_calendar_event": ["calendarWrite"],
         "delete_calendar_event": ["calendarWrite"],
         "get_weather": ["location"],
+        "get_current_location": ["location"],
         "search_places": ["location"],
         "open_navigation": ["location"],
         "get_activity_summary": ["activityRead"],
