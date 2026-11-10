@@ -100,6 +100,28 @@ struct PlaceSummary: Identifiable, Equatable, Codable {
             )
         }
     }
+
+    static func current(from data: JSONValue?) -> [PlaceSummary] {
+        guard
+            let object = data?.objectValue,
+            let latitude = object.optionalDouble("latitude"),
+            let longitude = object.optionalDouble("longitude")
+        else { return [] }
+
+        let address = object.optionalString("displayAddress") ?? ""
+        let name = object.optionalString("name")
+            ?? (address.isEmpty ? "我的位置" : address)
+        return [
+            PlaceSummary(
+                placeId: "current-location",
+                name: name,
+                address: address,
+                latitude: latitude,
+                longitude: longitude,
+                distanceMeters: 0
+            )
+        ]
+    }
 }
 
 struct CalendarEventPreview: Identifiable, Equatable {

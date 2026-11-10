@@ -9,12 +9,21 @@ enum ChatRole: String, Codable {
     case tool
 }
 
+struct ResultLink: Identifiable, Equatable, Codable {
+    let title: String
+    let url: String
+
+    var id: String { url }
+}
+
 struct ChatMessage: Identifiable, Equatable, Codable {
     let id: UUID
     let role: ChatRole
     let text: String
     var detail: String?
     var places: [PlaceSummary] = []
+    var links: [ResultLink]? = nil
+    var tool: String? = nil
     let createdAt: Date
 
     init(
@@ -23,6 +32,8 @@ struct ChatMessage: Identifiable, Equatable, Codable {
         text: String,
         detail: String? = nil,
         places: [PlaceSummary] = [],
+        links: [ResultLink]? = nil,
+        tool: String? = nil,
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -30,6 +41,8 @@ struct ChatMessage: Identifiable, Equatable, Codable {
         self.text = text
         self.detail = detail
         self.places = places
+        self.links = links
+        self.tool = tool
         self.createdAt = createdAt
     }
 }
@@ -875,12 +888,24 @@ final class AppModel: ObservableObject {
         isExecutingTool = false
         results[item.toolCallId] = result
         await reloadRecentActions()
+        let places: [PlaceSummary]
+        switch item.tool {
+        case "search_places":
+            places = PlaceSummary.list(from: result.data)
+        case "get_current_location":
+            places = PlaceSummary.current(from: result.data)
+        default:
+            places = []
+        }
+        let links = ToolResultLinks.extract(tool: item.tool, data: result.data)
         appendMessage(
             ChatMessage(
                 role: .tool,
                 text: "\(ToolPresentation.title(item.tool)) · \(result.status)",
                 detail: ToolPresentation.resultDetail(tool: item.tool, status: result.status, data: result.data, error: result.error),
-                places: item.tool == "search_places" ? PlaceSummary.list(from: result.data) : []
+                places: places,
+                links: links.isEmpty ? nil : links,
+                tool: item.tool
             )
         )
         if item.tool == "create_calendar_event" || item.tool == "list_calendar_events"
@@ -1007,5 +1032,38 @@ final class AppModel: ObservableObject {
         defaults.removeObject(forKey: activeTurnKey)
         defaults.removeObject(forKey: conversationKey)
         defaults.set(true, forKey: directModeMigrationKey)
+    }
+}
+private enum ToolResultLinks {
+    static func extract(tool: String, data: JSONValue?) -> [ResultLink] {
+        guard let object = data?.objectValue else { return [] }
+        switch tool {
+        case "search_web":
+            return (object["results"]?.arrayValue ?? []).compactMap { row in
+                guard
+                    let item = row.objectValue,
+                    let url = item.optionalString("url"),
+                    let title = item.optionalString("title")
+                else { return nil }
+                return ResultLink(title: title, url: url)
+            }
+        case "fetch_web_content":
+            guard let url = object.optionalString("finalURL") ?? object.optionalString("url") else {
+                return []
+            }
+            let title = object.optionalString("title") ?? "网页"
+            return [ResultLink(title: title, url: url)]
+        case "search_merchant_prices":
+            return (object["sources"]?.arrayValue ?? []).compactMap { row in
+                guard
+                    let item = row.objectValue,
+                    let url = item.optionalString("url")
+                else { return nil }
+                let title = item.optionalString("title") ?? url
+                return ResultLink(title: title, url: url)
+            }
+        default:
+            return []
+        }
     }
 }

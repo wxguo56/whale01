@@ -363,12 +363,21 @@ struct MessageRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 if message.places.isEmpty {
-                    Label(message.text, systemImage: "iphone.gen3")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(WhaleTheme.accent)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(WhaleTheme.accentSoft, in: Capsule())
+                    if let links = message.links, !links.isEmpty {
+                        ToolLinkCard(
+                            title: message.text,
+                            detail: message.detail,
+                            links: links,
+                            tool: message.tool
+                        )
+                    } else {
+                        Label(message.text, systemImage: "iphone.gen3")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(WhaleTheme.accent)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(WhaleTheme.accentSoft, in: Capsule())
+                    }
                 } else {
                     PlaceMapCard(places: message.places, statusText: message.detail ?? message.text)
                 }
@@ -448,9 +457,11 @@ struct PlaceMapCard: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(WhaleTheme.ink)
                         .lineLimit(1)
-                    Text(first.distanceText)
-                        .font(.system(size: 12))
-                        .foregroundStyle(WhaleTheme.muted)
+                    if first.distanceMeters > 0 {
+                        Text(first.distanceText)
+                            .font(.system(size: 12))
+                            .foregroundStyle(WhaleTheme.muted)
+                    }
                     Spacer(minLength: 8)
                     Button(action: openInMaps) {
                         Label("打开地图", systemImage: "map")
@@ -510,6 +521,102 @@ struct PlaceMapCard: View {
         MKMapItem.openMaps(with: items, launchOptions: [
             MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeWalking
         ])
+    }
+}
+
+struct ToolLinkCard: View {
+    let title: String
+    let detail: String?
+    let links: [ResultLink]
+    let tool: String?
+
+    @Environment(\.openURL) private var openURL
+    @State private var lastOpenAttempt = Date.distantPast
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                open(links.first)
+            } label: {
+                HStack(spacing: 11) {
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.accent)
+                        .frame(width: 36, height: 36)
+                        .background(WhaleTheme.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 11))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(WhaleTheme.ink)
+                            .lineLimit(2)
+                        if let detail, !detail.isEmpty {
+                            Text(detail)
+                                .font(.system(size: 12))
+                                .foregroundStyle(WhaleTheme.muted)
+                                .lineLimit(2)
+                        }
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.accent)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("打开搜索结果")
+
+            if links.count > 1 {
+                Rectangle()
+                    .fill(WhaleTheme.line)
+                    .frame(height: 0.5)
+
+                ForEach(Array(links.prefix(4))) { link in
+                    Button {
+                        open(link)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "link")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(WhaleTheme.muted)
+                            Text(link.title)
+                                .font(.system(size: 13))
+                                .foregroundStyle(WhaleTheme.ink)
+                                .lineLimit(1)
+                            Spacer(minLength: 6)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(WhaleTheme.muted)
+                        }
+                        .frame(minHeight: 36)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("打开 \(link.title)")
+                }
+            }
+        }
+        .whaleCard(padding: 12)
+    }
+
+    private var icon: String {
+        switch tool {
+        case "search_web": return "magnifyingglass"
+        case "fetch_web_content": return "safari"
+        case "search_merchant_prices": return "tag"
+        default: return "link"
+        }
+    }
+
+    private func open(_ link: ResultLink?) {
+        guard let link, let url = URL(string: link.url) else { return }
+        let now = Date()
+        guard now.timeIntervalSince(lastOpenAttempt) > 0.8 else { return }
+        lastOpenAttempt = now
+        openURL(url)
     }
 }
 
