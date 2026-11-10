@@ -138,3 +138,33 @@ test("空档查询拒绝反向时间范围", async () => {
   assert.equal(result.status, "failed");
   assert.equal(result.error.code, "invalid_time_range");
 });
+
+test("周期提醒保存重复规则并使用同一 operationId 去重", async () => {
+  const { dir } = await createTestRuntime();
+  const remindersPath = join(dir, "reminders.json");
+  const executor = new MockDeviceExecutor({ remindersPath });
+  const args = {
+    title: "喝水",
+    dueAt: "2026-11-10T09:00:00+08:00",
+    timezone: "Asia/Shanghai",
+    recurrence: { frequency: "daily", interval: 1, count: 30 }
+  };
+  const first = await executor.execute({
+    tool: "create_reminder",
+    arguments: args,
+    operationId: "op_recurring",
+    turnId: "turn_recurring"
+  });
+  const second = await executor.execute({
+    tool: "create_reminder",
+    arguments: args,
+    operationId: "op_recurring",
+    turnId: "turn_recurring"
+  });
+  assert.equal(first.status, "success");
+  assert.deepEqual(first.data.recurrence, args.recurrence);
+  assert.equal(second.deduplicated, true);
+  const records = JSON.parse(await readFile(remindersPath, "utf8"));
+  assert.equal(records.length, 1);
+  assert.deepEqual(records[0].recurrence, args.recurrence);
+});

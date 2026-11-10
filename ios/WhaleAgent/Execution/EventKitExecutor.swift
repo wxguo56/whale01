@@ -23,7 +23,12 @@ final class EventKitExecutor {
             throw ToolExecutionError(code: "reminder_calendar_missing", message: "没有可写的提醒事项列表")
         }
 
-        if let existingId = await existingReminderId(title: title, dueDate: dueDate, calendar: calendar) {
+        let recurrence = try recurrenceRule(from: arguments)
+        if recurrence != nil, dueDate == nil {
+            throw ToolExecutionError(code: "invalid_recurrence", message: "重复提醒需要具体的开始时间")
+        }
+        if recurrence == nil,
+           let existingId = await existingReminderId(title: title, dueDate: dueDate, calendar: calendar) {
             var row: [String: JSONValue] = [
                 "recordId": .string(existingId),
                 "title": .string(title),
@@ -43,6 +48,9 @@ final class EventKitExecutor {
         reminder.title = title
         reminder.notes = arguments.optionalString("notes")
         reminder.calendar = calendar
+        if let recurrence {
+            reminder.addRecurrenceRule(recurrence)
+        }
 
         if let dueDate {
             var components = ToolDate.calendar(timezone).dateComponents(
@@ -65,6 +73,9 @@ final class EventKitExecutor {
             "source": .string("eventkit"),
             "simulated": .bool(false)
         ]
+        if let label = recurrenceLabel(from: arguments) {
+            row["recurrence"] = .string(label)
+        }
         row["operationId"] = .string(operationId)
         return .object(row)
     }
@@ -468,6 +479,9 @@ final class EventKitExecutor {
         event.endDate = end
         event.location = arguments.optionalString("location")
         event.notes = arguments.optionalString("notes")
+        if let recurrence = try recurrenceRule(from: arguments) {
+            event.addRecurrenceRule(recurrence)
+        }
 
         if let calendarId = arguments.optionalString("calendarId"), let calendar = store.calendar(withIdentifier: calendarId) {
             event.calendar = calendar
@@ -492,6 +506,9 @@ final class EventKitExecutor {
             "source": .string("eventkit"),
             "simulated": .bool(false)
         ]
+        if let label = recurrenceLabel(from: arguments) {
+            row["recurrence"] = .string(label)
+        }
         row["operationId"] = .string(operationId)
         row["conflictCount"] = .number(Double(conflicts.count))
         if !conflicts.isEmpty {
@@ -585,5 +602,88 @@ final class EventKitExecutor {
             return calendar
         }
         return store.calendars(for: .reminder).first { $0.allowsContentModifications }
+    }
+
+    private func recurrenceRule(from arguments: [String: JSONValue]) throws -> EKRecurrenceRule? {
+        guard let raw = arguments["recurrence"], raw != .null else { return nil }
+        guard let object = raw.objectValue else {
+            throw ToolExecutionError(code: "invalid_recurrence", message: "recurrence 必须是对象")
+        }
+        guard let frequencyRaw = object.optionalString("frequency") else {
+            throw ToolExecutionError(code: "invalid_recurrence", message: "recurrence.frequency 不能为空")
+        }
+        let frequency: EKRecurrenceFrequency
+        switch frequencyRaw {
+        case "daily": frequency = .daily
+        case "weekly": frequency = .weekly
+        case "monthly": frequency = .monthly
+        case "yearly": frequency = .yearly
+        default:
+            throw ToolExecutionError(code: "invalid_recurrence", message: "不支持的重复频率 \(frequencyRaw)")
+        }
+        let interval = max(1, min(object.optionalInt("interval") ?? 1, 99))
+        var daysOfWeek: [EKRecurrenceDayOfWeek]?
+        if frequency == .weekly, let values = object["weekdays"]?.arrayValue, !values.isEmpty {
+            daysOfWeek = try values.map { item in
+                guard let iso = item.intValue, (1...7).contains(iso) else {
+                    throw ToolExecutionError(code: "invalid_recurrence", message: "weekdays 只能是 1（周一）到 7（周日）")
+                }
+                let rawWeekday = iso == 7 ? EKWeekday.sunday.rawValue : iso + 1
+                guard let weekday = EKWeekday(rawValue: rawWeekday) else {
+                    throw ToolExecutionError(code: "invalid_recurrence", message: "无法识别星期 \(iso)")
+                }
+                return EKRecurrenceDayOfWeek(dayOfTheWeek: weekday, weekNumber: 0)
+            }
+        }
+        var end: EKRecurrenceEnd?
+        if let rawUntil = object.optionalString("until") {
+            guard let until = ToolDate.parse(rawUntil) else {
+                throw ToolExecutionError(code: "invalid_recurrence", message: "recurrence.until 无法解析")
+            }
+            end = EKRecurrenceEnd(end: until)
+        } else if let count = object.optionalInt("count") {
+            end = EKRecurrenceEnd(recurrenceEndWithOccurrenceCount: max(1, min(count, 365)))
+        }
+        return EKRecurrenceRule(
+            recurrenceWith: frequency,
+            interval: interval,
+            daysOfTheWeek: daysOfWeek,
+            daysOfTheMonth: nil,
+            monthsOfTheYear: nil,
+            weeksOfTheYear: nil,
+            daysOfTheYear: nil,
+            setPositions: nil,
+            end: end
+        )
+    }
+
+    private func recurrenceLabel(from arguments: [String: JSONValue]) -> String? {
+        guard let object = arguments.optionalObject("recurrence"),
+              let frequency = object.optionalString("frequency") else { return nil }
+        let interval = max(1, min(object.optionalInt("interval") ?? 1, 99))
+        let unit: String
+        switch frequency {
+        case "daily": unit = "天"
+        case "weekly": unit = "周"
+        case "monthly": unit = "月"
+        case "yearly": unit = "年"
+        default: return nil
+        }
+        var label = interval == 1 ? "每\(unit)" : "每 \(interval) \(unit)"
+        if frequency == "weekly", let values = object["weekdays"]?.arrayValue {
+            let names = ["一", "二", "三", "四", "五", "六", "日"]
+            let days = values.compactMap { item -> String? in
+                guard let iso = item.intValue, (1...7).contains(iso) else { return nil }
+                return "周\(names[iso - 1])"
+            }
+            if !days.isEmpty { label += "（\(days.joined(separator: "、"))）" }
+        }
+        if let count = object.optionalInt("count") {
+            label += "，共 \(max(1, min(count, 365))) 次"
+        }
+        if let until = object.optionalString("until") {
+            label += "，至 \(until)"
+        }
+        return label
     }
 }

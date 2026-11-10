@@ -142,7 +142,7 @@ enum ToolCatalog {
         let args = pending.arguments
         switch pending.tool {
         case "create_reminder":
-            return [args.optionalString("title"), args.optionalString("dueAt")].compactMap { $0 }.joined(separator: " · ")
+            return [args.optionalString("title"), args.optionalString("dueAt"), recurrence(args.optionalObject("recurrence"))].compactMap { $0 }.joined(separator: " · ")
         case "update_reminder":
             return [args.optionalString("title"), args.optionalString("dueAt")].compactMap { $0 }.joined(separator: " · ")
         case "delete_reminder":
@@ -150,7 +150,7 @@ enum ToolCatalog {
         case "list_reminders":
             return [args.optionalString("startAt"), args.optionalString("endAt")].compactMap { $0 }.joined(separator: " → ")
         case "create_calendar_event":
-            return [args.optionalString("title"), args.optionalString("startAt")].compactMap { $0 }.joined(separator: " · ")
+            return [args.optionalString("title"), args.optionalString("startAt"), recurrence(args.optionalObject("recurrence"))].compactMap { $0 }.joined(separator: " · ")
         case "update_calendar_event", "delete_calendar_event":
             return [args.optionalString("eventId"), args.optionalString("title")].compactMap { $0 }.joined(separator: " · ")
         case "list_calendar_events":
@@ -188,5 +188,19 @@ enum ToolCatalog {
         default:
             return args.keys.sorted().map { "\($0)=\(args[$0]?.displayText ?? "")" }.joined(separator: "，")
         }
+    }
+
+    private static func recurrence(_ object: [String: JSONValue]?) -> String? {
+        guard let object, let frequency = object.optionalString("frequency") else { return nil }
+        let interval = max(1, object.optionalInt("interval") ?? 1)
+        let unit: String
+        switch frequency {
+        case "daily": unit = "天"
+        case "weekly": unit = "周"
+        case "monthly": unit = "月"
+        case "yearly": unit = "年"
+        default: return nil
+        }
+        return interval == 1 ? "每\(unit)" : "每 \(interval) \(unit)"
     }
 }

@@ -80,6 +80,29 @@ test("dueAt 必须是带偏移的 ISO 8601 时间", () => {
   assert.equal(good.ok, true);
 });
 
+test("周期规则只接受日／周／月／年与合法星期", () => {
+  const base = { title: "喝水", timezone: "Asia/Shanghai" };
+  const good = registry.validateArguments("create_reminder", {
+    ...base,
+    recurrence: { frequency: "weekly", interval: 1, weekdays: [1, 3, 5], count: 12 }
+  });
+  assert.equal(good.ok, true);
+  assert.equal(
+    registry.validateArguments("create_reminder", {
+      ...base,
+      recurrence: { frequency: "hourly" }
+    }).ok,
+    false
+  );
+  assert.equal(
+    registry.validateArguments("create_reminder", {
+      ...base,
+      recurrence: { frequency: "weekly", weekdays: [8] }
+    }).ok,
+    false
+  );
+});
+
 test("未知工具不通过白名单校验", () => {
   assert.equal(registry.get("run_shell"), null);
   assert.equal(registry.validateArguments("run_shell", {}).ok, false);

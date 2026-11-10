@@ -203,6 +203,7 @@ export class MockDeviceExecutor {
           dueAt: existing.dueAt,
           timezone: existing.timezone,
           listName: existing.listName,
+          recurrence: existing.recurrence ?? null,
           simulated: true
         },
         true
@@ -218,6 +219,7 @@ export class MockDeviceExecutor {
       timezone: args.timezone,
       listName: args.listId ?? "提醒事项",
       notes: args.notes ?? null,
+      recurrence: args.recurrence ?? null,
       createdAt: new Date().toISOString()
     };
     records.push(record);
@@ -229,6 +231,7 @@ export class MockDeviceExecutor {
       dueAt: record.dueAt,
       timezone: record.timezone,
       listName: record.listName,
+      recurrence: record.recurrence,
       simulated: true
     });
   }
@@ -447,6 +450,7 @@ export class MockDeviceExecutor {
       calendarId: args.calendarId ?? "personal",
       location: args.location ?? null,
       notes: args.notes ?? null,
+      recurrence: args.recurrence ?? null,
       createdAt: new Date().toISOString()
     };
     if (this.calendarPath) {
@@ -459,6 +463,7 @@ export class MockDeviceExecutor {
       startAt: event.startAt,
       endAt: event.endAt,
       calendarId: event.calendarId,
+      recurrence: event.recurrence,
       simulated: true
     });
   }

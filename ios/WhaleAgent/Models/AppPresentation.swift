@@ -238,7 +238,8 @@ enum ToolPresentation {
         case "create_reminder":
             return join(
                 args.optionalString("title"),
-                formatDateTime(args.optionalString("dueAt"))
+                formatDateTime(args.optionalString("dueAt")),
+                recurrenceText(args.optionalObject("recurrence"))
             )
         case "list_reminders":
             if let start = args.optionalString("startAt"), let end = args.optionalString("endAt") {
@@ -256,7 +257,8 @@ enum ToolPresentation {
         case "create_calendar_event":
             return join(
                 args.optionalString("title"),
-                formatDateRange(start: args.optionalString("startAt"), end: args.optionalString("endAt"))
+                formatDateRange(start: args.optionalString("startAt"), end: args.optionalString("endAt")),
+                recurrenceText(args.optionalObject("recurrence"))
             )
         case "update_calendar_event":
             return join(args.optionalString("title") ?? args.optionalString("eventId"), "修改系统日程")
@@ -358,11 +360,13 @@ enum ToolPresentation {
             if object.optionalBool("deduplicated") == true {
                 return "已存在相同提醒，未重复创建\(time)"
             }
-            return "已写入提醒事项\(time)"
+            let repeatText = object.optionalString("recurrence").map { " · \($0)" } ?? ""
+            return "已写入提醒事项\(time)\(repeatText)"
         case "create_calendar_event":
             let time = formatDateTime(object.optionalString("startAt")).map { " · \($0)" } ?? ""
             let conflicts = object.optionalInt("conflictCount") ?? 0
-            return conflicts > 0 ? "已写入系统日历\(time) · 与 \(conflicts) 个日程重叠" : "已写入系统日历\(time)"
+            let repeatText = object.optionalString("recurrence").map { " · \($0)" } ?? ""
+            return conflicts > 0 ? "已写入系统日历\(time)\(repeatText) · 与 \(conflicts) 个日程重叠" : "已写入系统日历\(time)\(repeatText)"
         case "set_memory":
             return "已保存偏好 · 可随时修改或删除"
         case "delete_memory":
@@ -435,5 +439,28 @@ enum ToolPresentation {
             guard let value, !value.isEmpty else { return nil }
             return value
         }.joined(separator: " · ")
+    }
+
+    private static func recurrenceText(_ object: [String: JSONValue]?) -> String? {
+        guard let object, let frequency = object.optionalString("frequency") else { return nil }
+        let interval = max(1, object.optionalInt("interval") ?? 1)
+        let unit: String
+        switch frequency {
+        case "daily": unit = "天"
+        case "weekly": unit = "周"
+        case "monthly": unit = "月"
+        case "yearly": unit = "年"
+        default: return nil
+        }
+        var text = interval == 1 ? "每\(unit)" : "每 \(interval) \(unit)"
+        if frequency == "weekly", let values = object["weekdays"]?.arrayValue {
+            let names = ["一", "二", "三", "四", "五", "六", "日"]
+            let days = values.compactMap { item -> String? in
+                guard let iso = item.intValue, (1...7).contains(iso) else { return nil }
+                return "周\(names[iso - 1])"
+            }
+            if !days.isEmpty { text += "（\(days.joined(separator: "、"))）" }
+        }
+        return text
     }
 }
