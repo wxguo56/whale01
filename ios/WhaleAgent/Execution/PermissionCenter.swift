@@ -25,6 +25,7 @@ final class PermissionCenter: ObservableObject {
         "update_reminder": ["reminder"],
         "delete_reminder": ["reminder"],
         "list_calendar_events": ["calendarRead"],
+        "find_free_slots": ["calendarRead"],
         "create_calendar_event": ["calendarWrite"],
         "update_calendar_event": ["calendarWrite"],
         "delete_calendar_event": ["calendarWrite"],

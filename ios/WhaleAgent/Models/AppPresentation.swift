@@ -215,7 +215,7 @@ enum ToolPresentation {
         switch tool {
         case "create_reminder": return "bell.badge"
         case "list_reminders", "update_reminder", "delete_reminder": return "bell.badge"
-        case "list_calendar_events", "create_calendar_event", "update_calendar_event", "delete_calendar_event":
+        case "list_calendar_events", "find_free_slots", "create_calendar_event", "update_calendar_event", "delete_calendar_event":
             return "calendar"
         case "get_weather": return "cloud.sun"
         case "get_activity_summary": return "figure.walk"
@@ -264,6 +264,12 @@ enum ToolPresentation {
             return join(args.optionalString("title") ?? args.optionalString("eventId"), "删除系统日程")
         case "list_calendar_events":
             return formatDateRange(start: args.optionalString("startAt"), end: args.optionalString("endAt"))
+        case "find_free_slots":
+            return join(
+                formatDateRange(start: args.optionalString("startAt"), end: args.optionalString("endAt")),
+                args.optionalInt("durationMinutes").map { "\($0) 分钟" },
+                "查找空闲时段"
+            )
         case "search_places":
             return args.optionalString("query") ?? "搜索附近地点"
         case "open_navigation":
@@ -325,6 +331,9 @@ enum ToolPresentation {
         case "list_calendar_events":
             let count = object.optionalInt("count") ?? 0
             return count == 0 ? "已读取系统日历 · 这段时间没有安排" : "已读取系统日历 · \(count) 项"
+        case "find_free_slots":
+            let count = object.optionalInt("count") ?? 0
+            return count == 0 ? "没有找到符合条件的空档" : "找到 \(count) 个候选空档 · 创建前仍需确认"
         case "list_reminders":
             let count = object.optionalInt("count") ?? 0
             return count == 0 ? "已读取系统提醒 · 当前没有匹配项" : "已读取系统提醒 · \(count) 项"

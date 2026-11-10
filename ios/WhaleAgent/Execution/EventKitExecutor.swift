@@ -305,6 +305,133 @@ final class EventKitExecutor {
         ])
     }
 
+    func findFreeSlots(arguments: [String: JSONValue]) throws -> JSONValue {
+        let rangeStart = try ToolDate.requiredDate(arguments, key: "startAt")
+        let rangeEnd = try ToolDate.requiredDate(arguments, key: "endAt")
+        guard rangeEnd > rangeStart else {
+            throw ToolExecutionError(code: "invalid_time_range", message: "结束时间必须晚于开始时间")
+        }
+        let timezone = arguments.optionalString("timezone") ?? TimeZone.current.identifier
+        let calendar = ToolDate.calendar(timezone)
+        let duration = max(15, min(arguments.optionalInt("durationMinutes") ?? 60, 480))
+        let buffer = max(0, min(arguments.optionalInt("bufferMinutes") ?? 0, 120))
+        let limit = max(1, min(arguments.optionalInt("limit") ?? 8, 20))
+        let includeAllDay = arguments.optionalBool("includeAllDay") ?? false
+        let dayStart = parseClock(arguments.optionalString("dayStart") ?? "09:00", fallback: (9, 0))
+        let dayEnd = parseClock(arguments.optionalString("dayEnd") ?? "21:00", fallback: (21, 0))
+        guard dayStart.hour * 60 + dayStart.minute < dayEnd.hour * 60 + dayEnd.minute else {
+            throw ToolExecutionError(code: "invalid_day_window", message: "dayStart 必须早于 dayEnd")
+        }
+
+        var slots: [JSONValue] = []
+        var dayCursor = calendar.startOfDay(for: rangeStart)
+        var inspectedDays = 0
+        while dayCursor < rangeEnd, slots.count < limit, inspectedDays < 14 {
+            if let windowStartOfDay = calendar.date(
+                bySettingHour: dayStart.hour,
+                minute: dayStart.minute,
+                second: 0,
+                of: dayCursor
+            ), let windowEndOfDay = calendar.date(
+                bySettingHour: dayEnd.hour,
+                minute: dayEnd.minute,
+                second: 0,
+                of: dayCursor
+            ) {
+                let windowStart = max(windowStartOfDay, rangeStart)
+                let windowEnd = min(windowEndOfDay, rangeEnd)
+                if windowStart < windowEnd {
+                    let predicate = store.predicateForEvents(withStart: windowStart, end: windowEnd, calendars: nil)
+                    let busy = store.events(matching: predicate)
+                        .filter { includeAllDay || !$0.isAllDay }
+                        .map { event in
+                            (
+                                start: max(windowStart, event.startDate.addingTimeInterval(-Double(buffer) * 60)),
+                                end: min(windowEnd, event.endDate.addingTimeInterval(Double(buffer) * 60))
+                            )
+                        }
+                        .filter { $0.start < $0.end }
+                        .sorted { $0.start < $1.start }
+
+                    var freeStart = windowStart
+                    for interval in busy {
+                        appendFreeSlots(
+                            from: freeStart,
+                            to: interval.start,
+                            duration: duration,
+                            timezone: timezone,
+                            limit: limit,
+                            into: &slots
+                        )
+                        if slots.count >= limit { break }
+                        if interval.end > freeStart { freeStart = interval.end }
+                        if freeStart >= windowEnd { break }
+                    }
+                    if slots.count < limit, freeStart < windowEnd {
+                        appendFreeSlots(
+                            from: freeStart,
+                            to: windowEnd,
+                            duration: duration,
+                            timezone: timezone,
+                            limit: limit,
+                            into: &slots
+                        )
+                    }
+                }
+            }
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: dayCursor) else { break }
+            dayCursor = nextDay
+            inspectedDays += 1
+        }
+
+        return .object([
+            "slots": .array(slots),
+            "count": .number(Double(slots.count)),
+            "durationMinutes": .number(Double(duration)),
+            "bufferMinutes": .number(Double(buffer)),
+            "timezone": .string(timezone),
+            "dayStart": .string(String(format: "%02d:%02d", dayStart.hour, dayStart.minute)),
+            "dayEnd": .string(String(format: "%02d:%02d", dayEnd.hour, dayEnd.minute)),
+            "source": .string("eventkit"),
+            "simulated": .bool(false),
+            "note": .string("空档按日历事件计算；创建前仍需你确认具体时段")
+        ])
+    }
+
+    private func appendFreeSlots(
+        from start: Date,
+        to end: Date,
+        duration: Int,
+        timezone: String,
+        limit: Int,
+        into slots: inout [JSONValue]
+    ) {
+        let durationSeconds = Double(duration) * 60
+        var cursor = start
+        while cursor.addingTimeInterval(durationSeconds) <= end, slots.count < limit {
+            let slotEnd = cursor.addingTimeInterval(durationSeconds)
+            slots.append(.object([
+                "startAt": .string(ToolDate.iso(cursor)),
+                "endAt": .string(ToolDate.iso(slotEnd)),
+                "durationMinutes": .number(Double(duration)),
+                "timezone": .string(timezone)
+            ]))
+            cursor = slotEnd
+        }
+    }
+
+    private func parseClock(_ raw: String, fallback: (hour: Int, minute: Int)) -> (hour: Int, minute: Int) {
+        let parts = raw.split(separator: ":")
+        guard parts.count == 2,
+              let hour = Int(parts[0]),
+              let minute = Int(parts[1]),
+              (0..<24).contains(hour),
+              (0..<60).contains(minute) else {
+            return fallback
+        }
+        return (hour, minute)
+    }
+
     func createCalendarEvent(arguments: [String: JSONValue], operationId: String) throws -> JSONValue {
         let title = try arguments.requiredString("title")
         let start = try ToolDate.requiredDate(arguments, key: "startAt")

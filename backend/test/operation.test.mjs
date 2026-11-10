@@ -102,3 +102,39 @@ test("偏好可保存、读取和删除，搜索结果明确标注模拟", async
   assert.equal(search.status, "success");
   assert.equal(search.data.simulated, true);
 });
+
+test("空档查询跳过占用时段并标注模拟来源", async () => {
+  const executor = new MockDeviceExecutor({});
+  const result = await executor.execute({
+    tool: "find_free_slots",
+    arguments: {
+      startAt: "2026-11-10T09:00:00+08:00",
+      endAt: "2026-11-10T12:00:00+08:00",
+      timezone: "Asia/Shanghai",
+      durationMinutes: 60,
+      dayStart: "09:00",
+      dayEnd: "12:00",
+      limit: 3
+    }
+  });
+  assert.equal(result.status, "success");
+  assert.equal(result.data.simulated, true);
+  assert.equal(result.data.source, "mock_calendar");
+  assert.ok(result.data.count >= 1);
+  assert.ok(result.data.slots.every((slot) => slot.durationMinutes === 60));
+  assert.ok(result.data.slots.every((slot) => Date.parse(slot.endAt) > Date.parse(slot.startAt)));
+});
+
+test("空档查询拒绝反向时间范围", async () => {
+  const executor = new MockDeviceExecutor({});
+  const result = await executor.execute({
+    tool: "find_free_slots",
+    arguments: {
+      startAt: "2026-11-10T12:00:00+08:00",
+      endAt: "2026-11-10T09:00:00+08:00",
+      timezone: "Asia/Shanghai"
+    }
+  });
+  assert.equal(result.status, "failed");
+  assert.equal(result.error.code, "invalid_time_range");
+});

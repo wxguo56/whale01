@@ -83,6 +83,7 @@ export class MockDeviceExecutor {
     return [
       "get_weather",
       "list_calendar_events",
+      "find_free_slots",
       "create_calendar_event",
       "create_reminder",
       "list_reminders",
@@ -135,6 +136,8 @@ export class MockDeviceExecutor {
         return this.#deleteReminder(args);
       case "list_calendar_events":
         return this.#listCalendarEvents(args);
+      case "find_free_slots":
+        return this.#findFreeSlots(args);
       case "create_calendar_event":
         return this.#createCalendarEvent({ args, operationId, turnId });
       case "update_calendar_event":
@@ -341,6 +344,85 @@ export class MockDeviceExecutor {
       source: "mock_demo_calendar",
       note: events.length ? "模拟日历数据，不代表已读取 iPhone 日历" : "模拟日历在该区间没有事件，不代表真实日历为空"
     });
+  }
+
+  async #findFreeSlots(args = {}) {
+    const rangeStart = Date.parse(args.startAt);
+    const rangeEnd = Date.parse(args.endAt);
+    if (Number.isNaN(rangeStart) || Number.isNaN(rangeEnd) || rangeEnd <= rangeStart) {
+      return this.#failure("invalid_time_range", "结束时间必须晚于开始时间");
+    }
+    const duration = Math.max(15, Math.min(args.durationMinutes ?? 60, 480));
+    const buffer = Math.max(0, Math.min(args.bufferMinutes ?? 0, 120));
+    const limit = Math.max(1, Math.min(args.limit ?? 8, 20));
+    const [startHour, startMinute] = String(args.dayStart ?? "09:00").split(":").map(Number);
+    const [endHour, endMinute] = String(args.dayEnd ?? "21:00").split(":").map(Number);
+    if (![startHour, startMinute, endHour, endMinute].every(Number.isFinite)
+        || startHour * 60 + startMinute >= endHour * 60 + endMinute) {
+      return this.#failure("invalid_day_window", "dayStart 必须早于 dayEnd");
+    }
+
+    const stored = this.calendarPath ? await this.#readJson(this.calendarPath, []) : [];
+    const events = [...DEMO_CALENDAR, ...stored].filter((event) => args.includeAllDay === true || !event.isAllDay);
+    const slots = [];
+    const cursor = new Date(rangeStart);
+    cursor.setHours(0, 0, 0, 0);
+    let inspectedDays = 0;
+    while (cursor.getTime() < rangeEnd && slots.length < limit && inspectedDays < 14) {
+      const windowStart = new Date(cursor);
+      windowStart.setHours(startHour, startMinute, 0, 0);
+      const windowEnd = new Date(cursor);
+      windowEnd.setHours(endHour, endMinute, 0, 0);
+      const clippedStart = Math.max(windowStart.getTime(), rangeStart);
+      const clippedEnd = Math.min(windowEnd.getTime(), rangeEnd);
+      if (clippedStart < clippedEnd) {
+        const busy = events
+          .map((event) => ({
+            start: Math.max(clippedStart, Date.parse(event.startAt) - buffer * 60_000),
+            end: Math.min(clippedEnd, Date.parse(event.endAt) + buffer * 60_000)
+          }))
+          .filter((interval) => Number.isFinite(interval.start) && Number.isFinite(interval.end) && interval.start < interval.end)
+          .sort((left, right) => left.start - right.start);
+        let freeStart = clippedStart;
+        for (const interval of busy) {
+          this.#appendMockSlots(freeStart, interval.start, duration, slots, limit);
+          if (slots.length >= limit) break;
+          freeStart = Math.max(freeStart, interval.end);
+          if (freeStart >= clippedEnd) break;
+        }
+        if (slots.length < limit && freeStart < clippedEnd) {
+          this.#appendMockSlots(freeStart, clippedEnd, duration, slots, limit);
+        }
+      }
+      cursor.setDate(cursor.getDate() + 1);
+      inspectedDays += 1;
+    }
+
+    return this.#success({
+      slots,
+      count: slots.length,
+      durationMinutes: duration,
+      bufferMinutes: buffer,
+      timezone: args.timezone,
+      dayStart: args.dayStart ?? "09:00",
+      dayEnd: args.dayEnd ?? "21:00",
+      source: "mock_calendar",
+      simulated: true,
+      note: "模拟空档，不代表真实日历可用性；创建前仍需确认"
+    });
+  }
+
+  #appendMockSlots(startMs, endMs, duration, slots, limit) {
+    const durationMs = duration * 60_000;
+    let cursor = startMs;
+    while (cursor + durationMs <= endMs && slots.length < limit) {
+      slots.push({
+        startAt: new Date(cursor).toISOString(),
+        endAt: new Date(cursor + durationMs).toISOString(),
+        durationMinutes: duration
+      });
+      cursor += durationMs;
+    }
   }
 
   async #createCalendarEvent({ args, operationId, turnId }) {

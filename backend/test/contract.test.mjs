@@ -15,6 +15,7 @@ test("工具目录覆盖系统操作、记录修改、记忆与公开信息能�
     "delete_memory",
     "delete_reminder",
     "fetch_web_content",
+    "find_free_slots",
     "get_activity_summary",
     "get_playback_state",
     "get_weather",

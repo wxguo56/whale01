@@ -353,6 +353,8 @@ final class NativeToolRouter {
             return try await eventKit.deleteReminder(arguments: pending.arguments)
         case "list_calendar_events":
             return try eventKit.listCalendarEvents(arguments: pending.arguments)
+        case "find_free_slots":
+            return try eventKit.findFreeSlots(arguments: pending.arguments)
         case "create_calendar_event":
             return try eventKit.createCalendarEvent(arguments: pending.arguments, operationId: pending.operationId)
         case "update_calendar_event":

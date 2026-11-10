@@ -113,6 +113,7 @@ enum ToolCatalog {
         case "update_reminder": return "修改提醒"
         case "delete_reminder": return "删除提醒"
         case "list_calendar_events": return "读取日历"
+        case "find_free_slots": return "查找空档"
         case "create_calendar_event": return "创建日程"
         case "update_calendar_event": return "修改日程"
         case "delete_calendar_event": return "删除日程"
@@ -154,6 +155,12 @@ enum ToolCatalog {
             return [args.optionalString("eventId"), args.optionalString("title")].compactMap { $0 }.joined(separator: " · ")
         case "list_calendar_events":
             return [args.optionalString("startAt"), args.optionalString("endAt")].compactMap { $0 }.joined(separator: " → ")
+        case "find_free_slots":
+            return [
+                args.optionalString("startAt"),
+                args.optionalString("endAt"),
+                args.optionalInt("durationMinutes").map { "\($0) 分钟" }
+            ].compactMap { $0 }.joined(separator: " · ")
         case "get_weather":
             return [args.optionalString("locationName"), args.optionalString("startAt")].compactMap { $0 }.joined(separator: " · ")
         case "get_activity_summary":
