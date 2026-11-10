@@ -3,7 +3,7 @@ import Foundation
 enum BackendConfig {
     static let storageKey = "whale.backendURL"
     static let apiTokenKey = "whale.apiToken"
-    static let defaultBaseURL = "https://intent-lakes-loc-nebraska.trycloudflare.com"
+    static let defaultBaseURL = ""
 
     /// Older builds stored a LAN address as the default. Treat it as stale so
     /// existing installs move to the public HTTPS endpoint after upgrading.

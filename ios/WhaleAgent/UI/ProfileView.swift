@@ -182,7 +182,7 @@ struct ProfileView: View {
             Text("关于")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(WhaleTheme.ink)
-            Text("数据留在设备与你的后端。鲸鱼只在获得确认后写入提醒、日历和短信草稿；导入的音乐只保存在 App 沙盒。")
+            Text("对话内容经 DeepSeek API 处理。提醒、日历、短信草稿和导入的音乐留在设备上；鲸鱼只在获得确认后执行写入。")
                 .font(.system(size: 13))
                 .foregroundStyle(WhaleTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)

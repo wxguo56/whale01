@@ -46,29 +46,6 @@ struct SettingsView: View {
                     .padding(.vertical, 6)
                 }
 
-                Section("后端访问码") {
-                    SecureField("粘贴后端 WHALE_AUTH_TOKENS 中的一个访问码", text: $model.apiToken)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    Button("保存访问码") {
-                        model.saveAPIToken()
-                    }
-                    .font(.subheadline.weight(.medium))
-                    if model.authRequired && model.apiToken.isEmpty {
-                        Label("后端已开启鉴权，填写访问码后才能对话", systemImage: "exclamationmark.triangle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                    } else if model.authRequired {
-                        Text("已填写；若提示 401，请向后端管理员核对访问码。")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("当前后端未启用鉴权。启用后每个安装身份使用独立访问码。")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
                 Section("系统权限") {
                     ForEach(permissionRows) { row in
                         PermissionSettingsRow(
@@ -112,7 +89,7 @@ struct SettingsView: View {
                 Section("关于") {
                     LabeledContent("应用", value: "鲸鱼")
                     LabeledContent("版本", value: model.versionText)
-                    LabeledContent("隐私", value: "数据留在设备与你的后端")
+                    LabeledContent("隐私", value: "对话经 DeepSeek 处理，系统数据留在设备")
                     Text("鲸鱼只在获得确认后写入提醒、日历和短信草稿；天气与运动摘要需要对应系统能力授权。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -196,17 +173,33 @@ struct DeveloperSettingsView: View {
 
     var body: some View {
         Form {
-            Section("后端服务") {
-                TextField("http://192.168.x.x:8787", text: $model.backendURL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .keyboardType(.URL)
-                Button("保存并检查") {
-                    model.saveBackendURL()
+            Section("运行方式") {
+                Picker("Agent", selection: $model.agentMode) {
+                    Text("本机直连").tag("local")
+                    Text("云后端").tag("cloud")
                 }
-                LabeledContent("连接状态", value: model.statusLine)
-                if let checked = model.lastCheckedAt {
-                    LabeledContent("最近检查", value: checked.formatted(date: .abbreviated, time: .standard))
+                .onChange(of: model.agentMode) { _, _ in
+                    model.saveAgentMode()
+                }
+                LabeledContent("状态", value: model.statusLine)
+                if model.agentMode != "cloud" {
+                    LabeledContent("本机密钥", value: LocalAgentConfig.isConfigured ? "已配置" : "缺失")
+                }
+            }
+
+            if model.agentMode == "cloud" {
+                Section("后端服务") {
+                    TextField("https://your-backend.example.com", text: $model.backendURL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
+                    Button("保存并检查") {
+                        model.saveBackendURL()
+                    }
+                    LabeledContent("连接状态", value: model.statusLine)
+                    if let checked = model.lastCheckedAt {
+                        LabeledContent("最近检查", value: checked.formatted(date: .abbreviated, time: .standard))
+                    }
                 }
             }
 
@@ -232,7 +225,7 @@ struct DeveloperSettingsView: View {
             }
 
             Section("说明") {
-                Text("这里只用于开发和真机诊断。DeepSeek 密钥保存在后端，不会写入 App，也不会显示在客户端。")
+                Text("本机直连模式把 DeepSeek 密钥编译进安装包，只适合个人设备；云后端模式把密钥留在服务器。切换后会自动重新检查。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

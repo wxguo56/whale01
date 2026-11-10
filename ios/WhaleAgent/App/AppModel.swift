@@ -20,12 +20,12 @@ struct ChatMessage: Identifiable, Equatable {
 @MainActor
 final class AppModel: ObservableObject {
     @Published var backendURL: String
-    @Published var apiToken: String
+    @Published var agentMode: String
     @Published var input = ""
     @Published private(set) var messages: [ChatMessage] = []
     @Published private(set) var pending: [PendingTool] = []
     @Published private(set) var isBusy = false
-    @Published private(set) var statusLine = "正在连接服务…"
+    @Published private(set) var statusLine = "正在准备本机引擎…"
     @Published private(set) var backendOnline = false
     @Published private(set) var lastCheckedAt: Date?
     @Published private(set) var errorText: String?
@@ -50,7 +50,12 @@ final class AppModel: ObservableObject {
     @Published private(set) var isExecutingTool = false
 
     let permissions = PermissionCenter()
-    private let client = AgentClient()
+    private let remoteClient = AgentClient()
+    private let localEngine = LocalAgentEngine()
+    private var client: AgentTransport {
+        if agentMode == "cloud" { return remoteClient }
+        return localEngine
+    }
     private let router: NativeToolRouter
     private var conversationId: String?
     private var activeTurnId: String?
@@ -63,10 +68,12 @@ final class AppModel: ObservableObject {
 
     private static let activeTurnKey = "whale.activeTurnId"
     private static let conversationKey = "whale.conversationId"
+    private static let directModeMigrationKey = "whale.directModeMigrated.v046"
 
     init() {
+        Self.migrateDirectModeIfNeeded()
         backendURL = BackendConfig.currentBaseURLString
-        apiToken = BackendConfig.authToken
+        agentMode = UserDefaults.standard.string(forKey: "whale.agentMode") ?? "local"
         conversationId = UserDefaults.standard.string(forKey: Self.conversationKey)
         router = NativeToolRouter(permissions: permissions)
         messages = [
@@ -102,13 +109,10 @@ final class AppModel: ObservableObject {
         Task { await health() }
     }
 
-    func saveAPIToken() {
-        let trimmed = apiToken.trimmingCharacters(in: .whitespacesAndNewlines)
-        UserDefaults.standard.set(trimmed, forKey: BackendConfig.apiTokenKey)
-        apiToken = trimmed
-        if errorText?.contains("访问") == true {
-            errorText = nil
-        }
+    func saveAgentMode() {
+        let value = agentMode == "cloud" ? "cloud" : "local"
+        UserDefaults.standard.set(value, forKey: "whale.agentMode")
+        agentMode = value
         Task { await health() }
     }
 
@@ -121,8 +125,14 @@ final class AppModel: ObservableObject {
             toolCount = health.tools
             authRequired = health.authRequired ?? false
             lastCheckedAt = Date()
-            statusLine = health.status == "ok" ? "服务已连接" : "服务返回 \(health.status)"
-            if health.executionMode == "mock" {
+            if agentMode == "cloud" {
+                statusLine = health.status == "ok" ? "服务已连接" : "服务返回 \(health.status)"
+            } else {
+                statusLine = health.status == "ok" ? "本机直连 DeepSeek" : "本机模型未配置"
+            }
+            if agentMode != "cloud" && health.status != "ok" {
+                errorText = "本机直连缺少 DeepSeek 密钥，请重新安装包含密钥的构建，或切换到云后端。"
+            } else if health.executionMode == "mock" {
                 errorText = "当前服务仍是演示执行模式，真实系统操作不会在手机上发生。"
             } else if errorText?.contains("演示执行模式") == true {
                 errorText = nil
@@ -156,7 +166,7 @@ final class AppModel: ObservableObject {
                 return
             }
 
-            if ["running", "awaiting_tool_results"].contains(response.status) {
+            if agentMode == "cloud" && ["running", "awaiting_tool_results"].contains(response.status) {
                 for _ in 0..<8 {
                     try? await Task.sleep(nanoseconds: 1_500_000_000)
                     response = try await client.turnSnapshot(turnId: storedTurn)
@@ -291,6 +301,7 @@ final class AppModel: ObservableObject {
         isBusy = true
         defer { isBusy = false }
         await executeAndCollect(item)
+        presentNextConfirmation()
     }
 
     func skip(_ item: PendingTool) async {
@@ -303,6 +314,7 @@ final class AppModel: ObservableObject {
         isBusy = true
         defer { isBusy = false }
         await submitIfComplete()
+        presentNextConfirmation()
     }
 
     func dismissConfirmation() {
@@ -526,7 +538,9 @@ final class AppModel: ObservableObject {
         case "awaiting_confirmation":
             pending = response.pending
             results = [:]
-            presentedConfirmation = response.pending.first { $0.requiresConfirmation }
+            autoStarted = []
+            await startAutomaticTools()
+            presentNextConfirmation()
         case "completed", "completed_with_limits", "failed", "cancelled", "superseded":
             pending = []
             results = [:]
@@ -551,6 +565,12 @@ final class AppModel: ObservableObject {
             await executeAndCollect(item)
         }
         await submitIfComplete()
+    }
+
+    private func presentNextConfirmation() {
+        presentedConfirmation = pending.first {
+            $0.requiresConfirmation && results[$0.toolCallId] == nil
+        }
     }
 
     private func executeAndCollect(_ item: PendingTool) async {
@@ -624,7 +644,7 @@ final class AppModel: ObservableObject {
     private func fail(_ error: Error) {
         let message: String
         if case AgentClientError.http(401, _) = error {
-            message = "后端要求访问码：请在「设置 → 后端访问码」填写并保存后重试。"
+            message = "云后端拒绝请求，请检查开发设置中的云后端地址与构建令牌。"
         } else if case AgentClientError.http(403, let body) = error, body.contains("forbidden_conversation") {
             conversationId = nil
             UserDefaults.standard.removeObject(forKey: Self.conversationKey)
@@ -638,10 +658,21 @@ final class AppModel: ObservableObject {
         }
         errorText = message
         messages.append(ChatMessage(role: .assistant, text: "本轮没有完成：\(message)"))
-        backendOnline = false
+        backendOnline = agentMode == "cloud" ? false : LocalAgentConfig.isConfigured
     }
 
     private var defersToDevice: Bool {
         backendExecutionMode == "ios" || backendExecutionMode == "device"
+    }
+
+    private static func migrateDirectModeIfNeeded() {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: directModeMigrationKey) else { return }
+        defaults.set("local", forKey: "whale.agentMode")
+        defaults.removeObject(forKey: BackendConfig.apiTokenKey)
+        defaults.removeObject(forKey: BackendConfig.storageKey)
+        defaults.removeObject(forKey: activeTurnKey)
+        defaults.removeObject(forKey: conversationKey)
+        defaults.set(true, forKey: directModeMigrationKey)
     }
 }

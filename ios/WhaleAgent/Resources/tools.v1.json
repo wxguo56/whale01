@@ -1,0 +1,295 @@
+{
+  "contractVersion": "1.0",
+  "tools": [
+    {
+      "name": "get_weather",
+      "version": "1.0",
+      "skill": "travel",
+      "description": "查询指定地点和区间的天气。地点必须明确且处于供应商预报范围内。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["locationName", "startAt", "endAt", "timezone"],
+        "additionalProperties": false,
+        "properties": {
+          "locationName": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "region": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "startAt": { "type": "string", "format": "date-time" },
+          "endAt": { "type": "string", "format": "date-time" },
+          "timezone": { "type": "string", "minLength": 1, "maxLength": 64 }
+        }
+      }
+    },
+    {
+      "name": "list_calendar_events",
+      "version": "1.0",
+      "skill": "schedule",
+      "description": "查询指定时间区间内的日历事件，包含全天事件和真实起止时间。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["eventkit"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["startAt", "endAt", "timezone"],
+        "additionalProperties": false,
+        "properties": {
+          "startAt": { "type": "string", "format": "date-time" },
+          "endAt": { "type": "string", "format": "date-time" },
+          "timezone": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "calendarIds": { "type": "array", "items": { "type": "string", "maxLength": 128 }, "maxItems": 20 }
+        }
+      }
+    },
+    {
+      "name": "create_calendar_event",
+      "version": "1.0",
+      "skill": "schedule",
+      "description": "在用户确认后创建日历事件。起止时间必须有效，不覆盖已有事件。",
+      "requiresConfirmation": true,
+      "requiresAuthorization": ["eventkit"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["title", "startAt", "endAt", "timezone"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "startAt": { "type": "string", "format": "date-time" },
+          "endAt": { "type": "string", "format": "date-time" },
+          "timezone": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "location": { "type": "string", "maxLength": 200 },
+          "calendarId": { "type": "string", "maxLength": 128 },
+          "notes": { "type": "string", "maxLength": 2000 }
+        }
+      }
+    },
+    {
+      "name": "create_reminder",
+      "version": "1.0",
+      "skill": "schedule",
+      "description": "创建提醒事项。dueAt 可省略表示无日期待办；请求含日期但无法解析时必须追问，不得猜测。",
+      "requiresConfirmation": true,
+      "requiresAuthorization": ["eventkit"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["title", "timezone"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "dueAt": { "type": "string", "format": "date-time" },
+          "timezone": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "listId": { "type": "string", "maxLength": 128 },
+          "notes": { "type": "string", "maxLength": 2000 }
+        }
+      }
+    },
+    {
+      "name": "get_activity_summary",
+      "version": "1.0",
+      "skill": "health",
+      "description": "读取指定区间的运动摘要。只返回已注册指标；无数据与无权限必须区分。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["healthkit"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["startAt", "endAt", "timezone", "metrics"],
+        "additionalProperties": false,
+        "properties": {
+          "startAt": { "type": "string", "format": "date-time" },
+          "endAt": { "type": "string", "format": "date-time" },
+          "timezone": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "metrics": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "uniqueItems": true,
+            "items": { "type": "string", "enum": ["steps", "activeEnergy", "exerciseMinutes", "distance"] }
+          }
+        }
+      }
+    },
+    {
+      "name": "search_places",
+      "version": "1.1",
+      "skill": "travel",
+      "description": "按关键词和当前位置、明确地区或给定坐标搜索地点。给出 radiusMeters 时由手机计算直线距离、过滤并排序后再返回。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["location"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["query"],
+        "additionalProperties": false,
+        "properties": {
+          "query": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "locationMode": { "type": "string", "enum": ["current", "region", "provided"] },
+          "region": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "near": {
+            "type": "object",
+            "required": ["latitude", "longitude"],
+            "additionalProperties": false,
+            "properties": {
+              "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+              "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
+            }
+          },
+          "radiusMeters": { "type": "integer", "minimum": 100, "maximum": 50000 },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 25 }
+        }
+      }
+    },
+    {
+      "name": "open_navigation",
+      "version": "1.0",
+      "skill": "travel",
+      "description": "把当前会话已选择的地点交给地图 App。只返回已打开外部应用，不表示已开始路线或抵达。",
+      "requiresConfirmation": true,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["placeId", "mode"],
+        "additionalProperties": false,
+        "properties": {
+          "placeId": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "mode": { "type": "string", "enum": ["driving", "walking", "transit"] }
+        }
+      }
+    },
+    {
+      "name": "summarize_shared_content",
+      "version": "1.0",
+      "skill": "content",
+      "description": "处理本次分享并已取得正文的内容。只有链接时不代表已读全文。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["contentId", "maxPoints"],
+        "additionalProperties": false,
+        "properties": {
+          "contentId": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "maxPoints": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "language": { "type": "string", "enum": ["zh-Hans", "en"] }
+        }
+      }
+    },
+    {
+      "name": "prepare_message",
+      "version": "1.0",
+      "skill": "communication",
+      "description": "在系统界面准备短信或邮件草稿。发送结果以系统回调为准。",
+      "requiresConfirmation": true,
+      "requiresAuthorization": ["contacts", "messages"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["channel", "recipientId", "body"],
+        "additionalProperties": false,
+        "properties": {
+          "channel": { "type": "string", "enum": ["sms", "email"] },
+          "recipientId": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "body": { "type": "string", "minLength": 1, "maxLength": 5000 },
+          "subject": { "type": "string", "maxLength": 200 }
+        }
+      }
+    },
+    {
+      "name": "search_music_library",
+      "version": "1.0",
+      "skill": "music",
+      "description": "在用户已授权的音乐库中按关键词或艺人查找可播放曲目，只返回候选引用，不自动播放。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["music"],
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {
+          "query": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "artist": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 25 }
+        }
+      }
+    },
+    {
+      "name": "play_music",
+      "version": "1.0",
+      "skill": "music",
+      "description": "播放本轮已查询并确认的曲目引用。只有播放器实际进入播放状态后才可报告正在播放。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["music"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["trackId"],
+        "additionalProperties": false,
+        "properties": {
+          "trackId": { "type": "string", "minLength": 2, "maxLength": 120 },
+          "queueIntent": { "type": "string", "enum": ["replace", "append"] },
+          "sessionId": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
+    },
+    {
+      "name": "pause_music",
+      "version": "1.0",
+      "skill": "music",
+      "description": "暂停当前播放会话。没有可暂停的播放时准确说明，不创建新队列。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["music"],
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
+    },
+    {
+      "name": "resume_music",
+      "version": "1.0",
+      "skill": "music",
+      "description": "继续当前已暂停的播放会话。没有可恢复队列时要求用户重新选曲。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["music"],
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
+    },
+    {
+      "name": "skip_music_track",
+      "version": "1.0",
+      "skill": "music",
+      "description": "按当前播放会话的真实队列切换上一首或下一首，到边界时准确反馈。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["music"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["direction"],
+        "additionalProperties": false,
+        "properties": {
+          "direction": { "type": "string", "enum": ["next", "previous"] },
+          "sessionId": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
+    },
+    {
+      "name": "get_playback_state",
+      "version": "1.0",
+      "skill": "music",
+      "description": "读取当前播放会话的播放、暂停、加载、停止或失败状态及当前曲目信息。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["music"],
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
+    }
+  ]
+}

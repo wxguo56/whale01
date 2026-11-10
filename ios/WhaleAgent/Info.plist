@@ -33,6 +33,8 @@
   </array>
   <key>WhaleAPIToken</key>
   <string>$(WHALE_API_TOKEN)</string>
+  <key>DeepSeekAPIKey</key>
+  <string>$(DEEPSEEK_API_KEY)</string>
   <key>LSRequiresIPhoneOS</key>
   <true/>
   <key>UIApplicationSceneManifest</key>

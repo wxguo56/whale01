@@ -20,7 +20,7 @@ enum AgentClientError: Error, LocalizedError {
     }
 }
 
-actor AgentClient {
+actor AgentClient: AgentTransport {
     private let session: URLSession
 
     init() {
