@@ -470,6 +470,10 @@ final class NativeToolRouter {
         try await music.play(arguments: ["trackId": .string(trackId)])
     }
 
+    func playMusicAlbum(albumId: String) async throws -> JSONValue {
+        try await music.playAlbum(albumId: albumId)
+    }
+
     func pauseMusic() async throws -> JSONValue {
         try await music.pause(arguments: [:])
     }
@@ -570,6 +574,10 @@ final class NativeToolRouter {
             return try await music.search(arguments: pending.arguments)
         case "play_music":
             return try await music.play(arguments: pending.arguments)
+        case "play_music_album":
+            return try await music.play(arguments: pending.arguments)
+        case "open_netease_music":
+            return try await music.openNetEase(arguments: pending.arguments)
         case "pause_music":
             return try await music.pause(arguments: pending.arguments)
         case "resume_music":

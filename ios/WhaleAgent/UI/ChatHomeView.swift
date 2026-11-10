@@ -8,6 +8,7 @@ struct ConversationTabView: View {
     let bottomInset: CGFloat
     let onOpenRecords: () -> Void
     let onOpenSettings: () -> Void
+    let onOpenMusic: () -> Void
 
     @State private var browsingStarter = false
 
@@ -25,6 +26,7 @@ struct ConversationTabView: View {
                         model: model,
                         bottomInset: bottomInset,
                         onOpenRecords: onOpenRecords,
+                        onOpenMusic: onOpenMusic,
                         onResumeConversation: model.messages.isEmpty ? nil : { goToConversation() }
                     )
                     .transition(.opacity)
@@ -32,7 +34,8 @@ struct ConversationTabView: View {
                     ConversationSurface(
                         model: model,
                         bottomInset: bottomInset,
-                        onOpenRecords: onOpenRecords
+                        onOpenRecords: onOpenRecords,
+                        onOpenMusic: onOpenMusic
                     )
                     .transition(.opacity)
                     .overlay(alignment: .leading) {
@@ -106,6 +109,15 @@ struct ConversationTabView: View {
             }
 
             Spacer(minLength: 6)
+
+            Button(action: onOpenMusic) {
+                Image(systemName: "music.note")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .whaleGlassCircle(size: 38)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("打开音乐")
 
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) {

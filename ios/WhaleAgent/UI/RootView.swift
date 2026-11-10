@@ -23,7 +23,8 @@ struct RootView: View {
                             model: model,
                             bottomInset: ConversationComposerBar.reservedHeight + WhaleTabBar.height + keyboardOverlap,
                             onOpenRecords: { go(.records) },
-                            onOpenSettings: { go(.settings) }
+                            onOpenSettings: { go(.settings) },
+                            onOpenMusic: { showMusic = true }
                         )
                         .frame(width: proxy.size.width, height: proxy.size.height)
                         .id(AppTab.conversation)
@@ -151,14 +152,26 @@ struct RootView: View {
 
     private func miniPlayer(_ track: MusicTrackItem) -> some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(LinearGradient(colors: [WhaleTheme.accent.opacity(0.8), WhaleTheme.accentDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 38, height: 38)
-                .overlay {
-                    Image(systemName: "music.note")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white)
+            Group {
+                if let image = track.artwork {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    LinearGradient(
+                        colors: [WhaleTheme.accent.opacity(0.8), WhaleTheme.accentDeep],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .overlay {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
                 }
+            }
+                .frame(width: 38, height: 38)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             Button {
                 showMusic = true
             } label: {

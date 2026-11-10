@@ -78,6 +78,7 @@ final class AppModel: ObservableObject {
 
     @Published var musicQuery = ""
     @Published private(set) var musicTracks: [MusicTrackItem] = []
+    @Published private(set) var musicAlbums: [MusicAlbumItem] = []
     @Published private(set) var playback = PlaybackSnapshot.idle
     @Published private(set) var musicError: String?
     @Published private(set) var isMusicBusy = false
@@ -669,10 +670,31 @@ final class AppModel: ObservableObject {
         UIApplication.shared.open(url)
     }
 
+    func openNetEaseMusic() {
+        tryOpenNetEase(candidates: ["orpheus://", "neteasecloudmusic://"], index: 0)
+    }
+
+    private func tryOpenNetEase(candidates: [String], index: Int) {
+        guard index < candidates.count, let url = URL(string: candidates[index]) else {
+            musicError = "没有检测到已安装的网易云音乐 App。请先安装并登录后再试。"
+            return
+        }
+        UIApplication.shared.open(url, options: [:]) { [weak self] opened in
+            Task { @MainActor in
+                guard let self else { return }
+                if opened {
+                    self.musicError = nil
+                } else {
+                    self.tryOpenNetEase(candidates: candidates, index: index + 1)
+                }
+            }
+        }
+    }
+
     func musicAppeared() async {
         refreshPermissions()
         LocalMusicLibrary.shared.bootstrap()
-        if !musicDidLoad {
+        if !musicDidLoad || permissionsSnapshot["music"] == "granted" {
             await loadMusicLibrary()
         }
         await refreshPlayback()
@@ -688,6 +710,7 @@ final class AppModel: ObservableObject {
         if permissionsSnapshot["music"] != "granted" && LocalMusicLibrary.shared.tracks.isEmpty {
             musicDidLoad = true
             musicError = nil
+            musicAlbums = []
             return
         }
         isMusicBusy = true
@@ -696,9 +719,19 @@ final class AppModel: ObservableObject {
         do {
             let data = try await router.searchMusic(query: musicQuery)
             let rows = data.objectValue?["tracks"]?.arrayValue ?? []
-            musicTracks = rows.compactMap { MusicTrackItem(json: $0) }
+            let albumRows = data.objectValue?["albums"]?.arrayValue ?? []
+            musicTracks = rows.compactMap { row in
+                guard var item = MusicTrackItem(json: row) else { return nil }
+                item.artwork = SystemMusicLibrary.shared.artwork(forTrackId: item.trackId)
+                return item
+            }
+            musicAlbums = albumRows.compactMap { row in
+                guard var item = MusicAlbumItem(json: row) else { return nil }
+                item.artwork = SystemMusicLibrary.shared.artwork(forAlbumId: item.albumId)
+                return item
+            }
             musicDidLoad = true
-            if musicTracks.isEmpty {
+            if musicTracks.isEmpty && musicAlbums.isEmpty {
                 if !musicQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     musicError = "没有找到匹配的曲目，换一个关键词试试。"
                 } else if permissionsSnapshot["music"] == "granted" {
@@ -745,6 +778,20 @@ final class AppModel: ObservableObject {
         defer { isMusicBusy = false }
         do {
             playback = PlaybackSnapshot(json: try await router.playMusic(trackId: track.trackId))
+            hydratePlaybackArtwork()
+        } catch {
+            musicError = error.localizedDescription
+        }
+    }
+
+    func play(_ album: MusicAlbumItem) async {
+        guard !isMusicBusy else { return }
+        isMusicBusy = true
+        musicError = nil
+        defer { isMusicBusy = false }
+        do {
+            playback = PlaybackSnapshot(json: try await router.playMusicAlbum(albumId: album.albumId))
+            hydratePlaybackArtwork()
         } catch {
             musicError = error.localizedDescription
         }
@@ -763,6 +810,7 @@ final class AppModel: ObservableObject {
             } else if let first = musicTracks.first {
                 playback = PlaybackSnapshot(json: try await router.playMusic(trackId: first.trackId))
             }
+            hydratePlaybackArtwork()
         } catch {
             musicError = error.localizedDescription
         }
@@ -780,6 +828,7 @@ final class AppModel: ObservableObject {
         guard !isMusicBusy else { return }
         do {
             playback = PlaybackSnapshot(json: try await router.playbackState())
+            hydratePlaybackArtwork()
         } catch {
             musicError = error.localizedDescription
         }
@@ -792,9 +841,18 @@ final class AppModel: ObservableObject {
         defer { isMusicBusy = false }
         do {
             playback = PlaybackSnapshot(json: try await router.skipMusic(direction: direction))
+            hydratePlaybackArtwork()
         } catch {
             musicError = error.localizedDescription
         }
+    }
+
+    private func hydratePlaybackArtwork() {
+        guard let track = playback.track, track.artwork == nil,
+              let artwork = SystemMusicLibrary.shared.artwork(forTrackId: track.trackId) else {
+            return
+        }
+        playback = playback.attachingArtwork(artwork)
     }
 
     private func handle(_ response: AgentTurnResponse) async {

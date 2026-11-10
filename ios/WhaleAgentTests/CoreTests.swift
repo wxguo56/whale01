@@ -14,6 +14,33 @@ final class CoreTests: XCTestCase {
         XCTAssertThrowsError(try value.requiredString("missing"))
     }
 
+    func testMusicAlbumAndTrackKeepRealLibraryIdentity() {
+        let albumJSON = JSONValue.object([
+            "albumId": .string("album:123"),
+            "title": .string("真实专辑"),
+            "artist": .string("真实艺人"),
+            "trackCount": .number(9),
+            "source": .string("system")
+        ])
+        let album = MusicAlbumItem(json: albumJSON)
+        XCTAssertEqual(album?.albumId, "album:123")
+        XCTAssertEqual(album?.trackCount, 9)
+
+        let trackJSON = JSONValue.object([
+            "trackId": .string("library:456"),
+            "title": .string("第一首"),
+            "artist": .string("真实艺人"),
+            "album": .string("真实专辑"),
+            "albumId": .string("album:123"),
+            "durationSec": .number(201),
+            "source": .string("system")
+        ])
+        let track = MusicTrackItem(json: trackJSON)
+        XCTAssertEqual(track?.albumId, "album:123")
+        XCTAssertEqual(track?.source, "system")
+        XCTAssertEqual(track?.durationText, "3:21")
+    }
+
     func testOperationLedgerCachesOutcome() async {
         let ledger = OperationLedger()
         let operationId = "test-\(UUID().uuidString)"

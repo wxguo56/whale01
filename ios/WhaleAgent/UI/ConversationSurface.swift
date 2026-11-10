@@ -11,6 +11,7 @@ struct ConversationSurface: View {
     @ObservedObject var model: AppModel
     let bottomInset: CGFloat
     let onOpenRecords: () -> Void
+    let onOpenMusic: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,7 +33,8 @@ struct ConversationSurface: View {
         WhaleHomeCanvas(
             model: model,
             bottomInset: bottomInset,
-            onOpenRecords: onOpenRecords
+            onOpenRecords: onOpenRecords,
+            onOpenMusic: onOpenMusic
         )
     }
 

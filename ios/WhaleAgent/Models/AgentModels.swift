@@ -124,6 +124,8 @@ enum ToolCatalog {
         case "prepare_message": return "准备短信"
         case "search_music_library": return "搜索音乐"
         case "play_music": return "播放音乐"
+        case "play_music_album": return "播放专辑"
+        case "open_netease_music": return "打开网易云"
         case "pause_music": return "暂停音乐"
         case "resume_music": return "继续播放"
         case "skip_music_track": return "切换歌曲"
@@ -179,6 +181,10 @@ enum ToolCatalog {
             return [args.optionalString("query"), args.optionalString("artist")].compactMap { $0 }.joined(separator: " · ")
         case "play_music":
             return args.optionalString("trackId") ?? "当前曲目"
+        case "play_music_album":
+            return args.optionalString("albumId") ?? "资料库专辑"
+        case "open_netease_music":
+            return "打开网易云音乐 App"
         case "skip_music_track":
             return args.optionalString("direction") ?? "下一首"
         case "set_memory":

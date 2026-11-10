@@ -1,6 +1,7 @@
 import CoreLocation
 import Foundation
 import SwiftUI
+import UIKit
 
 enum AppTab: Hashable {
     case conversation
@@ -46,7 +47,7 @@ struct OperationRecord: Identifiable, Equatable, Codable {
             return "calendar"
         case "search_places", "open_navigation", "get_current_location": return "map.fill"
         case "prepare_message": return "message.fill"
-        case "search_music_library", "play_music", "pause_music", "resume_music", "skip_music_track":
+        case "search_music_library", "play_music", "play_music_album", "open_netease_music", "pause_music", "resume_music", "skip_music_track":
             return "music.note"
         case "get_weather": return "cloud.sun.fill"
         case "get_activity_summary": return "figure.walk"
@@ -237,13 +238,16 @@ struct MusicTrackItem: Identifiable, Equatable {
     let title: String
     let artist: String
     let album: String
+    let albumId: String
     let durationSec: Double
     let artworkURL: URL?
     let source: String
+    var artwork: UIImage?
 
     var id: String { trackId }
 
     var isLocal: Bool { source == "local" }
+    var isSystem: Bool { source == "system" }
 
     init?(json: JSONValue) {
         guard let object = json.objectValue else { return nil }
@@ -254,15 +258,56 @@ struct MusicTrackItem: Identifiable, Equatable {
         self.title = title
         self.artist = object.optionalString("artist") ?? "未知艺人"
         self.album = object.optionalString("album") ?? ""
+        self.albumId = object.optionalString("albumId") ?? ""
         self.durationSec = object.optionalDouble("durationSec") ?? 0
         self.artworkURL = object.optionalString("artworkURL").flatMap(URL.init(string:))
         self.source = object.optionalString("source") ?? "musickit"
+        self.artwork = nil
     }
 
     var durationText: String {
         guard durationSec > 0 else { return "" }
         let seconds = Int(durationSec.rounded())
         return String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+
+    static func == (lhs: MusicTrackItem, rhs: MusicTrackItem) -> Bool {
+        lhs.trackId == rhs.trackId
+            && lhs.title == rhs.title
+            && lhs.artist == rhs.artist
+            && lhs.album == rhs.album
+            && lhs.source == rhs.source
+    }
+}
+
+struct MusicAlbumItem: Identifiable, Equatable {
+    let albumId: String
+    let title: String
+    let artist: String
+    let trackCount: Int
+    let source: String
+    var artwork: UIImage?
+
+    var id: String { albumId }
+
+    init?(json: JSONValue) {
+        guard let object = json.objectValue else { return nil }
+        guard let albumId = object.optionalString("albumId"), let title = object.optionalString("title") else {
+            return nil
+        }
+        self.albumId = albumId
+        self.title = title
+        self.artist = object.optionalString("artist") ?? "未知艺人"
+        self.trackCount = object.optionalInt("trackCount") ?? 0
+        self.source = object.optionalString("source") ?? "system"
+        self.artwork = nil
+    }
+
+    static func == (lhs: MusicAlbumItem, rhs: MusicAlbumItem) -> Bool {
+        lhs.albumId == rhs.albumId
+            && lhs.title == rhs.title
+            && lhs.artist == rhs.artist
+            && lhs.trackCount == rhs.trackCount
     }
 }
 
@@ -301,6 +346,19 @@ struct PlaybackSnapshot: Equatable {
         self.audioOutput = audioOutput
     }
 
+    func attachingArtwork(_ artwork: UIImage?) -> PlaybackSnapshot {
+        guard let existing = track, existing.artwork == nil, let artwork else { return self }
+        var updated = existing
+        updated.artwork = artwork
+        return PlaybackSnapshot(
+            state: state,
+            track: updated,
+            positionSec: positionSec,
+            queueLength: queueLength,
+            audioOutput: audioOutput
+        )
+    }
+
     var isPlaying: Bool { state == "playing" }
     var stateText: String {
         switch state {
@@ -329,7 +387,7 @@ enum ToolPresentation {
         case "open_navigation": return "location.north.line"
         case "prepare_message": return "message"
         case "search_music_library": return "music.note.list"
-        case "play_music", "pause_music", "resume_music", "skip_music_track", "get_playback_state":
+        case "play_music", "play_music_album", "open_netease_music", "pause_music", "resume_music", "skip_music_track", "get_playback_state":
             return "music.note"
         case "summarize_shared_content": return "doc.text"
         case "list_memory", "set_memory", "delete_memory": return "brain.head.profile"
@@ -392,6 +450,10 @@ enum ToolPresentation {
             return args.optionalString("query") ?? "读取你的音乐库"
         case "play_music":
             return "播放你选择的曲目"
+        case "play_music_album":
+            return "播放资料库里的整张专辑"
+        case "open_netease_music":
+            return "打开已登录的网易云音乐 App"
         case "skip_music_track":
             return args.optionalString("direction") == "previous" ? "回到上一首" : "播放下一首"
         case "get_weather":
@@ -443,6 +505,30 @@ enum ToolPresentation {
         guard let object = data?.objectValue else { return status == "success" ? "已完成" : status }
 
         switch tool {
+        case "search_music_library":
+            let trackCount = object["tracks"]?.arrayValue?.count ?? 0
+            let albumCount = object["albums"]?.arrayValue?.count ?? 0
+            if trackCount == 0 && albumCount == 0 {
+                return object.optionalString("note") ?? "音乐库里没有找到匹配内容"
+            }
+            return "找到 \(trackCount) 首歌曲 · \(albumCount) 张专辑"
+        case "play_music", "play_music_album":
+            let title = object.optionalString("trackTitle")
+                ?? object["track"]?.objectValue?.optionalString("title")
+                ?? "正在播放"
+            let state = object.optionalString("state")
+            if state == "playing" {
+                return "正在播放「\(title)」"
+            }
+            if state == "paused" {
+                return "已暂停「\(title)」"
+            }
+            return "播放器没有进入播放状态"
+        case "open_netease_music":
+            if object.optionalString("state") == "opened_external_app" {
+                return "已打开网易云音乐 App · 未控制播放"
+            }
+            return object.optionalString("note") ?? "没有打开网易云音乐"
         case "list_calendar_events":
             let count = object.optionalInt("count") ?? 0
             return count == 0 ? "已读取系统日历 · 这段时间没有安排" : "已读取系统日历 · \(count) 项"

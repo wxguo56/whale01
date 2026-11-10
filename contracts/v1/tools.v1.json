@@ -301,6 +301,37 @@
       }
     },
     {
+      "name": "play_music_album",
+      "version": "1.0",
+      "skill": "music",
+      "description": "播放本轮从系统音乐资料库查询到的整张专辑。albumId 必须来自 search_music_library 的 albums 结果；只有播放器实际进入播放状态后才可报告正在播放。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": ["music"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["albumId"],
+        "additionalProperties": false,
+        "properties": {
+          "albumId": { "type": "string", "minLength": 2, "maxLength": 160 },
+          "sessionId": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
+    },
+    {
+      "name": "open_netease_music",
+      "version": "1.0",
+      "skill": "music",
+      "description": "打开已安装并登录的网易云音乐 App。iOS 不允许第三方 App 读取网易云账号、歌库或代替它播放；结果只能报告已打开外部 App。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    {
       "name": "pause_music",
       "version": "1.0",
       "skill": "music",

@@ -4,7 +4,7 @@ import CoreLocation
 import EventKit
 import HealthKit
 import MessageUI
-import MusicKit
+import MediaPlayer
 
 @MainActor
 final class PermissionCenter: ObservableObject {
@@ -36,6 +36,8 @@ final class PermissionCenter: ObservableObject {
         "get_activity_summary": ["activityRead"],
         "search_music_library": ["music"],
         "play_music": ["music"],
+        "play_music_album": ["music"],
+        "open_netease_music": [],
         "pause_music": ["music"],
         "resume_music": ["music"],
         "skip_music_track": ["music"],
@@ -105,16 +107,7 @@ final class PermissionCenter: ObservableObject {
             next["location"] = "unknown"
         }
 
-        switch MusicAuthorization.currentStatus {
-        case .authorized:
-            next["music"] = "granted"
-        case .denied, .restricted:
-            next["music"] = "denied"
-        case .notDetermined:
-            next["music"] = "unknown"
-        @unknown default:
-            next["music"] = "unknown"
-        }
+        next["music"] = mapMusicStatus(MPMediaLibrary.authorizationStatus())
 
         next["messages"] = MFMessageComposeViewController.canSendText() ? "granted" : "denied"
         statuses = next
@@ -307,7 +300,7 @@ final class PermissionCenter: ObservableObject {
     }
 
     private func ensureMusic() async -> Bool {
-        switch MusicAuthorization.currentStatus {
+        switch MPMediaLibrary.authorizationStatus() {
         case .authorized:
             statuses["music"] = "granted"
             return true
@@ -320,15 +313,26 @@ final class PermissionCenter: ObservableObject {
             break
         }
 
-        let result = await MusicAuthorization.request()
-        let granted: Bool
-        if case .authorized = result {
-            granted = true
-        } else {
-            granted = false
+        let granted = await withCheckedContinuation { continuation in
+            MPMediaLibrary.requestAuthorization { status in
+                continuation.resume(returning: status == .authorized)
+            }
         }
         statuses["music"] = granted ? "granted" : "denied"
         return granted
+    }
+
+    private func mapMusicStatus(_ status: MPMediaLibraryAuthorizationStatus) -> String {
+        switch status {
+        case .authorized:
+            return "granted"
+        case .denied, .restricted:
+            return "denied"
+        case .notDetermined:
+            return "unknown"
+        @unknown default:
+            return "unknown"
+        }
     }
 
     private func healthReadTypes() -> Set<HKObjectType> {

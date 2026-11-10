@@ -7,6 +7,7 @@ struct WhaleHomeCanvas: View {
     @ObservedObject var model: AppModel
     let bottomInset: CGFloat
     let onOpenRecords: () -> Void
+    let onOpenMusic: () -> Void
     var onResumeConversation: (() -> Void)? = nil
 
     var body: some View {
@@ -140,7 +141,7 @@ struct WhaleHomeCanvas: View {
                 if model.playback.track != nil {
                     Task { await model.togglePlayback() }
                 } else {
-                    send("我想听歌。")
+                    onOpenMusic()
                 }
             }
         }

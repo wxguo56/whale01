@@ -45,6 +45,7 @@ targets:
       - sdk: CoreLocation.framework
       - sdk: Contacts.framework
       - sdk: MessageUI.framework
+      - sdk: MediaPlayer.framework
       - sdk: MusicKit.framework
       - sdk: Speech.framework
       - sdk: Vision.framework
@@ -81,6 +82,7 @@ targets:
       - sdk: CoreLocation.framework
       - sdk: Contacts.framework
       - sdk: MessageUI.framework
+      - sdk: MediaPlayer.framework
       - sdk: MusicKit.framework
       - sdk: Speech.framework
       - sdk: Vision.framework

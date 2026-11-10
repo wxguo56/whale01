@@ -37,6 +37,11 @@
   <string>$(DEEPSEEK_API_KEY)</string>
   <key>LSRequiresIPhoneOS</key>
   <true/>
+  <key>LSApplicationQueriesSchemes</key>
+  <array>
+    <string>orpheus</string>
+    <string>neteasecloudmusic</string>
+  </array>
   <key>UIApplicationSceneManifest</key>
   <dict>
     <key>UIApplicationSupportsMultipleScenes</key>
