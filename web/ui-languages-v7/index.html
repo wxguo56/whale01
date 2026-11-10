@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>代号鲸鱼01 · 五套乔布斯风设计语言 v7</title>
+<style>
+  :root { --r-card:16px; --r-control:12px; --ease:cubic-bezier(0.2,0.8,0.2,1); }
+  [data-theme="light"] {
+    --bg:#F2F2F7; --bg-g:#FFFFFF; --bg-el:#FFFFFF; --bg-in:#E9E9EE;
+    --t1:#1C1C1E; --t2:#8E8E93; --t3:#AEAEB2;
+    --acc:#007AFF; --acc2:#0062CC; --on-acc:#FFFFFF;
+    --sep:#C6C6C8; --hair:rgba(60,60,67,0.12);
+    --ok:#34C759; --warn:#FF9500; --err:#FF3B30; --pend:#AF52DE;
+    --bar:rgba(249,249,251,0.82); --ov:rgba(0,0,0,0.40); --sh:0 2px 12px rgba(0,0,0,0.06);
+  }
+  [data-theme="dark"] {
+    --bg:#000000; --bg-g:#1C1C1E; --bg-el:#2C2C2E; --bg-in:#1C1C1E;
+    --t1:#FFFFFF; --t2:#98989E; --t3:#636366;
+    --acc:#0A84FF; --acc2:#409CFF; --on-acc:#FFFFFF;
+    --sep:#38383A; --hair:rgba(84,84,88,0.4);
+    --ok:#30D158; --warn:#FF9F0A; --err:#FF453A; --pend:#BF5AF2;
+    --bar:rgba(22,22,24,0.82); --ov:rgba(0,0,0,0.55); --sh:none;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,"SF Pro Text","PingFang SC",system-ui,sans-serif; background:#F5F6FA; color:#1D1D1F; line-height:1.45; padding-bottom:64px; }
+  header { position:sticky; top:0; z-index:60; background:rgba(255,255,255,0.85); backdrop-filter:blur(14px); border-bottom:1px solid rgba(0,0,0,0.08); padding:12px 20px 0; }
+  .head-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; max-width:1120px; margin:0 auto; }
+  header h1 { font-size:16px; font-weight:700; letter-spacing:-0.2px; }
+  header .sub { font-size:12px; color:#8E8E93; margin-top:2px; }
+  .hdr-btn { min-height:40px; padding:0 16px; border-radius:12px; border:1px solid rgba(0,0,0,0.10); background:#fff; font-size:13px; font-weight:600; cursor:pointer; }
+  .tabs { display:flex; gap:6px; max-width:1120px; margin:12px auto 0; overflow-x:auto; padding-bottom:12px; }
+  .tab { min-height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(0,0,0,0.10); background:#fff; cursor:pointer; font-size:14px; font-weight:600; white-space:nowrap; transition:all .18s ease; }
+  .tab:hover { border-color:rgba(0,0,0,0.28); }
+  .tab.active { background:#1D1D1F; color:#fff; border-color:#1D1D1F; }
+  main { max-width:1120px; margin:0 auto; padding:26px 20px 0; display:flex; gap:34px; align-items:flex-start; flex-wrap:wrap; }
+
+  .phone-scale { width:402px; height:874px; overflow:hidden; border-radius:46px; box-shadow:0 12px 40px rgba(0,0,0,0.18); flex-shrink:0; }
+  .phone { width:402px; height:874px; border-radius:46px; overflow:hidden; position:relative; background:var(--bg); color:var(--t1); display:flex; flex-direction:column; transition:background .3s var(--ease); }
+  .lang { display:none; flex:1; min-height:0; flex-direction:column; }
+  .lang.show { display:flex; animation:fadeUp .22s var(--ease); }
+  @keyframes fadeUp { from{transform:translateY(6px);opacity:0} to{transform:none;opacity:1} }
+
+  .glassbar { background:var(--bar); backdrop-filter:blur(18px) saturate(1.4); }
+  .card { background:var(--bg-g); border-radius:var(--r-card); box-shadow:var(--sh); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; height:44px; padding:0 18px; border-radius:var(--r-control); font-size:15px; font-weight:600; border:none; cursor:pointer; }
+  .btn.primary { background:var(--acc); color:var(--on-acc); }
+  .btn.primary:hover { background:var(--acc2); }
+  .tag { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:5px 11px; font-size:12px; font-weight:600; }
+  .tag.ok { background:color-mix(in srgb,var(--ok) 15%,transparent); color:var(--ok); }
+  .tag.pend { background:color-mix(in srgb,var(--pend) 15%,transparent); color:var(--pend); }
+
+  /* L1 大标题经典 */
+  .l1-nav { padding:16px 20px 6px; display:flex; align-items:flex-end; justify-content:space-between; }
+  .l1-title { font-size:34px; font-weight:700; letter-spacing:-0.6px; }
+  .l1-navbtns { display:flex; gap:4px; }
+  .l1-nb { min-width:44px; height:44px; padding:0 10px; border:none; background:transparent; color:var(--acc); font-size:15px; cursor:pointer; border-radius:10px; }
+  .l1-nb:hover { background:rgba(0,122,255,0.10); }
+  .l1-scroll { flex:1; min-height:0; overflow-y:auto; padding:0 16px; scrollbar-width:none; }
+  .l1-scroll::-webkit-scrollbar { display:none; }
+  .grp { background:var(--bg-g); border-radius:var(--r-card); overflow:hidden; box-shadow:var(--sh); }
+  .grp .row { display:flex; align-items:center; gap:12px; padding:13px 16px; min-height:52px; cursor:pointer; }
+  .grp .row + .row { border-top:0.5px solid var(--hair); }
+  .grp .row:hover { background:rgba(0,122,255,0.05); }
+  .grp .ric { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; color:#fff; flex-shrink:0; }
+  .grp .rk { flex:1; font-size:16px; }
+  .grp .chev { color:var(--t3); font-size:14px; }
+  .sec-lbl { font-size:13px; color:var(--t2); text-transform:uppercase; letter-spacing:0.5px; margin:18px 4px 8px; }
+  .l1-input { padding:8px 16px 10px; }
+  .l1-tabbar { display:flex; background:var(--bar); backdrop-filter:blur(18px); border-top:0.5px solid var(--sep); padding:8px 0 24px; }
+  .l1-tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; border:none; background:transparent; cursor:pointer; font-size:10px; font-weight:600; color:var(--t3); padding:4px 0; }
+  .l1-tab .ic { font-size:20px; }
+  .l1-tab.on { color:var(--acc); }
+
+  /* 输入区（共用样式） */
+  .input-bar { display:flex; align-items:center; gap:8px; }
+  .input-field { flex:1; display:flex; align-items:center; height:44px; padding:0 16px; background:var(--bg-in); border-radius:var(--r-control); font-size:17px; color:var(--t2); cursor:text; }
+  .voice-btn { width:44px; height:44px; border-radius:var(--r-control); border:none; cursor:pointer; background:var(--acc); color:var(--on-acc); font-size:16px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .voice-btn:hover { background:var(--acc2); }
+  .chatbox { display:flex; flex-direction:column; gap:10px; margin-bottom:6px; }
+  .bub-u { align-self:flex-end; max-width:82%; background:var(--acc); color:var(--on-acc); border-radius:18px; border-bottom-right-radius:5px; padding:10px 14px; font-size:15px; }
+  .bub-a { align-self:flex-start; max-width:90%; font-size:15px; padding:2px 2px; }
+
+  /* L2 极致聚焦 */
+  .pager { flex:1; min-height:0; overflow-y:auto; scroll-snap-type:y mandatory; scrollbar-width:none; }
+  .pager::-webkit-scrollbar { display:none; }
+  .pg { height:874px; scroll-snap-align:start; scroll-snap-stop:always; display:flex; flex-direction:column; padding:70px 24px 40px; }
+  .pg-h { font-size:22px; font-weight:700; letter-spacing:-0.3px; margin-bottom:14px; color:var(--t1); }
+  .pg.hero { justify-content:center; text-align:center; gap:14px; }
+  .pg-orb { width:56px; height:56px; border-radius:50%; background:var(--bg-el); display:flex; align-items:center; justify-content:center; font-size:26px; margin:0 auto; box-shadow:var(--sh); animation:br 3.5s ease-in-out infinite; }
+  @keyframes br { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+  .pg-greet { font-size:30px; font-weight:700; letter-spacing:-0.5px; }
+  .pg-sub { font-size:14px; color:var(--t2); }
+  .pg .input-bar { margin-top:26px; }
+  .dots { position:absolute; right:10px; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:8px; z-index:5; }
+  .dot { width:6px; height:6px; border-radius:50%; background:var(--sep); transition:background .2s; }
+  .dot.on { background:var(--acc); }
+  .pg-hint { font-size:12px; color:var(--t3); margin-top:16px; }
+  .l2-row { display:flex; align-items:center; gap:12px; padding:14px 4px; border-bottom:0.5px solid var(--hair); font-size:16px; }
+  .l2-row .st { margin-left:auto; }
+
+  /* L3 命令面板 */
+  .l3 { justify-content:flex-start; padding:0; }
+  .l3-spacer { height:150px; }
+  .l3-bar { display:flex; align-items:center; gap:10px; margin:0 20px; background:var(--bg-g); border-radius:26px; padding:0 18px; height:52px; box-shadow:var(--sh); cursor:text; }
+  .l3-bar .ph { flex:1; font-size:18px; color:var(--t3); }
+  .l3-bar .mic { color:var(--acc); font-size:18px; }
+  .l3-chips { display:flex; gap:8px; flex-wrap:wrap; padding:14px 20px 0; }
+  .l3-chip { padding:8px 14px; border-radius:999px; background:var(--bg-g); box-shadow:var(--sh); font-size:13px; color:var(--t2); cursor:pointer; min-height:36px; display:inline-flex; align-items:center; }
+  .l3-chip:hover { color:var(--acc); }
+  .l3-results { padding:16px 20px; }
+  .l3-res { display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:0.5px solid var(--hair); font-size:16px; cursor:pointer; }
+  .l3-res:hover { color:var(--acc); }
+  .l3-res .ric { width:30px; height:30px; border-radius:8px; background:var(--bg-in); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+  .l3-res .sub { display:block; font-size:12px; color:var(--t2); margin-top:1px; }
+  .l3-corner { position:absolute; top:16px; right:16px; display:flex; gap:6px; z-index:4; }
+  .l3-cb { width:44px; height:44px; border-radius:50%; background:var(--bg-g); box-shadow:var(--sh); border:none; font-size:16px; cursor:pointer; }
+  .l3-foot { margin-top:auto; padding:16px 20px 30px; font-size:12px; color:var(--t3); }
+
+  /* L4 卡片流 */
+  .l4-top { padding:18px 20px 12px; display:flex; align-items:center; gap:12px; }
+  .l4-brand { font-size:22px; font-weight:700; letter-spacing:-0.4px; }
+  .l4-pill { margin-left:auto; display:flex; align-items:center; gap:8px; background:var(--bg-in); border-radius:999px; padding:10px 16px; font-size:14px; color:var(--t2); cursor:pointer; min-height:44px; }
+  .l4-pill:hover { color:var(--acc); }
+  .l4-scroll { flex:1; min-height:0; overflow-y:auto; padding:4px 20px 20px; scrollbar-width:none; }
+  .l4-scroll::-webkit-scrollbar { display:none; }
+  .l4-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .wdg { background:var(--bg-g); border-radius:22px; padding:16px; box-shadow:var(--sh); cursor:pointer; }
+  .wdg:hover { box-shadow:0 6px 18px rgba(0,0,0,0.10); }
+  .wdg .wi { font-size:20px; }
+  .wdg .wt { font-size:13px; font-weight:600; color:var(--t2); margin-top:6px; }
+  .wdg .wv { font-size:22px; font-weight:700; letter-spacing:-0.3px; margin-top:2px; }
+  .wdg .wd { font-size:12px; color:var(--t2); margin-top:2px; }
+  .wdg .src { font-size:10px; color:var(--t3); margin-top:10px; }
+  .wdg.wide { grid-column:span 2; display:flex; align-items:center; gap:12px; }
+  .l4-input { padding:10px 20px 26px; }
+
+  /* L5 工作台 */
+  .l5-seg { margin:16px 20px 0; display:flex; background:var(--bg-in); border-radius:12px; padding:3px; }
+  .l5-seg button { flex:1; height:32px; border:none; border-radius:10px; background:transparent; font-size:13px; font-weight:600; color:var(--t2); cursor:pointer; }
+  .l5-seg button.on { background:var(--bg-el); color:var(--t1); box-shadow:0 1px 3px rgba(0,0,0,0.12); }
+  .l5-body { flex:1; min-height:0; overflow-y:auto; padding:16px 20px; scrollbar-width:none; }
+  .l5-body::-webkit-scrollbar { display:none; }
+  .l5-mode { display:none; flex-direction:column; gap:10px; }
+  .l5-mode.show { display:flex; }
+  .l5-toolbar { display:flex; gap:10px; padding:10px 20px 26px; background:var(--bar); backdrop-filter:blur(18px); border-top:0.5px solid var(--sep); }
+  .l5-tool { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; border:none; background:transparent; font-size:11px; font-weight:600; color:var(--t2); cursor:pointer; padding:6px 0; border-radius:10px; }
+  .l5-tool .ic { font-size:18px; }
+  .l5-tool:hover { color:var(--acc); }
+  .l5-tool.main { color:var(--acc); }
+  .l5-field { display:flex; justify-content:space-between; padding:12px 4px; border-bottom:0.5px solid var(--hair); font-size:15px; }
+
+  /* Sheet 覆盖层 */
+  .sheet-layer { position:absolute; inset:0; z-index:40; display:none; }
+  .sheet-layer.show { display:block; }
+  .sheet-layer .dim { position:absolute; inset:0; background:var(--ov); }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:var(--bar); backdrop-filter:blur(22px) saturate(1.4); border-radius:24px 24px 0 0; padding:14px 20px 30px; animation:up .28s cubic-bezier(0.32,0.72,0,1); }
+  @keyframes up { from{transform:translateY(40px);opacity:.5} to{transform:none;opacity:1} }
+  .sheet .grab { width:36px; height:5px; border-radius:999px; background:var(--sep); margin:0 auto 16px; }
+  .sheet h3 { font-size:22px; font-weight:700; letter-spacing:-0.4px; margin-bottom:10px; }
+  .frow { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:0.5px solid var(--hair); }
+  .frow .k { color:var(--t2); font-size:14px; }
+  .frow .v { font-weight:600; font-size:16px; }
+  .sheet-actions { display:flex; gap:12px; margin-top:18px; }
+  .sheet-actions .btn { flex:1; height:48px; }
+
+  aside { flex:1; min-width:300px; position:sticky; top:76px; }
+  .aside-card { background:#fff; border:1px solid rgba(0,0,0,0.08); border-radius:16px; padding:20px; margin-bottom:14px; }
+  .aside-card h3 { font-size:15px; font-weight:700; margin-bottom:8px; }
+  .aside-card p, .aside-card li { font-size:13px; color:#6E6E73; }
+  .aside-card ul { padding-left:18px; display:flex; flex-direction:column; gap:5px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  footer { text-align:center; font-size:12px; color:#8E8E93; margin-top:44px; padding:0 20px; }
+  @media (prefers-reduced-motion: reduce) { .pg-orb { animation:none!important; } .lang.show,.sheet { animation:none!important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="head-row">
+    <div>
+      <h1>🐋 五套乔布斯风设计语言 · 结构大改版</h1>
+      <div class="sub">v7 · 信息架构与导航模型各自不同 · 共享 iOS 基础视觉与业务铁律 · 402×874pt · 2026-11-10</div>
+    </div>
+    <button class="hdr-btn" onclick="toggleTheme()">◐ 切换浅 / 深色</button>
+  </div>
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<main>
+  <div class="phone-scale"><div class="phone" id="phone">
+
+    <!-- L1 大标题经典 -->
+    <section class="lang show" id="g-l1">
+      <div class="l1-nav glassbar">
+        <div class="l1-title">鲸鱼</div>
+        <div class="l1-navbtns"><button class="l1-nb">任务</button><button class="l1-nb">设置</button></div>
+      </div>
+      <div class="l1-scroll">
+        <div class="chatbox" style="padding-top:10px">
+          <div class="bub-u">附近人均 50 以内的咖啡店</div>
+          <div class="bub-a">在 1.5 公里内找到 3 家，按人均从低到高排列。</div>
+        </div>
+        <div class="sec-lbl">现在可以做的</div>
+        <div class="grp">
+          <div class="row" onclick="openSheet()"><div class="ric" style="background:var(--acc)">⏰</div><div class="rk">确认提醒「取快递」15:00</div><span class="chev">›</span></div>
+          <div class="row"><div class="ric" style="background:var(--warn)">☀️</div><div class="rk">查看今天天气</div><span class="chev">›</span></div>
+          <div class="row"><div class="ric" style="background:var(--ok)">🎵</div><div class="rk">继续播放 鲸鱼之歌</div><span class="chev">›</span></div>
+        </div>
+        <div class="sec-lbl">最近</div>
+        <div class="grp">
+          <div class="row"><div class="ric" style="background:#8E8E93">🗂</div><div class="rk">查看全部记录</div><span class="chev">›</span></div>
+        </div>
+      </div>
+      <div class="l1-input"><div class="input-bar">
+        <div class="input-field" onclick="openSheet()">给鲸鱼发消息…</div>
+        <button class="voice-btn" onclick="openSheet()" title="语音">🎙</button>
+      </div></div>
+      <div class="l1-tabbar">
+        <button class="l1-tab on"><span class="ic">💬</span>对话</button>
+        <button class="l1-tab"><span class="ic">🗂</span>记录</button>
+        <button class="l1-tab"><span class="ic">⚙️</span>设置</button>
+      </div>
+    </section>
+
+    <!-- L2 极致聚焦 -->
+    <section class="lang" id="g-l2">
+      <div class="pager" id="pager" onscroll="pagerDot()">
+        <div class="pg">
+          <div class="pg-h">记录</div>
+          <div class="l2-row">创建提醒「取快递」<span class="tag pend">◎ 待核对</span></div>
+          <div class="l2-row">查询天气 <span class="tag ok">✓ 完成</span></div>
+          <div class="l2-row">运动摘要 4.2 公里 <span class="tag ok">✓ 完成</span></div>
+          <div class="pg-hint">↑ 下滑返回对话</div>
+        </div>
+        <div class="pg hero">
+          <div class="pg-orb">🐋</div>
+          <div class="pg-greet">有什么想聊的？</div>
+          <div class="pg-sub">下滑看记录 · 上滑看设置</div>
+          <div class="input-bar">
+            <div class="input-field" onclick="openSheet()">给鲸鱼发消息…</div>
+            <button class="voice-btn" onclick="openSheet()">🎙</button>
+          </div>
+        </div>
+        <div class="pg">
+          <div class="pg-h">设置</div>
+          <div class="l2-row">提醒确认 <span style="color:var(--acc)">开 ›</span></div>
+          <div class="l2-row">能力授权 <span style="color:var(--t3)">3 项已授权 ›</span></div>
+          <div class="l2-row">外观 · 跟随系统</div>
+          <div class="pg-hint">↑ 上滑返回对话</div>
+        </div>
+      </div>
+      <div class="dots"><span class="dot" id="d0"></span><span class="dot on" id="d1"></span><span class="dot" id="d2"></span></div>
+    </section>
+
+    <!-- L3 命令面板 -->
+    <section class="lang" id="g-l3">
+      <div class="l3-corner">
+        <button class="l3-cb" title="任务">🗂</button>
+        <button class="l3-cb" title="设置">⚙️</button>
+      </div>
+      <div class="l3" style="flex:1;min-height:0;display:flex;flex-direction:column">
+        <div class="l3-spacer"></div>
+        <div class="l3-bar" onclick="l3type()"><span class="ph" id="l3ph">问鲸鱼…</span><span class="mic">🎙</span></div>
+        <div class="l3-chips">
+          <button class="l3-chip" onclick="l3type()">明天的日程</button>
+          <button class="l3-chip" onclick="l3type()">附近咖啡店</button>
+          <button class="l3-chip" onclick="l3type()">总结这篇文章</button>
+        </div>
+        <div class="l3-results" id="l3res" style="display:none">
+          <div class="l3-res"><div class="ric">⏰</div><div>创建提醒「取快递」<span class="sub">11月10日 15:00 · 待确认</span></div></div>
+          <div class="l3-res"><div class="ric">☀️</div><div>今天天气<span class="sub">多云 14–22° · 已缓存</span></div></div>
+          <div class="l3-res"><div class="ric">☕</div><div>3 家附近咖啡店<span class="sub">1.5km 内 · 人均 ≤50</span></div></div>
+        </div>
+        <div class="l3-foot">输入即搜 · 结果即时呈现 · 无固定首页内容</div>
+      </div>
+    </section>
+
+    <!-- L4 卡片流 -->
+    <section class="lang" id="g-l4">
+      <div class="l4-top">
+        <div class="l4-brand">鲸鱼</div>
+        <div class="l4-pill" onclick="openSheet()">🔍 问鲸鱼… <span>🎙</span></div>
+      </div>
+      <div class="l4-scroll">
+        <div class="l4-grid">
+          <div class="wdg"><div class="wi">☀️</div><div class="wt">天气</div><div class="wv">14–22°</div><div class="wd">多云 · 今晚有风</div><div class="src">气象 · 刚刚更新</div></div>
+          <div class="wdg"><div class="wi">📅</div><div class="wt">今天日程</div><div class="wv">2 项</div><div class="wd">下一场 15:00 周会</div><div class="src">日历 · 已授权</div></div>
+          <div class="wdg"><div class="wi">🎵</div><div class="wt">音乐</div><div class="wv">播放中</div><div class="wd">鲸鱼之歌 · 02:41</div><div class="src">本地曲库</div></div>
+          <div class="wdg"><div class="wi">🏃</div><div class="wt">运动</div><div class="wv">4.2 km</div><div class="wd">今晨 · 320 千卡</div><div class="src">健康 · 已授权</div></div>
+          <div class="wdg wide" onclick="openSheet()"><div style="font-size:20px">⏰</div><div style="flex:1"><div style="font-size:15px;font-weight:600">继续完成：取快递提醒</div><div style="font-size:12px;color:var(--t2)">昨天中断 · 待确认时间</div></div><span class="chev" style="color:var(--t3)">›</span></div>
+        </div>
+      </div>
+      <div class="l4-input"><div class="input-bar">
+        <div class="input-field">给鲸鱼发消息…</div>
+        <button class="voice-btn" onclick="openSheet()">🎙</button>
+      </div></div>
+    </section>
+
+    <!-- L5 工作台 -->
+    <section class="lang" id="g-l5">
+      <div style="padding-top:16px"></div>
+      <div class="l5-seg">
+        <button class="on" onclick="l5mode(0,this)">对话</button>
+        <button onclick="l5mode(1,this)">任务</button>
+        <button onclick="l5mode(2,this)">设置</button>
+      </div>
+      <div class="l5-body">
+        <div class="l5-mode show" id="m0">
+          <div class="chatbox">
+            <div class="bub-u">明天下午三点提醒我取快递</div>
+            <div class="bub-a">好的：11月10日 15:00「取快递」。确认后写入提醒事项。</div>
+            <div><span class="tag ok">✓ 已创建</span> <span class="tag pend">◎ 结果待核对</span></div>
+          </div>
+          <div class="card" style="padding:14px 16px">
+            <div class="frow" style="border:none;padding:6px 0"><span class="k">标题</span><span class="v">取快递</span></div>
+            <div class="frow" style="border:none;padding:6px 0"><span class="k">时刻</span><span class="v">15:00 · Asia/Shanghai</span></div>
+            <div style="display:flex;gap:10px;margin-top:8px"><button class="btn primary" style="flex:1">确认写入</button><button class="btn" style="background:var(--bg-in)">改参数</button></div>
+          </div>
+        </div>
+        <div class="l5-mode" id="m1">
+          <div class="l2-row">取快递提醒 · 15:00 <span class="tag pend">◎ 待核对</span></div>
+          <div class="l2-row">天气查询 <span class="tag ok">✓ 完成</span></div>
+          <div class="l2-row">运动摘要 <span class="tag ok">✓ 完成</span></div>
+        </div>
+        <div class="l5-mode" id="m2">
+          <div class="l5-field"><span>提醒确认</span><span style="color:var(--acc)">开</span></div>
+          <div class="l5-field"><span>定位 · 使用期间</span><span class="tag ok">✓</span></div>
+          <div class="l5-field"><span>麦克风</span><span style="color:var(--t2)">未请求</span></div>
+          <div class="l5-field"><span>外观</span><span>跟随系统</span></div>
+        </div>
+      </div>
+      <div class="l5-toolbar">
+        <button class="l5-tool"><span class="ic">＋</span>附件</button>
+        <button class="l5-tool main" onclick="openSheet()"><span class="ic">🎙</span>语音</button>
+        <button class="l5-tool"><span class="ic">⌨️</span>文字输入</button>
+      </div>
+    </section>
+
+    <!-- 共享确认 Sheet -->
+    <div class="sheet-layer" id="sheetLayer">
+      <div class="dim" onclick="closeSheet()"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>创建提醒</h3>
+        <div class="frow"><span class="k">标题</span><span class="v">取快递</span></div>
+        <div class="frow"><span class="k">日期</span><span class="v" style="color:var(--acc)">11月10日（周二）›</span></div>
+        <div class="frow"><span class="k">时刻</span><span class="v" style="color:var(--acc)">15:00 ›</span></div>
+        <div class="frow"><span class="k">时区</span><span class="v">Asia/Shanghai</span></div>
+        <div class="sheet-actions"><button class="btn" style="background:var(--bg-in);flex:1" onclick="closeSheet()">取消</button><button class="btn primary" style="flex:1" onclick="closeSheet()">确认创建</button></div>
+      </div>
+    </div>
+  </div></div>
+
+  <aside>
+    <div class="aside-card">
+      <h3 id="lgName"></h3>
+      <p id="lgOne"></p>
+      <p style="margin-top:8px"><b>导航模型：</b><span id="lgNav"></span></p>
+      <p style="margin-top:4px"><b>最适合：</b><span id="lgBest"></span></p>
+    </div>
+    <div class="grid2">
+      <div class="aside-card"><h3>优势</h3><ul id="lgStr"></ul></div>
+      <div class="aside-card"><h3>代价</h3><ul id="lgCost"></ul></div>
+    </div>
+    <div class="aside-card">
+      <h3>五套共享铁律</h3>
+      <ul>
+        <li>语音入口唯一、在输入区；有文字变发送；空白不进语音（23 号）。</li>
+        <li>确认 Sheet：完整参数 + 唯一主确认，改参数即失效（点画布内任意输入试试）。</li>
+        <li>状态图标+文字+色调三重表达；待核对不盲目重做。</li>
+        <li>正文 17pt、触控 ≥44pt、动态字体、Reduce Motion；SF 系统字体。</li>
+        <li>配色沿用 29 号选定套系即可接入；本批只改结构。</li>
+      </ul>
+    </div>
+  </aside>
+</main>
+
+<footer>代号鲸鱼01 · 设计语言 v7 · Token 见 design/ui-languages-v7/tokens.json · 原型演示不代表真机验收</footer>
+
+<script>
+  const LANGS = {
+    l1: { name:"L1 · 大标题经典 LARGE-TITLE", one:"最正统 iOS：底部 TabBar（对话/记录/设置）+ 可折叠大标题导航，像苹果自带 App 一样可靠。", nav:"底部 TabBar × 3 + 大标题滚动折叠", best:"希望零学习成本、系统感最强", str:["用户零学习成本","记录/设置触达最快","与 iOS 系统习惯完全一致"], cost:["底部 TabBar+输入区两层堆叠","结构个性最弱"] },
+    l2: { name:"L2 · 极致聚焦 FOCUS-PAGER", one:"无任何导航组件，垂直整页分页：下滑=记录、上滑=设置，对话是唯一一层。试试在画布里上下滚动。", nav:"垂直整页分页 × 3 + 侧缘圆点", best:"希望产品'消失'，只剩对话", str:["最 Jobs 式极简","对话沉浸感最强","结构最轻"], cost:["分页发现性弱","频繁切记录多一次滑动"] },
+    l3: { name:"L3 · 命令面板 COMMAND-BAR", one:"Spotlight 式：居中输入即首页，无固定内容，输入即得结果列表。点击输入框或建议 chips 试试。", nav:"无首页内容；焦点输入 + 结果列表；右上角任务/设置", best:"把鲸鱼当随身效率工具", str:["效率最高","界面永远干净","结果即界面"], cost:["新用户需引导","浏览型任务弱"] },
+    l4: { name:"L4 · 卡片流 WIDGET-STREAM", one:"iOS 小组件式卡片流前置信息（天气/日程/音乐/运动），打开即有用，顶部轻输入唤起对话。", nav:"单列滚动流 + 顶部轻输入；卡片点按出 sheet", best:"希望打开就看到当下重要的事", str:["信息前置","与 iOS 主屏心智一致","真实数据卡是天然内容"], cost:["结构最重","空数据状态多","有仪表盘化风险"] },
+    l5: { name:"L5 · 工作台 WORKBENCH", one:"顶部分段控制（对话/任务/设置）+ 底部工具栏，像专业工具的秩序结构。点分段按钮切换模式。", nav:"顶部分段 × 3 + 底部工具栏", best:"把鲸鱼当个人工作台", str:["模式最清楚","任务/设置常驻可见","操作密度高"], cost:["个性感最弱","上下两栏占用空间多"] }
+  };
+
+  function toggleTheme() {
+    const el = document.documentElement;
+    el.dataset.theme = el.dataset.theme === "dark" ? "light" : "dark";
+  }
+  function showLang(k) {
+    ["l1","l2","l3","l4","l5"].forEach(id => document.getElementById("g-"+id).classList.toggle("show", id === k));
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.k === k));
+    const L = LANGS[k];
+    lgName.textContent = L.name; lgOne.textContent = L.one; lgNav.textContent = L.nav; lgBest.textContent = L.best;
+    lgStr.innerHTML = L.str.map(s => `<li>${s}</li>`).join("");
+    lgCost.innerHTML = L.cost.map(s => `<li>${s}</li>`).join("");
+  }
+  function openSheet() { document.getElementById("sheetLayer").classList.add("show"); }
+  function closeSheet() { document.getElementById("sheetLayer").classList.remove("show"); }
+  function l3type() {
+    document.getElementById("l3ph").textContent = "明天的日程和提醒";
+    document.getElementById("l3ph").style.color = "var(--t1)";
+    document.getElementById("l3res").style.display = "block";
+  }
+  function l5mode(i, btn) {
+    document.querySelectorAll(".l5-seg button").forEach(b => b.classList.remove("on"));
+    btn.classList.add("on");
+    [0,1,2].forEach(n => document.getElementById("m"+n).classList.toggle("show", n === i));
+  }
+  function pagerDot() {
+    const p = document.getElementById("pager");
+    const idx = Math.round(p.scrollTop / 874);
+    [0,1,2].forEach(n => document.getElementById("d"+n).classList.toggle("on", n === idx));
+  }
+  document.getElementById("tabs").innerHTML = Object.keys(LANGS).map(k =>
+    `<button class="tab" data-k="${k}" onclick="showLang('${k}')">${LANGS[k].name.split("·")[1].trim().split(" ")[0]}</button>`).join("");
+  showLang("l1");
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+"use strict";
+const UI_PLACES=[{name:'清木炭火',distance:'680m',price:88},{name:'小巷烧烤',distance:'1.2km',price:96},{name:'晚风烤串',distance:'1.7km',price:null}];
+const UI_TRACKS=[{title:'午后窗边',artist:'示例曲目 · 器乐',duration:'3:25'},{title:'慢慢走',artist:'示例曲目 · 轻音乐',duration:'4:12'},{title:'留一盏灯',artist:'示例曲目 · 吉他',duration:'3:48'}];
+const qs=new URLSearchParams(location.search);
+const defaultReminder=()=>({title:'取快递',date:'2026-11-11',time:'15:00'});
+const state={screen:UI_SCREENS.some(s=>s.id===qs.get('screen'))?qs.get('screen'):'home',theme:['light','dark'].includes(qs.get('theme'))?qs.get('theme'):'system',textScale:['1','1.3','2'].includes(qs.get('text'))?qs.get('text'):'1',keyboard:qs.get('keyboard')==='show',reduceMotion:false,reduceTransparency:false,view:'prototype',chat:'empty',history:[],draft:'',userText:'',voice:'text',panel:null,panelStack:[],attachments:false,systemPermission:false,locationGranted:false,readingSelected:false,reminder:defaultReminder(),saved:null,editing:false,formError:'',place:0,budget:false,track:0,playing:false,musicStarted:false,musicEmpty:false,memory:['不吃辣','喜欢器乐','回答简洁'],memoryIndex:-1,memoryDraft:'',routineTime:'08:00',routinePaused:false,communication:'我会晚10分钟到。',recipient:'张三 · 示例联系人（工作）',healthEmpty:false,tts:false,subtitles:true,reply:'简洁',eventTitle:'健身',eventDate:'2026-11-11',eventStart:'14:00',eventEnd:'15:00',savedEvent:null,toast:''};
+const $=selector=>document.querySelector(selector);
+let voiceDemoTimer,toastTimer;
+state.reconciled=false;
+if(qs.get('mode')==='app')document.body.dataset.mode='app';
+function uiKeyboardVisible(s){return s.keyboard&&s.voice==='text'&&(!s.panel||['reminder','memory-edit','routine','communication','calendar-create'].includes(s.panel));}
+function currentTheme(){return state.theme==='system'?(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'):state.theme;}
+function applyTokens(){const phone=$('#phone');phone.dataset.theme=currentTheme();phone.dataset.size=state.textScale;phone.style.setProperty('--text-scale',state.textScale);Object.entries(WHALE_UI_TOKENS.colors[currentTheme()]).forEach(([name,value])=>phone.style.setProperty('--'+name,value));phone.classList.toggle('reduced-motion',state.reduceMotion);phone.classList.toggle('reduce-transparency',state.reduceTransparency);}
+function rootMarkup(){return state.history.join('')+uiMessageView(state);}
+function rememberCurrent(){if(state.chat!=='empty')state.history.push(uiMessageView(state));}
+function render(){
+  applyTokens();const keyboard=uiKeyboardVisible(state);
+  $('#app').innerHTML=uiToolbar()+`<main class="conversation" id="conversationCanvas">${rootMarkup()}</main>`+(state.musicStarted&&state.voice==='text'&&!keyboard?uiMiniPlayer(state):'')+(state.voice==='text'?uiComposer(state):uiVoice(state))+(keyboard?uiKeyboard():'')+uiSheet(state)+(state.attachments?uiAttachments():'')+(state.systemPermission?uiSystemPermission():'')+(state.toast?`<div class="toast" role="status">${escapeUI(state.toast)}</div>`:'');
+  [...$('#app').children].forEach(child=>{child.inert=Boolean(state.panel||state.attachments||state.systemPermission)&&!child.classList.contains('sheet-layer')&&!child.classList.contains('action-menu')&&!child.classList.contains('mock-system-alert')&&!child.classList.contains('keyboard-mock')&&!child.classList.contains('toast');});
+  const screen=UI_SCREENS.find(s=>s.id===state.screen)||UI_SCREENS[0];$('#screenName').textContent=screen.name;$('#screenId').textContent=screen.code;$('#inspectorTitle').textContent=screen.title;$('#inspectorDescription').textContent=screen.description;$('#inspectorRules').innerHTML=screen.rules.map(([title,text])=>`<div class="inspector-rule"><strong>${title}</strong><p>${text}</p></div>`).join('');
+  $('#screenSelect').value=state.screen;$('#themeSelect').value=state.theme;$('#textSelect').value=state.textScale;$('#keyboardToggle').checked=state.keyboard;$('#reduceMotion').checked=state.reduceMotion;$('#reduceTransparency').checked=state.reduceTransparency;
+  document.querySelectorAll('[data-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.view===state.view)));['prototype','boards','motion'].forEach(view=>$('#view-'+view).hidden=view!==state.view);
+  const draft=$('#messageDraft');if(draft){draft.style.height='auto';draft.style.height=Math.min(116,Math.max(36,draft.scrollHeight))+'px';}
+  fitDevice();
+}
+function fitDevice(){if(document.body.dataset.mode==='app')return;const width=$('.preview-column').clientWidth;const scale=Math.min(1,(width-4)/418);$('#deviceStage').style.setProperty('--scale',Math.max(.3,scale).toFixed(3));}
+function selectScreen(id){clearTimeout(voiceDemoTimer);state.screen=id;state.panelStack=[];state.panel=UI_SCREENS.find(s=>s.id===id)?.panel||null;state.attachments=false;state.systemPermission=false;state.voice='text';state.formError='';state.history=[];state.budget=false;state.chat='empty';
+  if(id==='weather')state.chat='weather';if(id==='places')state.chat='places';if(id==='reminder'){state.chat='reminder-pending';state.reminder=defaultReminder();state.editing=false;}if(id==='unknown'){state.chat='reminder-pending';state.saved=null;state.reconciled=false;}if(id==='offline')state.chat='offline';if(id==='voice-listening'){state.voice='listening';state.chat='voice-transcript';}if(id==='voice-speaking'){state.voice='speaking';state.saved=defaultReminder();state.chat='saved';}render();}
+function panelOpen(panel,root=false){state.attachments=false;state.formError='';if(root)state.panelStack=[];else if(state.panel&&state.panel!==panel)state.panelStack.push(state.panel);state.panel=panel;const matched=UI_SCREENS.find(s=>s.panel===panel);if(matched)state.screen=matched.id;render();}
+function panelClose(){state.panel=null;state.panelStack=[];state.formError='';state.screen=state.chat==='places'?'places':state.chat==='weather'?'weather':'home';render();}
+function panelBack(){if(state.panel==='reminder'&&!state.editing&&state.chat==='reminder-pending'){state.chat='text';state.userText='取消这次提醒安排。';state.panelStack=[];panelClose();announce('这次安排已取消，未写入系统 · 示例');return;}state.formError='';if(state.panelStack.length){state.panel=state.panelStack.pop();const matched=UI_SCREENS.find(s=>s.panel===state.panel);if(matched)state.screen=matched.id;render();}else panelClose();}
+function announce(text){clearTimeout(toastTimer);state.toast=text;render();toastTimer=setTimeout(()=>{state.toast='';render();},2000);}
+function openReminder(edit=false,values=null){state.editing=edit;state.reminder=values||(edit&&state.saved?{...state.saved}:defaultReminder());panelOpen('reminder');}
+function saveReminder(){if(state.panel!=='reminder')return;if(!state.reminder.title.trim()||!state.reminder.date||!state.reminder.time){state.formError='请补齐事项、日期和提醒时间。';render();return;}state.saved={...state.reminder,title:state.reminder.title.trim()};state.chat='saved';state.screen='home';state.panel=null;state.panelStack=[];state.formError='';render();}
+function sendMessage(){if(!state.draft.trim())return;rememberCurrent();state.userText=state.draft.trim();state.draft='';state.chat='text';state.screen='home';render();$('#conversationCanvas').scrollTop=$('#conversationCanvas').scrollHeight;}
+function startVoice(){clearTimeout(voiceDemoTimer);state.voice='listening';state.screen='voice-listening';state.panel=null;state.panelStack=[];render();}
+function stopVoice(){clearTimeout(voiceDemoTimer);if(state.voice==='speaking'){state.voice='paused';render();return;}if(state.voice==='thinking'){state.voice='paused';render();return;}if(state.voice==='paused'){state.voice='listening';render();return;}rememberCurrent();state.chat='voice-transcript';state.voice='thinking';render();voiceDemoTimer=setTimeout(()=>{if(state.voice==='thinking'){state.chat='reminder-pending';state.voice='speaking';render();}},850);}
+function returnToKeyboard(){clearTimeout(voiceDemoTimer);state.voice='text';state.screen=state.chat==='places'?'places':state.chat==='weather'?'weather':'home';render();}
+$('#screenSelect').innerHTML=UI_SCREENS.map(s=>`<option value="${s.id}">${s.code} ${s.name}</option>`).join('');
+const boardItems=[{name:'01-conversation-voice-v3',title:'01 主页与语音',screens:'S01–S04 · 空状态、对话、倾听与播报'},{name:'02-schedule-execution-v2',title:'02 安排与执行',screens:'S05–S08 · 任务、提醒、日历与待核对'},{name:'03-places-music-content',title:'03 出行、音乐与阅读',screens:'S09–S12 · 附近、来源、播放器与行动项'},{name:'04-settings-accessibility-errors',title:'04 设置、授权与异常',screens:'S13–S16 · 设置、记忆、系统提示与网络错误'},{name:'05-routines-communication-health-audio',title:'05 周期服务与个人数据',screens:'S17–S20 · 周期、通讯、健康与语音设置'}];
+$('#boardGrid').innerHTML=boardItems.map(board=>`<article class="board-item"><h3>${board.title}</h3><p>${board.screens} · 丹青约 nano_banana_2 生成 · <a href="assets/${board.name}.jpg" download="${board.name}.jpg">下载原图</a></p><img src="assets/${board.name}.jpg" alt="${board.title}：原生iOS设计画板" loading="lazy"></article>`).join('');
+document.addEventListener('click',event=>{
+  const view=event.target.closest('[data-view]');if(view){state.view=view.dataset.view;render();return;}
+  const scenario=event.target.closest('[data-screen]');if(scenario){state.view='prototype';selectScreen(scenario.dataset.screen);return;}
+  const button=event.target.closest('[data-action]');if(!button||button.disabled)return;const action=button.dataset.action;
+  if(action==='panel-close'){panelClose();return;}if(action==='panel-back'){panelBack();return;}
+  if(['tasks','settings'].includes(action)){panelOpen(action,true);return;}
+  if(['calendar','unknown','music','reading','memory','permissions','routine','communication','health','audio-settings','appearance','reply-style','source-weather','audio-rate','audio-route','calendar-create','contact-choice','reconcile'].includes(action)){panelOpen(action);return;}
+  if(action==='places'){state.panel=null;state.panelStack=[];state.chat='places';state.screen='places';render();return;}
+  if(action==='place'||action==='source'){state.place=Number(button.dataset.place)||0;panelOpen(action);return;}
+  if(action==='reminder'){openReminder();return;}if(action==='edit-reminder'){openReminder(true);return;}if(action==='reminder-save'){saveReminder();return;}
+  if(action==='budget'){state.budget=!state.budget;render();return;}
+  if(action==='voice-start'){startVoice();return;}if(action==='voice-stop'){stopVoice();return;}if(action==='voice-return'){returnToKeyboard();return;}
+  if(action==='attachments'){state.attachments=true;render();return;}if(action==='attachments-close'){state.attachments=false;render();return;}if(action==='attachment-content'){state.attachments=false;panelOpen('reading',true);return;}
+  if(action==='audio-import'){panelOpen('audio-import');return;}if(action==='import-confirm'){state.musicEmpty=false;state.panel='music';state.panelStack=[];state.screen='music';render();announce('已加入3首示例曲目');return;}
+  if(action==='music-toggle'){state.musicStarted=true;state.playing=!state.playing;render();return;}if(action==='music-next'||action==='music-prev'||action==='track'){state.track=action==='track'?Number(button.dataset.track):(state.track+(action==='music-next'?1:UI_TRACKS.length-1))%UI_TRACKS.length;state.musicStarted=true;state.playing=true;render();return;}
+  if(action==='map-handoff'){panelClose();announce('地图交接反馈示例：已打开地图，不代表已抵达');return;}
+  if(action==='reading-select'){state.readingSelected=!state.readingSelected;render();return;}if(action==='reading-arrange'){if(state.readingSelected)openReminder(false,{title:'报名摄影分享会',date:'2026-11-13',time:'18:00'});return;}
+  if(action==='memory-edit'||action==='memory-add'){state.memoryIndex=action==='memory-add'?-1:Number(button.dataset.memory);state.memoryDraft=state.memoryIndex<0?'':state.memory[state.memoryIndex];panelOpen('memory-edit');return;}
+  if(action==='memory-save'){if(!state.memoryDraft.trim()){state.formError='请填写偏好，或使用删除。';announce(state.formError);return;}if(state.memoryIndex<0)state.memory.push(state.memoryDraft.trim());else state.memory[state.memoryIndex]=state.memoryDraft.trim();state.panel='memory';state.panelStack=[];state.screen='memory';render();return;}
+  if(action==='memory-delete'){if(state.memoryIndex>=0)state.memory.splice(state.memoryIndex,1);state.panel='memory';state.panelStack=[];state.screen='memory';render();return;}
+  if(action==='permission-location'){state.systemPermission=true;render();return;}if(action==='permission-other'){announce('权限示意：原生由系统API请求，不提前申请全部权限');return;}
+  if(action==='permission-allow'){state.locationGranted=true;state.systemPermission=false;render();announce('定位已允许（示例）；还需取得有效位置');return;}if(action==='permission-deny'){state.locationGranted=false;state.systemPermission=false;render();announce('可以手动指定地区，不重复强制定位');return;}
+  if(action==='routine-save'){panelClose();announce('周期流程保存示例；真实调度与通知需验证');return;}if(action==='routine-test'){announce('试跑示例：来源与通知可用时返回结果');return;}if(action==='routine-pause'){state.routinePaused=!state.routinePaused;render();return;}
+  if(action==='contact-pick'){state.recipient=button.dataset.recipient;state.panel='communication';state.panelStack=[];state.screen='communication';render();return;}
+  if(action==='message-handoff'){announce('系统短信界面交接示意：最终由你发送或取消');return;}
+  if(action==='health-state'){state.healthEmpty=!state.healthEmpty;render();return;}
+  if(action==='toggle'){state[button.dataset.toggle]=!state[button.dataset.toggle];render();return;}
+  if(action==='theme-choice'){state.theme=button.dataset.theme;state.panel='settings';state.panelStack=[];state.screen='settings';render();return;}
+  if(action==='reply-choice'){state.reply=button.dataset.value;state.panel='settings';state.panelStack=[];state.screen='settings';render();return;}
+  if(action==='event-save'){if(!state.eventTitle.trim()||!state.eventDate||!state.eventStart||!state.eventEnd||state.eventEnd<=state.eventStart){state.formError='请补齐事项、日期和有效起止时间。';render();return;}state.savedEvent={title:state.eventTitle.trim(),date:state.eventDate,start:state.eventStart,end:state.eventEnd};state.panel='tasks';state.panelStack=[];state.screen='tasks';render();announce('日程保存结果示例');return;}
+  if(action==='reconcile-confirm'){state.reconciled=true;state.panel='tasks';state.panelStack=[];state.screen='tasks';render();announce('已人工核对有对应记录；不重复写入');return;}
+  if(action==='retry-read'){state.chat='weather';state.screen='weather';render();announce('查询结果演示，不是真实网络重试');return;}
+  if(action==='keyboard-hide'){state.keyboard=false;render();}
+});
+document.addEventListener('input',event=>{const target=event.target;if(target.id==='messageDraft'){state.draft=target.value;$('#sendMessage').hidden=!state.draft.trim();target.style.height='auto';target.style.height=Math.min(116,Math.max(36,target.scrollHeight))+'px';return;}const field=target.dataset.field;if(!field)return;if(['title','date','time'].includes(field))state.reminder[field]=target.value;else if(field in state)state[field]=target.value;});
+document.addEventListener('submit',event=>{if(event.target.id==='messageForm'){event.preventDefault();sendMessage();}});
+document.addEventListener('keydown',event=>{if(event.target.id==='messageDraft'&&event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();sendMessage();}if(event.key==='Escape'){if(state.systemPermission){state.systemPermission=false;render();}else if(state.attachments){state.attachments=false;render();}else if(state.panel)panelClose();}});
+$('#screenSelect').addEventListener('change',event=>selectScreen(event.target.value));$('#themeSelect').addEventListener('change',event=>{state.theme=event.target.value;render();});$('#textSelect').addEventListener('change',event=>{state.textScale=event.target.value;render();});$('#keyboardToggle').addEventListener('change',event=>{state.keyboard=event.target.checked;render();});$('#reduceMotion').addEventListener('change',event=>{state.reduceMotion=event.target.checked;render();});$('#reduceTransparency').addEventListener('change',event=>{state.reduceTransparency=event.target.checked;render();});
+$('#playMotion').addEventListener('click',()=>{const page=$('#view-motion');page.classList.remove('play');requestAnimationFrame(()=>requestAnimationFrame(()=>page.classList.add('play')));});$('#motionReduce').addEventListener('change',event=>$('#view-motion').classList.toggle('reduced',event.target.checked));
+window.addEventListener('resize',fitDevice);matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(state.theme==='system')render();});
+selectScreen(state.screen);

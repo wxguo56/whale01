@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>代号鲸鱼01 · GLASS 通透 全页面原型</title>
+<style>
+  :root {
+    --r-card: 20px; --r-control: 16px; --r-sheet: 28px;
+    --pg-m: 20px; --sp: 16px; --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  [data-theme="light"] {
+    --bg-page: #DCE7F5; --bg-image: linear-gradient(165deg,#DCE7F5 0%,#EDE4F2 55%,#F6E8E4 100%);
+    --surface: rgba(255,255,255,0.72); --surface-strong: rgba(255,255,255,0.88); --surface-input: rgba(255,255,255,0.60);
+    --hairline: rgba(255,255,255,0.65); --hairline-soft: rgba(29,29,31,0.10);
+    --t1: #1D1D1F; --t2: rgba(29,29,31,0.62); --t3: rgba(29,29,31,0.42);
+    --accent: #5856D6; --accent-2: #4B49C4; --on-accent: #FFFFFF; --accent-muted: rgba(88,86,214,0.12);
+    --ok: #34A853; --warn: #C77D0A; --err: #D6453A; --info: #3B82D6; --pend: #8E6BC7;
+    --overlay: rgba(20,24,40,0.35); --blur: blur(22px) saturate(1.5);
+    --card-shadow: 0 2px 12px rgba(20,24,40,0.08); --float-shadow: 0 8px 28px rgba(20,24,40,0.16);
+  }
+  [data-theme="dark"] {
+    --bg-page: #0E1220; --bg-image: linear-gradient(165deg,#0E1220 0%,#161B2E 55%,#1E1A26 100%);
+    --surface: rgba(40,46,72,0.55); --surface-strong: rgba(52,58,88,0.78); --surface-input: rgba(28,32,52,0.60);
+    --hairline: rgba(255,255,255,0.14); --hairline-soft: rgba(255,255,255,0.08);
+    --t1: #F5F6FA; --t2: rgba(245,246,250,0.65); --t3: rgba(245,246,250,0.42);
+    --accent: #8B8AF0; --accent-2: #7A79E6; --on-accent: #FFFFFF; --accent-muted: rgba(139,138,240,0.16);
+    --ok: #5FD08A; --warn: #E8B45A; --err: #F08078; --info: #6FA8E8; --pend: #B49BE8;
+    --overlay: rgba(6,8,16,0.50); --blur: blur(22px) saturate(1.4);
+    --card-shadow: 0 2px 12px rgba(0,0,0,0.30); --float-shadow: 0 8px 28px rgba(0,0,0,0.45);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "SF Pro Text", "PingFang SC", system-ui, sans-serif; background: #F5F6FA; color: #1D1D1F; line-height: 1.45; }
+
+  header { position: sticky; top: 0; z-index: 60; background: rgba(255,255,255,0.85); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(0,0,0,0.08); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  header h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; }
+  header .sub { font-size: 12px; color: #8E8E93; }
+  .hdr-actions { display: flex; gap: 8px; }
+  .hdr-btn { min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.10); background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .hdr-btn:hover { border-color: rgba(0,0,0,0.30); }
+
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 20px 64px; display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+  /* 左：页面导航 */
+  nav { width: 210px; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; position: sticky; top: 76px; }
+  nav .nav-title { font-size: 11px; font-weight: 700; color: #8E8E93; letter-spacing: 1px; margin: 8px 0 2px 10px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 12px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #3C3C43; text-align: left; transition: all .16s var(--ease); }
+  .nav-item:hover { background: rgba(88,86,214,0.08); color: #5856D6; }
+  .nav-item.active { background: #1D1D1F; color: #fff; }
+  .nav-item .ico { font-size: 15px; width: 20px; text-align: center; }
+
+  /* 中：手机画布 */
+  .phone-scale { width: 402px; height: 874px; overflow: hidden; border-radius: 46px; box-shadow: 0 12px 40px rgba(20,24,40,0.18); flex-shrink: 0; }
+  .phone {
+    width: 402px; height: 874px; border-radius: 46px; overflow: hidden; position: relative;
+    background: var(--bg-page); background-image: var(--bg-image); color: var(--t1);
+    display: flex; flex-direction: column; transition: background .3s var(--ease);
+  }
+  .page { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  .page.show { display: flex; animation: fadeUp .22s var(--ease); }
+  @keyframes fadeUp { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px var(--pg-m) 10px; }
+  .topbar .brand { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
+  .topbar .page-tt { font-size: 25px; font-weight: 600; letter-spacing: -0.4px; }
+  .entries { display: flex; gap: 2px; }
+  .entry-btn { min-width: 44px; height: 44px; padding: 0 12px; border: none; border-radius: var(--r-control); background: transparent; color: var(--t2); font-size: 14px; font-weight: 500; cursor: pointer; }
+  .entry-btn:hover { background: var(--accent-muted); color: var(--accent); }
+
+  .scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 4px var(--pg-m) 12px; scrollbar-width: none; }
+  .scroll::-webkit-scrollbar { display: none; }
+
+  .glass { background: var(--surface); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); border: 1px solid var(--hairline); border-radius: var(--r-card); box-shadow: var(--card-shadow); }
+  .pad { padding: var(--sp); }
+
+  /* 主页 */
+  .hero { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; text-align: center; padding: 0 var(--pg-m); }
+  .orb { width: 62px; height: 62px; border-radius: 50%; background: var(--accent-muted); border: 1.5px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 30px; animation: breathe 3.5s ease-in-out infinite; }
+  @keyframes breathe { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+  .greet { font-size: 28px; font-weight: 600; letter-spacing: -0.4px; }
+  .greet-sub { font-size: 14px; color: var(--t2); }
+  .sug-row { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
+  .sug { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--hairline); background: var(--surface); backdrop-filter: var(--blur); font-size: 14px; color: var(--t1); cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; }
+  .sug:hover { border-color: var(--accent); color: var(--accent); }
+  .recent { margin-top: 20px; width: 100%; max-width: 330px; text-align: left; }
+  .recent .lbl { font-size: 12px; font-weight: 600; color: var(--t3); letter-spacing: 1px; margin: 0 0 8px 4px; }
+
+  /* 底部统一输入区 */
+  .bottom { padding: 8px var(--pg-m) 26px; display: flex; flex-direction: column; gap: 10px; }
+  .mini-player { display: none; align-items: center; gap: 10px; background: var(--surface-strong); backdrop-filter: var(--blur); border: 1px solid var(--hairline); border-radius: var(--r-card); padding: 10px 14px; box-shadow: var(--float-shadow); }
+  .mini-player.show { display: flex; }
+  .mini-cover { width: 36px; height: 36px; border-radius: 10px; background: var(--accent-muted); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .mini-meta { flex: 1; min-width: 0; }
+  .mini-meta .t { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini-meta .a { font-size: 12px; color: var(--t2); }
+  .mp-ctl { display: flex; gap: 2px; }
+  .mp-btn { width: 44px; height: 44px; border: none; background: transparent; color: var(--t1); font-size: 15px; cursor: pointer; border-radius: 12px; }
+  .mp-btn:hover { background: var(--accent-muted); color: var(--accent); }
+  .input-bar { display: flex; align-items: center; gap: 8px; }
+  .plus-btn, .send-btn { width: 44px; height: 44px; border-radius: var(--r-control); border: 1px solid var(--hairline); cursor: pointer; font-size: 18px; flex-shrink: 0; background: var(--surface-input); backdrop-filter: var(--blur); color: var(--t2); }
+  .send-btn { display: none; background: var(--accent); color: var(--on-accent); border: none; font-size: 15px; font-weight: 600; }
+  .input-field { flex: 1; display: flex; align-items: center; height: 44px; padding: 0 16px; background: var(--surface-input); backdrop-filter: var(--blur); border: 1px solid var(--hairline); border-radius: var(--r-control); font-size: 17px; color: var(--t2); }
+  .voice-btn { height: 44px; padding: 0 18px; border: none; cursor: pointer; flex-shrink: 0; background: var(--accent); color: var(--on-accent); border-radius: var(--r-control); font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  .voice-btn:hover { background: var(--accent-2); }
+
+  /* 对话 */
+  .chat { display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
+  .bub-user { align-self: flex-end; max-width: 82%; background: var(--surface-strong); backdrop-filter: var(--blur); border: 1px solid var(--hairline); border-radius: var(--r-card); border-top-right-radius: 6px; padding: 12px 16px; font-size: 17px; box-shadow: var(--card-shadow); }
+  .bub-ai { align-self: flex-start; max-width: 92%; font-size: 17px; padding: 2px 4px; }
+  .place-card { border-radius: var(--r-card); padding: var(--sp); border: 1px solid var(--hairline); background: var(--surface); backdrop-filter: var(--blur); box-shadow: var(--card-shadow); cursor: pointer; }
+  .place-card + .place-card { margin-top: 10px; }
+  .pc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .pc-name { font-size: 17px; font-weight: 600; }
+  .pc-name .no { color: var(--accent); font-family: ui-monospace, monospace; font-size: 12px; margin-right: 6px; }
+  .pc-dist { font-size: 12px; color: var(--t3); font-family: ui-monospace, monospace; }
+  .pc-price { font-size: 17px; font-weight: 600; color: var(--accent); margin-top: 4px; }
+  .pc-price.unknown { color: var(--t3); font-weight: 400; font-size: 14px; }
+  .pc-meta { font-size: 14px; color: var(--t2); margin-top: 4px; }
+  .pc-src { font-size: 12px; color: var(--t3); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline-soft); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0; }
+  .chip { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--hairline); background: var(--surface); backdrop-filter: var(--blur); font-size: 13px; color: var(--t2); cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; }
+  .chip.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .tagline { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--t2); }
+
+  /* 状态标签 */
+  .tag { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; }
+  .tag.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+  .tag.warn { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); }
+  .tag.err { background: color-mix(in srgb, var(--err) 15%, transparent); color: var(--err); }
+  .tag.pend { background: color-mix(in srgb, var(--pend) 15%, transparent); color: var(--pend); }
+  .tag.info { background: color-mix(in srgb, var(--info) 15%, transparent); color: var(--info); }
+  .tag.on-accent { background: rgba(255,255,255,0.2); color: #fff; }
+
+  /* 语音页（整屏覆盖） */
+  .voice-page { position: absolute; inset: 0; z-index: 30; display: none; flex-direction: column; background: var(--bg-page); background-image: var(--bg-image); }
+  .voice-page.show { display: flex; animation: fadeUp .22s var(--ease); }
+  .voice-stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 0 var(--pg-m); }
+  .voice-orb { width: 88px; height: 88px; border-radius: 50%; background: var(--accent-muted); border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 42px; animation: breathe 3.5s ease-in-out infinite; box-shadow: 0 0 0 12px var(--accent-muted); }
+  .voice-state { font-size: 12px; font-weight: 700; letter-spacing: 2px; color: var(--accent); }
+  .wave { display: flex; gap: 4px; align-items: flex-end; height: 30px; }
+  .wave i { width: 4px; border-radius: 2px; background: var(--accent); animation: wv 1s ease-in-out infinite; }
+  .wave i:nth-child(1){height:40%;animation-delay:0s}.wave i:nth-child(2){height:90%;animation-delay:.15s}
+  .wave i:nth-child(3){height:60%;animation-delay:.3s}.wave i:nth-child(4){height:100%;animation-delay:.1s}
+  .wave i:nth-child(5){height:50%;animation-delay:.25s}.wave i:nth-child(6){height:75%;animation-delay:.05s}
+  @keyframes wv { 0%,100%{transform:scaleY(.5)} 50%{transform:scaleY(1)} }
+  .caption { font-size: 25px; font-weight: 600; text-align: center; letter-spacing: -0.3px; }
+  .voice-ctl { display: flex; gap: 12px; padding: 0 var(--pg-m) 40px; justify-content: center; }
+  .vbtn { min-width: 96px; height: 48px; border-radius: 999px; border: 1px solid var(--hairline); background: var(--surface-strong); backdrop-filter: var(--blur); font-size: 15px; font-weight: 600; color: var(--t1); cursor: pointer; }
+  .vbtn.danger { background: var(--err); color: #fff; border: none; }
+  .vbtn:hover { transform: translateY(-1px); }
+
+  /* 音乐 */
+  .now { display: flex; flex-direction: column; gap: 12px; }
+  .np-card { display: flex; gap: 14px; align-items: center; border-radius: var(--r-card); padding: var(--sp); border: 1px solid var(--hairline); background: var(--surface); backdrop-filter: var(--blur); box-shadow: var(--card-shadow); }
+  .np-cover { width: 72px; height: 72px; border-radius: 16px; background: var(--accent-muted); display: flex; align-items: center; justify-content: center; font-size: 30px; flex-shrink: 0; }
+  .np-meta { flex: 1; min-width: 0; }
+  .np-meta .t { font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-meta .a { font-size: 14px; color: var(--t2); }
+  .np-ctl { display: flex; gap: 4px; }
+  .np-btn { width: 44px; height: 44px; border-radius: 14px; border: none; background: transparent; color: var(--t1); font-size: 17px; cursor: pointer; }
+  .np-btn:hover { background: var(--accent-muted); color: var(--accent); }
+  .np-btn.main { background: var(--accent); color: var(--on-accent); }
+  .track { display: flex; align-items: center; gap: 12px; padding: 12px var(--sp); border-radius: var(--r-card); border: 1px solid var(--hairline); background: var(--surface); backdrop-filter: var(--blur); cursor: pointer; }
+  .track:hover { border-color: var(--accent); }
+  .track + .track { margin-top: 8px; }
+  .track .tc { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-muted); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .track .tt { flex: 1; min-width: 0; }
+  .track .tt .n { font-size: 15px; font-weight: 600; }
+  .track .tt .a { font-size: 12px; color: var(--t2); }
+  .track .dur { font-size: 12px; color: var(--t3); font-family: ui-monospace, monospace; }
+  .empty-lib { text-align: center; padding: 44px 20px; display: none; }
+  .empty-lib .big { font-size: 34px; margin-bottom: 8px; }
+  .empty-lib .h { font-size: 17px; font-weight: 600; }
+  .empty-lib .d { font-size: 14px; color: var(--t2); margin-top: 6px; }
+
+  /* 记录 */
+  .date-lbl { font-size: 12px; font-weight: 700; color: var(--t3); letter-spacing: 1px; margin: 18px 0 8px 4px; }
+  .rec { display: flex; align-items: center; gap: 12px; border-radius: var(--r-card); padding: 14px var(--sp); border: 1px solid var(--hairline); background: var(--surface); backdrop-filter: var(--blur); }
+  .rec + .rec { margin-top: 8px; }
+  .rec .ri { width: 36px; height: 36px; border-radius: 12px; background: var(--accent-muted); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .rec .rt { flex: 1; min-width: 0; }
+  .rec .rt .n { font-size: 15px; font-weight: 600; }
+  .rec .rt .d { font-size: 12px; color: var(--t2); margin-top: 2px; }
+  .rec .next { font-size: 13px; color: var(--accent); font-weight: 600; cursor: pointer; white-space: nowrap; }
+
+  /* 设置 */
+  .group { border-radius: var(--r-card); border: 1px solid var(--hairline); background: var(--surface); backdrop-filter: var(--blur); overflow: hidden; }
+  .group + .group { margin-top: 14px; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 13px var(--sp); min-height: 52px; }
+  .row + .row { border-top: 1px solid var(--hairline-soft); }
+  .row .ri { font-size: 16px; width: 24px; text-align: center; }
+  .row .rk { flex: 1; font-size: 15px; }
+  .row .rk small { display: block; font-size: 12px; color: var(--t2); margin-top: 1px; }
+  .row .rv { font-size: 14px; color: var(--t2); }
+  .switch { width: 44px; height: 28px; border-radius: 999px; background: var(--hairline-soft); position: relative; cursor: pointer; flex-shrink: 0; transition: background .2s; border: none; }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: left .2s var(--ease); }
+  .switch.on { background: var(--accent); }
+  .switch.on::after { left: 18px; }
+
+  /* 内容摘要 */
+  .sum-card { border-radius: var(--r-card); border: 1px solid var(--hairline); background: var(--surface); backdrop-filter: var(--blur); box-shadow: var(--card-shadow); padding: var(--sp); }
+  .sum-card .h { font-size: 17px; font-weight: 600; }
+  .sum-card .src { font-size: 12px; color: var(--t3); margin-top: 4px; }
+  .sum-item { display: flex; gap: 10px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--hairline-soft); }
+  .sum-item:last-of-type { border-bottom: none; }
+  .sum-item .cb { width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid var(--accent); flex-shrink: 0; margin-top: 2px; cursor: pointer; }
+  .sum-item .cb.on { background: var(--accent); box-shadow: inset 0 0 0 3px var(--surface); }
+  .sum-item .tx { font-size: 15px; }
+  .sum-actions { display: flex; gap: 10px; margin-top: 14px; }
+
+  /* 按钮 */
+  .btn { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 20px; border-radius: var(--r-control); font-size: 15px; font-weight: 600; border: none; cursor: pointer; }
+  .btn.primary { background: var(--accent); color: var(--on-accent); }
+  .btn.primary:hover { background: var(--accent-2); }
+  .btn.ghost { background: var(--surface-strong); color: var(--t1); border: 1px solid var(--hairline); backdrop-filter: var(--blur); }
+  .btn.block { width: 100%; }
+
+  /* 确认 sheet 覆盖层 */
+  .sheet-layer { position: absolute; inset: 0; z-index: 40; display: none; }
+  .sheet-layer.show { display: block; }
+  .sheet-layer .dim { position: absolute; inset: 0; background: var(--overlay); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface-strong); backdrop-filter: var(--blur); border: 1px solid var(--hairline); border-bottom: none; border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding: 14px var(--pg-m) 30px; box-shadow: var(--float-shadow); animation: up .28s cubic-bezier(0.32,0.72,0,1); }
+  @keyframes up { from { transform: translateY(40px); opacity: .5; } to { transform: none; opacity: 1; } }
+  .sheet .grab { width: 36px; height: 5px; border-radius: 999px; background: var(--hairline-soft); margin: 0 auto 16px; }
+  .sheet h3 { font-size: 25px; font-weight: 600; letter-spacing: -0.4px; margin-bottom: 12px; }
+  .frow { display: flex; justify-content: space-between; align-items: center; padding: 13px 0; border-bottom: 1px solid var(--hairline-soft); }
+  .frow .k { color: var(--t2); font-size: 14px; }
+  .frow .v { font-weight: 600; font-size: 17px; }
+  .frow .v.edit { color: var(--accent); }
+  .sheet-actions { display: flex; gap: 12px; margin-top: 20px; }
+  .sheet-actions .btn { flex: 1; height: 48px; }
+
+  .note-strip { font-size: 13px; color: var(--t2); padding: 10px 14px; border-radius: 14px; background: var(--surface); backdrop-filter: var(--blur); border: 1px solid var(--hairline); display: flex; gap: 8px; align-items: flex-start; }
+
+  /* 右侧说明 */
+  aside { flex: 1; min-width: 300px; position: sticky; top: 76px; }
+  .aside-card { background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 16px; padding: 20px; margin-bottom: 14px; }
+  .aside-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .aside-card p, .aside-card li { font-size: 13px; color: #6E6E73; }
+  .aside-card ul { padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+  footer { text-align: center; font-size: 12px; color: #8E8E93; padding: 0 20px 40px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .orb, .voice-orb, .wave i { animation: none !important; }
+    .page.show, .sheet, .voice-page.show { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🐋 GLASS 通透 · 全页面原型</h1>
+    <div class="sub">代号鲸鱼01 · v6 定稿方向 · iPhone 16 Pro 402×874pt · 浅深色完整对等</div>
+  </div>
+  <div class="hdr-actions">
+    <button class="hdr-btn" onclick="toggleTheme()">◐ 切换浅 / 深色</button>
+  </div>
+</header>
+
+<main>
+  <nav>
+    <div class="nav-title">页面 / 状态</div>
+    <button class="nav-item active" data-p="home"><span class="ico">🏠</span>主页（空状态）</button>
+    <button class="nav-item" data-p="chat"><span class="ico">💬</span>找店对话</button>
+    <button class="nav-item" data-p="summary"><span class="ico">📄</span>内容摘要</button>
+    <button class="nav-item" data-p="music"><span class="ico">🎵</span>音乐</button>
+    <button class="nav-item" data-p="records"><span class="ico">🗂</span>记录</button>
+    <button class="nav-item" data-p="settings"><span class="ico">⚙️</span>设置</button>
+    <div class="nav-title">覆盖层</div>
+    <button class="nav-item" onclick="openSheet()"><span class="ico">✅</span>提醒确认 Sheet</button>
+    <button class="nav-item" onclick="showVoice()"><span class="ico">🎙</span>语音（整屏）</button>
+    <div class="nav-title">状态演示</div>
+    <button class="nav-item" onclick="gotoPage('music');toggleLib()"><span class="ico">🕳</span>空曲库</button>
+    <button class="nav-item" onclick="gotoPage('records');focusUnknown()"><span class="ico">◎</span>执行待核对</button>
+  </nav>
+
+  <div class="phone-scale"><div class="phone" id="phone">
+    <!-- 主页 -->
+    <section class="page show" id="p-home">
+      <div class="topbar">
+        <span class="brand">鲸鱼</span>
+        <div class="entries"><button class="entry-btn" onclick="gotoPage('records')">任务</button><button class="entry-btn" onclick="gotoPage('settings')">设置</button></div>
+      </div>
+      <div class="hero">
+        <div class="orb">🐋</div>
+        <div class="greet">有什么想聊的？</div>
+        <div class="greet-sub">文字或语音都可以</div>
+        <div class="sug-row">
+          <button class="sug" onclick="gotoPage('chat')">☕ 附近咖啡店比较</button>
+          <button class="sug" onclick="gotoPage('music')">🎵 听点音乐</button>
+        </div>
+        <div class="recent">
+          <div class="lbl">最近未完成</div>
+          <div class="rec"><div class="ri">📦</div><div class="rt"><div class="n">取快递提醒 · 待确认时间</div><div class="d">昨天 · 继续完成</div></div><span class="next" onclick="openSheet()">继续 ›</span></div>
+        </div>
+      </div>
+      <div class="bottom"><div class="input-bar">
+        <button class="plus-btn">＋</button><div class="input-field">给鲸鱼发消息…</div>
+        <button class="voice-btn" onclick="showVoice()">🎙 语音</button>
+      </div></div>
+    </section>
+
+    <!-- 找店对话 -->
+    <section class="page" id="p-chat">
+      <div class="topbar">
+        <span class="page-tt" style="font-size:17px;font-weight:600">找店对话</span>
+        <div class="entries"><button class="entry-btn" onclick="gotoPage('home')">‹ 返回</button></div>
+      </div>
+      <div class="scroll"><div class="chat">
+        <div class="bub-user">附近人均 50 以内的咖啡店，带我去一家</div>
+        <div class="bub-ai">在 1.5 公里内找到 3 家，按人均从低到高。价格来自最近一次点评，可能有出入。</div>
+        <div class="chips"><span class="chip on">人均 ≤50</span><span class="chip">1.5 km</span><span class="chip">有插座</span></div>
+        <div class="place-card" onclick="openSheet()">
+          <div class="pc-head"><span class="pc-name"><span class="no">01</span>鲸屿咖啡</span><span class="pc-dist">580m · 步行8分</span></div>
+          <div class="pc-price">人均 ¥38</div>
+          <div class="pc-meta">手冲 · 有插座 · 营业至 22:00</div>
+          <div class="pc-src">来源：点评数据 · 更新于今日</div>
+        </div>
+        <div class="place-card">
+          <div class="pc-head"><span class="pc-name"><span class="no">02</span>慢闪书房</span><span class="pc-dist">1.2km · 步行16分</span></div>
+          <div class="pc-price unknown">价格未知 · 新店暂无点评</div>
+          <div class="pc-meta">安静 · 适合长时间坐</div>
+          <div class="pc-src">未知价格不参与预算筛选</div>
+        </div>
+        <div class="place-card">
+          <div class="pc-head"><span class="pc-name"><span class="no">03</span>白噪音咖啡</span><span class="pc-dist">1.4km · 步行19分</span></div>
+          <div class="pc-price">人均 ¥45</div>
+          <div class="pc-meta">甜品 · 靠窗位多</div>
+          <div class="pc-src">来源：点评数据 · 更新于今日</div>
+        </div>
+        <div class="bub-ai">选一家的话我可以帮你打开地图导航。</div>
+      </div></div>
+      <div class="bottom">
+        <div class="mini-player show" id="mpChat"><div class="mini-cover">🎵</div><div class="mini-meta"><div class="t">鲸鱼之歌</div><div class="a">本地曲库 · 02:41</div></div><div class="mp-ctl"><button class="mp-btn">⏸</button><button class="mp-btn">⏭</button></div></div>
+        <div class="input-bar"><button class="plus-btn">＋</button><div class="input-field" id="chatField" onclick="fakeType()">继续追问…</div><button class="voice-btn" onclick="showVoice()">🎙</button></div>
+      </div>
+    </section>
+
+    <!-- 内容摘要 -->
+    <section class="page" id="p-summary">
+      <div class="topbar">
+        <span class="page-tt">内容摘要</span>
+        <div class="entries"><button class="entry-btn" onclick="gotoPage('home')">‹ 返回</button></div>
+      </div>
+      <div class="scroll"><div class="sum-card">
+        <div class="h">这篇文章的三点摘要</div>
+        <div class="src">来源：分享的文章 · 已读取全文 · 今天 09:12</div>
+        <div style="margin-top:10px">
+          <div class="sum-item"><span class="cb on" onclick="this.classList.toggle('on')"></span><span class="tx">作者认为边缘计算会先在高频低延迟场景落地，如车机与工业质检。</span></div>
+          <div class="sum-item"><span class="cb on" onclick="this.classList.toggle('on')"></span><span class="tx">成本结构分析：带宽下降 60%，但运维复杂度上升，需要混合部署。</span></div>
+          <div class="sum-item"><span class="cb" onclick="this.classList.toggle('on')"></span><span class="tx">结论：三年内云端推理仍占大头，边缘是补充而非替代。</span></div>
+        </div>
+        <div class="sum-actions">
+          <button class="btn primary">把选中 2 项写入待办</button>
+          <button class="btn ghost">查看原文</button>
+        </div>
+      </div>
+      <p style="margin-top:12px" class="note-strip"> ⓘ 只摘要实际取得的内容；仅收到链接时不假装读过全文。不自动全部写入，由你勾选后确认。</p>
+      </div>
+      <div class="bottom"><div class="input-bar"><button class="plus-btn">＋</button><div class="input-field">给鲸鱼发消息…</div><button class="voice-btn" onclick="showVoice()">🎙</button></div></div>
+    </section>
+
+    <!-- 音乐 -->
+    <section class="page" id="p-music">
+      <div class="topbar">
+        <span class="page-tt">音乐</span>
+        <div class="entries"><button class="entry-btn" onclick="gotoPage('home')">‹ 返回</button></div>
+      </div>
+      <div class="scroll">
+        <div id="libFull">
+          <div class="now">
+            <div class="np-card">
+              <div class="np-cover">🎵</div>
+              <div class="np-meta"><div class="t">鲸鱼之歌</div><div class="a">本地曲库 · 深海电台</div></div>
+              <div class="np-ctl"><button class="np-btn main">⏸</button><button class="np-btn">⏭</button></div>
+            </div>
+          </div>
+          <div class="date-lbl">曲库 · 12 首</div>
+          <div class="track"><div class="tc">🌊</div><div class="tt"><div class="n">深海电台</div><div class="a">鲸鱼之歌 · 专辑同上</div></div><span class="dur">03:24</span></div>
+          <div class="track"><div class="tc">🌙</div><div class="tt"><div class="n">夜航西飞</div><div class="a">暗流乐队</div></div><span class="dur">04:11</span></div>
+          <div class="track"><div class="tc">☁️</div><div class="tt"><div class="n">云层之上</div><div class="a">深海电台</div></div><span class="dur">02:58</span></div>
+          <div class="track"><div class="tc">🫧</div><div class="tt"><div class="n">气泡信使</div><div class="a">Single</div></div><span class="dur">03:05</span></div>
+        </div>
+        <div class="empty-lib" id="libEmpty">
+          <div class="big">🕳</div>
+          <div class="h">系统音乐库还没有歌曲</div>
+          <div class="d">曲库来自你授权的系统音乐库。<br>文件导入功能在实现后才会出现在这里。</div>
+        </div>
+      </div>
+      <div class="bottom"><div class="input-bar"><button class="plus-btn">＋</button><div class="input-field">给鲸鱼发消息…</div><button class="voice-btn" onclick="showVoice()">🎙</button></div></div>
+    </section>
+
+    <!-- 记录 -->
+    <section class="page" id="p-records">
+      <div class="topbar">
+        <span class="page-tt">记录</span>
+        <div class="entries"><button class="entry-btn" onclick="gotoPage('home')">‹ 返回</button></div>
+      </div>
+      <div class="scroll">
+        <div class="date-lbl">今天 · 11月10日</div>
+        <div class="rec" id="recUnknown"><div class="ri">⏰</div><div class="rt"><div class="n">创建提醒「取快递」</div><div class="d">15:00 · 结果未知</div></div><span class="tag pend">◎ 待核对</span></div>
+        <div class="rec"><div class="ri">☁️</div><div class="rt"><div class="n">查询天气</div><div class="d">08:30 · 多云 14–22°</div></div><span class="tag ok">✓ 完成</span></div>
+        <div class="rec"><div class="ri">🏃</div><div class="rt"><div class="n">运动摘要</div><div class="d">07:50 · 4.2 公里</div></div><span class="tag ok">✓ 完成</span></div>
+        <div class="date-lbl">昨天 · 11月9日</div>
+        <div class="rec"><div class="ri">📅</div><div class="rt"><div class="n">创建日程「周会」</div><div class="d">16:00 · 已写入日历</div></div><span class="tag ok">✓ 完成</span></div>
+        <div class="rec"><div class="ri">🗺</div><div class="rt"><div class="n">打开地图导航</div><div class="d">12:10 · 已交接给地图</div></div><span class="tag info">↗ 已交接</span></div>
+        <div style="margin-top:14px" class="note-strip"> ⓘ 待核对表示写入结果未知：查看记录核实，不提供盲目重做。</div>
+      </div>
+      <div class="bottom"><div class="input-bar"><button class="plus-btn">＋</button><div class="input-field">给鲸鱼发消息…</div><button class="voice-btn" onclick="showVoice()">🎙</button></div></div>
+    </section>
+
+    <!-- 设置 -->
+    <section class="page" id="p-settings">
+      <div class="topbar">
+        <span class="page-tt">设置</span>
+        <div class="entries"><button class="entry-btn" onclick="gotoPage('home')">‹ 返回</button></div>
+      </div>
+      <div class="scroll">
+        <div class="group">
+          <div class="row"><span class="ri">🔔</span><span class="rk">提醒确认<small>写入日历/提醒前需要确认</small></span><button class="switch on" onclick="this.classList.toggle('on')"></button></div>
+          <div class="row"><span class="ri">🌊</span><span class="rk">回复风格<small>简洁 · 默认</small></span><span class="rv">›</span></div>
+          <div class="row"><span class="ri">🌗</span><span class="rk">外观</span><span class="rv">跟随系统</span></div>
+        </div>
+        <div class="group">
+          <div class="nav-title" style="margin:14px 0 2px 4px;font-size:12px;color:var(--t3);font-weight:700;letter-spacing:1px">能力授权</div>
+          <div class="row"><span class="ri">📍</span><span class="rk">定位<small>使用期间 · 找店时请求</small></span><span class="tag ok">✓ 已授权</span></div>
+          <div class="row"><span class="ri">📅</span><span class="rk">日历<small>读取与写入</small></span><span class="tag ok">✓ 已授权</span></div>
+          <div class="row"><span class="ri">🎤</span><span class="rk">麦克风<small>点击语音时请求</small></span><span class="tag warn">◐ 未请求</span></div>
+          <div class="row"><span class="ri">❤️</span><span class="rk">健康<small>按数据类型授权</small></span><span class="tag ok">✓ 已授权</span></div>
+          <div class="row"><span class="ri">🎵</span><span class="rk">音乐库<small>查询与播放</small></span><span class="tag err">✕ 已拒绝 · 去设置</span></div>
+        </div>
+        <div class="group">
+          <div class="row"><span class="ri">🐋</span><span class="rk">关于鲸鱼<small>版本 0.4.3 (16) · 能力说明</small></span><span class="rv">›</span></div>
+        </div>
+        <p class="note-strip" style="margin:14px 4px 0"> ⓘ 授权状态来自系统真实状态；拒绝后不阻塞其他能力，需要时在场景内再次说明。</p>
+      </div>
+      <div class="bottom"><div class="input-bar"><button class="plus-btn">＋</button><div class="input-field">给鲸鱼发消息…</div><button class="voice-btn" onclick="showVoice()">🎙</button></div></div>
+    </section>
+
+    <!-- 语音整屏 -->
+    <div class="voice-page" id="voicePage">
+      <div class="topbar"><span class="brand">语音</span><div class="entries"><button class="entry-btn" onclick="hideVoice()">✕</button></div></div>
+      <div class="voice-stage">
+        <div class="voice-orb">🐋</div>
+        <div class="voice-state" id="voiceState">正在倾听 · LISTENING</div>
+        <div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="caption" id="voiceCap">"明天下午三点提醒我取快递"</div>
+        <button class="vbtn" style="margin-top:8px" onclick="cycleVoice()">切换状态示例</button>
+      </div>
+      <div class="voice-ctl">
+        <button class="vbtn danger">■ 停止</button>
+        <button class="vbtn">🔇 静音</button>
+        <button class="vbtn" onclick="hideVoice()">⌨ 返回文字</button>
+      </div>
+    </div>
+
+    <!-- 确认 sheet -->
+    <div class="sheet-layer" id="sheetLayer">
+      <div class="dim" onclick="closeSheet()"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>创建提醒</h3>
+        <div class="frow"><span class="k">标题</span><span class="v">取快递</span></div>
+        <div class="frow"><span class="k">日期</span><span class="v edit">11月10日（周二）›</span></div>
+        <div class="frow"><span class="k">时刻</span><span class="v edit">15:00 ›</span></div>
+        <div class="frow"><span class="k">时区</span><span class="v">Asia/Shanghai</span></div>
+        <div class="sheet-actions"><button class="btn ghost" onclick="closeSheet()">取消</button><button class="btn primary" onclick="closeSheet()">确认创建</button></div>
+        <p style="margin-top:12px;font-size:12px;color:var(--t3)">修改任一参数后，本次确认失效，需要重新确认。</p>
+      </div>
+    </div>
+  </div></div>
+
+  <aside>
+    <div class="aside-card">
+      <h3>页面清单（10 个状态全覆盖）</h3>
+      <ul>
+        <li><b>主页</b>：空状态 + 内容建议 + 最近未完成，顶部 任务/设置 入口。</li>
+        <li><b>找店对话</b>：范围/预算条件持续可见，价格未知项明确标注，来源可查。</li>
+        <li><b>内容摘要</b>：勾选行动项后确认写入，不自动全量写入。</li>
+        <li><b>语音</b>：整屏覆盖，倾听/处理/播报三态，停止始终可达。</li>
+        <li><b>音乐</b>：正在播放 + 曲库列表；空曲库如实说明来源与条件。</li>
+        <li><b>记录</b>：日期分组，含待核对状态与"查看核实"路径。</li>
+        <li><b>设置</b>：偏好 + 能力授权（真实系统状态，拒绝不阻塞）。</li>
+        <li><b>确认 Sheet</b>：完整参数 + 唯一主确认，改参数即失效。</li>
+      </ul>
+    </div>
+    <div class="aside-card">
+      <h3>GLASS 视觉规则</h3>
+      <ul>
+        <li>深度 = 渐变底 + 半透明层 + backdrop blur，文字始终有可读底层。</li>
+        <li>主强调靛蓝 #5856D6（浅）/ #8B8AF0（深）；层级靠 blur 与透明度，不靠线框堆叠。</li>
+        <li>圆角：卡 20 / 控件 16 / sheet 28；阴影只给浮层。</li>
+        <li>原生用 ultraThinMaterial + availability 判断；不确定可读性就加厚材质。</li>
+      </ul>
+    </div>
+    <div class="aside-card">
+      <h3>交互铁律（23 号）</h3>
+      <ul>
+        <li>底部统一输入是文字/附件/语音唯一入口；空白提交不进语音。</li>
+        <li>语音↔文字保留同一会话与草稿；切页面不清任务。</li>
+        <li>成功判定来自真实状态，待核对不提供盲目重做。</li>
+      </ul>
+    </div>
+  </aside>
+</main>
+
+<footer>代号鲸鱼01 · GLASS 通透全页面原型 · Token 见 design/ui-glass-v6/tokens.json · 原型仅演示，不代表原生真机验收</footer>
+
+<script>
+  const PAGES = ["home","chat","summary","music","records","settings"];
+  function gotoPage(p) {
+    PAGES.forEach(id => document.getElementById("p-" + id).classList.toggle("show", id === p));
+    document.querySelectorAll(".nav-item[data-p]").forEach(b => b.classList.toggle("active", b.dataset.p === p));
+    hideVoice();
+  }
+  document.querySelectorAll(".nav-item[data-p]").forEach(b => b.addEventListener("click", () => gotoPage(b.dataset.p)));
+
+  function toggleTheme() {
+    const el = document.documentElement;
+    el.dataset.theme = el.dataset.theme === "dark" ? "light" : "dark";
+  }
+  function openSheet() { document.getElementById("sheetLayer").classList.add("show"); }
+  function closeSheet() { document.getElementById("sheetLayer").classList.remove("show"); }
+  function showVoice() { document.getElementById("voicePage").classList.add("show"); }
+  function hideVoice() { document.getElementById("voicePage").classList.remove("show"); }
+  function toggleLib() {
+    const full = document.getElementById("libFull"), empty = document.getElementById("libEmpty");
+    const showEmpty = full.style.display !== "none";
+    full.style.display = showEmpty ? "none" : "block";
+    empty.style.display = showEmpty ? "block" : "none";
+  }
+  function focusUnknown() {
+    const el = document.getElementById("recUnknown");
+    el.style.boxShadow = "0 0 0 2px var(--pend)";
+    setTimeout(() => el.style.boxShadow = "", 1600);
+  }
+  function fakeType() {
+    const f = document.getElementById("chatField");
+    f.textContent = "选第 1 家";
+    f.style.color = "var(--t1)";
+  }
+  const STATES = [["正在倾听 · LISTENING", '"明天下午三点提醒我取快递"'], ["正在思考 · THINKING", '"稍等，我在确认你的日历…"'], ["正在播报 · SPEAKING", '"已创建提醒：11月10日 15:00 取快递。"']];
+  let vi = 0;
+  function cycleVoice() { vi = (vi + 1) % 3; document.getElementById("voiceState").textContent = STATES[vi][0]; document.getElementById("voiceCap").textContent = STATES[vi][1]; }
+</script>
+</body>
+</html>

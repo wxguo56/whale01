@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>鲸鱼 · iOS 全系统 UI 与动效设计</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="studio-header"><div><p class="eyebrow">WHALE 01 / NATIVE iOS SYSTEM</p><h1>界面退一步，让事情更清楚。</h1><p>完整重建提案 · iPhone16 Pro · 原型交互与业务数据均为模拟</p></div><nav class="studio-tabs" aria-label="设计交付内容"><button data-view="prototype" aria-pressed="true">交互原型</button><button data-view="boards" aria-pressed="false">丹青约画板</button><button data-view="motion" aria-pressed="false">组件与动效</button></nav></header>
+  <main>
+    <section id="view-prototype" class="studio-layout">
+      <aside class="controls"><h2>全系统界面</h2><label class="field-label">页面与状态<select id="screenSelect" aria-label="页面与状态"></select></label><label class="field-label">界面主题<select id="themeSelect" aria-label="界面主题"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></label><label class="field-label">文字大小<select id="textSelect" aria-label="文字大小"><option value="1">标准</option><option value="1.3">大字 130%</option><option value="2">特大 200%</option></select></label><label class="check-label"><input type="checkbox" id="keyboardToggle">键盘布局示意</label><label class="check-label"><input type="checkbox" id="reduceMotion">减少动态效果</label><label class="check-label"><input type="checkbox" id="reduceTransparency">减少透明效果</label><div class="control-divider"></div><h3>走一条流程</h3><button class="scenario" data-screen="reminder">创建提醒 → 查看记录</button><button class="scenario" data-screen="places">找店 → 来源 → 地图交接</button><button class="scenario" data-screen="voice-listening">语音 → 停止 → 回文字</button><button class="scenario" data-screen="reading">读通知 → 选择 → 安排</button><button class="scenario" data-screen="unknown">未知结果 → 核对记录</button><p class="control-note">这里只演示设计与状态，不访问手机系统、不调用对话模型，也不产生真实音频。</p></aside>
+      <section class="preview-column" aria-label="iPhone16 Pro UI 原型"><div class="preview-caption"><span>402 × 874 pt</span><span id="screenName">主页</span></div><div class="device-stage" id="deviceStage"><div class="device"><div class="phone" id="phone"><div class="system-reference" aria-hidden="true"><b>9:41</b><span class="island"></span><span>▮▮▮ ▰</span></div><div class="app" id="app"></div><div class="home-reference" aria-hidden="true"></div></div></div></div><p class="preview-note">外框与系统栏仅作参考，原生采用真实安全区与系统控件。</p></section>
+      <aside class="inspector"><p class="eyebrow" id="screenId">S01</p><h2 id="inspectorTitle">对话即主页</h2><p id="inspectorDescription"></p><div id="inspectorRules"></div><div class="inspector-footer"><h3>三个独立状态</h3><p>会话保留历史和草稿；输入模式负责文字／语音；任务状态依据真实回执。切换界面不会重做任务。</p><h3>原生实现</h3><p>系统字体、语义色、SF Symbols、List／Form／sheet与真实键盘布局。生成图是参考，不是App背景图。</p></div></aside>
+    </section>
+    <section id="view-boards" class="boards-page" hidden><header><p class="eyebrow">DANQING / NANO BANANA 2</p><h2>20个核心界面，放进同一套系统。</h2><p>以下画板由丹青约模型实际生成。模型画板中的设备外框、系统栏和权限提示仅用于说明；原生实现不复制这些像素。</p></header><div id="boardGrid" class="board-grid"></div></section>
+    <section id="view-motion" class="motion-page" hidden><header><p class="eyebrow">COMPONENTS / MOTION</p><h2>每个动作，都有明确的原因。</h2><p>演示只说明视觉反馈；真实状态必须来自模型、工具、音频和系统回调。</p></header><div class="motion-controls"><button id="playMotion">播放动效演示</button><label><input id="motionReduce" type="checkbox">减少动态效果</label></div><div class="motion-grid"><article><h3>消息出现</h3><p>180ms，淡入＋约4pt位移。不抢历史阅读位置。</p><div class="motion-canvas"><div class="demo-message">我们一起把这件事理清。</div></div></article><article><h3>结果反馈</h3><p>200ms。先有真实回执，再出现结果。</p><div class="motion-canvas"><div class="demo-result">✓ 提醒已创建</div></div></article><article><h3>详情与确认</h3><p>原生使用系统sheet；原型只演示层级。</p><div class="motion-canvas demo-sheet-canvas"><div class="demo-sheet"><span></span><strong>创建提醒</strong><p>事项与时间在一起核对。</p></div></div></article><article><h3>语音停止</h3><p>声音先立即停止，界面再更新。减少动态时仍保留状态文字。</p><div class="motion-canvas"><div class="demo-audio"><span></span><span></span><span></span><span></span><span></span></div><p class="demo-audio-label">正在播报 · 视觉示意</p></div></article></div><div class="native-components"><h3>组件规则</h3><dl><div><dt>统一输入</dt><dd>语音与发送含义固定，空白不提交，草稿保留。</dd></div><div><dt>确认表单</dt><dd>一个积极提交动作，参数校验和确认绑定。</dd></div><div><dt>任务结果</dt><dd>成功、失败、部分完成与待核对分开。</dd></div><div><dt>系统授权</dt><dd>使用真正系统提示，拒绝后提供可用替代路径。</dd></div><div><dt>内容与来源</dt><dd>有多少真实内容，就展示多少；未知不编造。</dd></div><div><dt>无障碍</dt><dd>至少44pt主触控，动态字体、VoiceOver、减少动态／透明度。</dd></div></dl></div></section>
+  </main>
+  <footer class="studio-footer">重建提案 v2.0 · 2026-11-10 · 设计与浏览器验证不替代原生真机验收。</footer>
+  <script src="tokens.js"></script>
+  <script src="icons.js"></script>
+  <script src="views.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

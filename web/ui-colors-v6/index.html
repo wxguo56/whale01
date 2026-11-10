@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>代号鲸鱼01 · GLASS 五套换色方案</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "SF Pro Text", "PingFang SC", system-ui, sans-serif; background: #F5F6FA; color: #1D1D1F; line-height: 1.45; padding-bottom: 64px; }
+  header { position: sticky; top: 0; z-index: 60; background: rgba(255,255,255,0.85); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(0,0,0,0.08); padding: 12px 20px 0; }
+  .head-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; max-width: 1120px; margin: 0 auto; }
+  header h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; }
+  header .sub { font-size: 12px; color: #8E8E93; margin-top: 2px; }
+  .hdr-btn { min-height: 40px; padding: 0 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.10); background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .hdr-btn:hover { border-color: rgba(0,0,0,0.30); }
+  .tabs { display: flex; gap: 6px; max-width: 1120px; margin: 12px auto 0; overflow-x: auto; padding-bottom: 12px; }
+  .tab { min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.10); background: #fff; cursor: pointer; font-size: 14px; font-weight: 600; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; transition: all .18s ease; }
+  .tab .dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.12); }
+  .tab:hover { border-color: rgba(0,0,0,0.28); }
+  .tab.active { background: #1D1D1F; color: #fff; border-color: #1D1D1F; }
+
+  main { max-width: 1120px; margin: 0 auto; padding: 26px 20px 0; }
+  .stage { display: flex; gap: 34px; align-items: flex-start; flex-wrap: wrap; }
+  .aside { flex: 1; min-width: 300px; }
+
+  /* 手机画布：GLASS 布局，颜色由所选套系驱动 */
+  .phone-scale { width: 402px; height: 874px; overflow: hidden; border-radius: 46px; box-shadow: 0 12px 40px rgba(20,24,40,0.18); flex-shrink: 0; }
+  .phone { width: 402px; height: 874px; border-radius: 46px; overflow: hidden; display: flex; flex-direction: column;
+    background: var(--bg-page); background-image: var(--bg-gradient); color: var(--text-1); transition: background .3s ease, color .3s ease; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 8px; }
+  .brand { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
+  .entries { display: flex; gap: 2px; }
+  .entry-btn { min-width: 44px; height: 44px; padding: 0 12px; border: none; border-radius: 16px; background: transparent; color: var(--text-2); font-size: 14px; font-weight: 500; cursor: pointer; }
+  .entry-btn:hover { background: var(--accent-muted); color: var(--accent); }
+  .hero { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; text-align: center; padding: 0 20px; }
+  .orb { width: 62px; height: 62px; border-radius: 50%; background: var(--accent-muted); border: 1.5px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 30px; animation: breathe 3.5s ease-in-out infinite; box-shadow: 0 0 0 10px var(--accent-muted); }
+  @keyframes breathe { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+  .greet { font-size: 28px; font-weight: 600; letter-spacing: -0.4px; }
+  .greet-sub { font-size: 14px; color: var(--text-2); }
+  .glass { background: var(--surface); backdrop-filter: blur(22px) saturate(1.5); border: 1px solid var(--hairline); border-radius: 20px; }
+  .sug-row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; justify-content: center; }
+  .sug { padding: 10px 16px; border-radius: 999px; font-size: 14px; color: var(--text-1); cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; }
+  .sug:hover { border-color: var(--accent); color: var(--accent); }
+  .place-card { border-radius: 20px; padding: 16px; cursor: pointer; }
+  .pc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .pc-name { font-size: 17px; font-weight: 600; }
+  .pc-name .no { color: var(--accent); font-family: ui-monospace, monospace; font-size: 12px; margin-right: 6px; }
+  .pc-dist { font-size: 12px; color: var(--text-3); font-family: ui-monospace, monospace; }
+  .pc-price { font-size: 17px; font-weight: 600; color: var(--accent); margin-top: 4px; }
+  .pc-meta { font-size: 14px; color: var(--text-2); margin-top: 4px; }
+  .pc-src { font-size: 12px; color: var(--text-3); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline-soft); }
+  .bottom { padding: 8px 20px 26px; display: flex; flex-direction: column; gap: 10px; }
+  .chat-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 2px; }
+  .bub-user { align-self: flex-end; max-width: 85%; background: var(--surface-strong); backdrop-filter: blur(22px) saturate(1.5); border: 1px solid var(--hairline); border-radius: 20px; border-top-right-radius: 6px; padding: 10px 14px; font-size: 15px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .tag-ok { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+  .input-bar { display: flex; align-items: center; gap: 8px; }
+  .plus-btn { width: 44px; height: 44px; border-radius: 16px; border: 1px solid var(--hairline); cursor: pointer; font-size: 18px; flex-shrink: 0; background: var(--surface-input); backdrop-filter: blur(22px); color: var(--text-2); }
+  .input-field { flex: 1; display: flex; align-items: center; height: 44px; padding: 0 16px; background: var(--surface-input); backdrop-filter: blur(22px); border: 1px solid var(--hairline); border-radius: 16px; font-size: 17px; color: var(--text-2); }
+  .voice-btn { height: 44px; padding: 0 18px; border: none; cursor: pointer; flex-shrink: 0; background: var(--accent); color: var(--on-accent); border-radius: 16px; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  .voice-btn:hover { background: var(--accent-pressed); }
+
+  .aside-card { background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 16px; padding: 20px; margin-bottom: 14px; }
+  .aside-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .aside-card p { font-size: 13px; color: #6E6E73; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+  .sw .chip { height: 44px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.06); }
+  .sw .n { font-size: 11px; color: #8E8E93; margin-top: 4px; font-family: ui-monospace, monospace; }
+  .btn-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .demo-btn { display: inline-flex; align-items: center; height: 44px; padding: 0 20px; border: none; border-radius: 16px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .demo-btn.primary { background: var(--accent); color: var(--on-accent); }
+  .demo-btn.secondary { background: var(--accent-muted); color: var(--accent); }
+
+  section.quick { margin-top: 40px; }
+  section.quick h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 6px; }
+  section.quick .desc { font-size: 14px; color: #8E8E93; margin-bottom: 20px; }
+  .quick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
+  .q-card { border: 1px solid rgba(0,0,0,0.08); border-radius: 16px; overflow: hidden; background: #fff; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease; }
+  .q-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
+  .q-thumb { height: 200px; position: relative; overflow: hidden; background: var(--bg-page); background-image: var(--bg-gradient); color: var(--text-1); }
+  .q-bar { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; font-size: 8px; color: var(--text-2); font-weight: 500; }
+  .q-mid { position: absolute; inset: 30px 10px 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
+  .q-orb { width: 18px; height: 18px; border-radius: 50%; background: var(--accent-muted); border: 1.5px solid var(--accent); }
+  .q-greet { font-size: 11px; font-weight: 600; letter-spacing: -0.2px; }
+  .q-sub { font-size: 8px; color: var(--text-2); }
+  .q-input { position: absolute; left: 10px; right: 10px; bottom: 10px; height: 16px; border-radius: 8px; background: var(--surface-input); border: 1px solid var(--hairline); }
+  .q-voice { position: absolute; right: 10px; bottom: 10px; height: 16px; width: 30px; border-radius: 8px; background: var(--accent); }
+  .q-name { padding: 12px 14px; }
+  .q-name .t { font-size: 14px; font-weight: 700; }
+  .q-name .v { font-size: 12px; color: #8E8E93; margin-top: 2px; }
+  footer { text-align: center; font-size: 12px; color: #8E8E93; margin-top: 44px; padding: 0 20px; }
+  @media (prefers-reduced-motion: reduce) { .orb { animation: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="head-row">
+    <div>
+      <h1>🐋 GLASS 通透 · 五套换色方案</h1>
+      <div class="sub">v6.2 · 布局/材质/圆角/动效锁定不变，仅换色 · 每套浅深完整对等 · 2026-11-10</div>
+    </div>
+    <button class="hdr-btn" onclick="toggleTheme()">◐ 画布切浅 / 深色</button>
+  </div>
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<main>
+  <div class="stage">
+    <div class="phone-scale"><div class="phone" id="phone">
+      <div class="topbar">
+        <span class="brand">鲸鱼</span>
+        <div class="entries"><button class="entry-btn">任务</button><button class="entry-btn">设置</button></div>
+      </div>
+      <div class="hero">
+        <div class="orb">🐋</div>
+        <div class="greet">有什么想聊的？</div>
+        <div class="greet-sub">文字或语音都可以</div>
+        <div class="sug-row">
+          <button class="sug glass">☕ 附近咖啡店比较</button>
+          <button class="sug glass">🎵 听点音乐</button>
+        </div>
+      </div>
+      <div class="bottom">
+        <div class="chat-row">
+          <div class="bub-user">明天下午三点提醒我取快递</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 4px">
+            <span style="font-size:12px;color:var(--text-3)">示例 · 确认后写入提醒事项</span>
+            <span class="tag-ok">✓ 已创建提醒</span>
+          </div>
+        </div>
+        <div class="glass place-card">
+          <div class="pc-head"><span class="pc-name"><span class="no">01</span>鲸屿咖啡</span><span class="pc-dist">580m · 步行8分</span></div>
+          <div class="pc-price">人均 ¥38</div>
+          <div class="pc-meta">手冲 · 有插座 · 营业至 22:00</div>
+          <div class="pc-src">来源：点评数据 · 更新于今日</div>
+        </div>
+        <div class="input-bar">
+          <button class="plus-btn">＋</button>
+          <div class="input-field">给鲸鱼发消息…</div>
+          <button class="voice-btn">🎙 语音</button>
+        </div>
+      </div>
+    </div></div>
+
+    <div class="aside">
+      <div class="aside-card">
+        <h3 id="palName"></h3>
+        <p id="palNote"></p>
+      </div>
+      <div class="aside-card">
+        <h3>调色板（当前主题）</h3>
+        <div class="swatches" id="swatches"></div>
+      </div>
+      <div class="aside-card">
+        <h3>组件取样</h3>
+        <div class="btn-row">
+          <button class="demo-btn primary">确认创建</button>
+          <button class="demo-btn secondary">查看来源</button>
+          <span class="tag-ok">✓ 已创建提醒</span>
+        </div>
+        <p style="margin-top:10px">锁定不变的：渐变玻璃层、blur 22px、圆角 20/16/28、字体阶梯、动效节奏。变的只有 Color 资产。</p>
+      </div>
+    </div>
+  </div>
+
+  <section class="quick">
+    <h2>五套速览</h2>
+    <p class="desc">同一 GLASS 主页，五种配色。点击任意卡片切换到该套系。</p>
+    <div class="quick-grid" id="quickGrid"></div>
+  </section>
+</main>
+
+<footer>代号鲸鱼01 · GLASS 换色方案 · Token 见 design/ui-colors-v6/tokens.json · 对比度校验见 29 号文档 · 原型演示不代表真机验收</footer>
+
+<script>
+  const PALETTES = {
+    indigo: { name: "靛蓝 INDIGO", note: "现行默认（28 号定稿原配色）。理性科技感，与 GLASS 气质最融合。深色主题强调色改用深字压浅色，对比度较原版更达标。" },
+    abyss:  { name: "深海 ABYSS",  note: "鲸鱼品牌色：深海蓝光晕，浅色像清晨海面，深色像海底夜航。品牌一致性最强，推荐度最高。" },
+    mint:   { name: "薄荷 MINT",   note: "清爽治愈系：海雾青绿渐变。与最早 B 折光薄荷青一脉相承，老用户观感迁移成本最低。" },
+    sunset: { name: "落日 SUNSET", note: "暖珊瑚色：落日霞光渐变，温暖有人情味。错误色已特意加深与强调色拉开语义距离。" },
+    ink:    { name: "墨金 INK",    note: "黑金克制奢华：近中性灰纸底 + 青铜金强调，最安静、最'高级'。状态色整体降饱和。" }
+  };
+
+  const C = {
+    indigo: {
+      light: { "--bg-page":"#DCE7F5","--bg-gradient":"linear-gradient(165deg,#DCE7F5 0%,#EDE4F2 55%,#F6E8E4 100%)",
+        "--surface":"rgba(255,255,255,0.72)","--surface-strong":"rgba(255,255,255,0.88)","--surface-input":"rgba(255,255,255,0.60)",
+        "--hairline":"rgba(255,255,255,0.65)","--hairline-soft":"rgba(29,29,31,0.10)",
+        "--text-1":"#1D1D1F","--text-2":"rgba(29,29,31,0.62)","--text-3":"rgba(29,29,31,0.42)",
+        "--accent":"#5856D6","--accent-pressed":"#4B49C4","--accent-muted":"rgba(88,86,214,0.12)","--on-accent":"#FFFFFF",
+        "--ok":"#34A853","--warn":"#C77D0A","--err":"#D6453A","--info":"#3B82D6","--pend":"#8E6BC7" },
+      dark: { "--bg-page":"#0E1220","--bg-gradient":"linear-gradient(165deg,#0E1220 0%,#161B2E 55%,#1E1A26 100%)",
+        "--surface":"rgba(40,46,72,0.55)","--surface-strong":"rgba(52,58,88,0.78)","--surface-input":"rgba(28,32,52,0.60)",
+        "--hairline":"rgba(255,255,255,0.14)","--hairline-soft":"rgba(255,255,255,0.08)",
+        "--text-1":"#F5F6FA","--text-2":"rgba(245,246,250,0.65)","--text-3":"rgba(245,246,250,0.42)",
+        "--accent":"#8B8AF0","--accent-pressed":"#A5A4F5","--accent-muted":"rgba(139,138,240,0.16)","--on-accent":"#14123B",
+        "--ok":"#5FD08A","--warn":"#E8B45A","--err":"#F08078","--info":"#6FA8E8","--pend":"#B49BE8" }
+    },
+    abyss: {
+      light: { "--bg-page":"#D8E8F6","--bg-gradient":"linear-gradient(165deg,#D8E8F6 0%,#DDE9F3 50%,#E6F1F2 100%)",
+        "--surface":"rgba(255,255,255,0.72)","--surface-strong":"rgba(255,255,255,0.88)","--surface-input":"rgba(255,255,255,0.60)",
+        "--hairline":"rgba(255,255,255,0.68)","--hairline-soft":"rgba(18,35,46,0.10)",
+        "--text-1":"#12232E","--text-2":"rgba(18,35,46,0.62)","--text-3":"rgba(18,35,46,0.42)",
+        "--accent":"#0E6FD8","--accent-pressed":"#0B5CB8","--accent-muted":"rgba(14,111,216,0.12)","--on-accent":"#FFFFFF",
+        "--ok":"#2E9E63","--warn":"#C77D0A","--err":"#D6453A","--info":"#0E6FD8","--pend":"#7C6BC7" },
+      dark: { "--bg-page":"#081424","--bg-gradient":"linear-gradient(165deg,#081424 0%,#0C1B30 55%,#0E2233 100%)",
+        "--surface":"rgba(24,44,72,0.55)","--surface-strong":"rgba(32,56,88,0.78)","--surface-input":"rgba(14,28,46,0.60)",
+        "--hairline":"rgba(255,255,255,0.14)","--hairline-soft":"rgba(255,255,255,0.08)",
+        "--text-1":"#EEF4FB","--text-2":"rgba(238,244,251,0.65)","--text-3":"rgba(238,244,251,0.42)",
+        "--accent":"#5AA7F0","--accent-pressed":"#7CBCF6","--accent-muted":"rgba(90,167,240,0.16)","--on-accent":"#04182E",
+        "--ok":"#62C795","--warn":"#E5B75C","--err":"#F0837B","--info":"#6FB3E8","--pend":"#AFA3E0" }
+    },
+    mint: {
+      light: { "--bg-page":"#DAF1EB","--bg-gradient":"linear-gradient(165deg,#DAF1EB 0%,#E4F3EA 55%,#F0F6E6 100%)",
+        "--surface":"rgba(255,255,255,0.74)","--surface-strong":"rgba(255,255,255,0.90)","--surface-input":"rgba(255,255,255,0.62)",
+        "--hairline":"rgba(255,255,255,0.70)","--hairline-soft":"rgba(20,38,32,0.10)",
+        "--text-1":"#142620","--text-2":"rgba(20,38,32,0.62)","--text-3":"rgba(20,38,32,0.42)",
+        "--accent":"#0B7F6E","--accent-pressed":"#09695B","--accent-muted":"rgba(11,127,110,0.12)","--on-accent":"#FFFFFF",
+        "--ok":"#3D9E6B","--warn":"#B97F0F","--err":"#CE5340","--info":"#3B82A6","--pend":"#8E6BC7" },
+      dark: { "--bg-page":"#0A1A18","--bg-gradient":"linear-gradient(165deg,#0A1A18 0%,#0E2420 55%,#12281E 100%)",
+        "--surface":"rgba(28,58,52,0.55)","--surface-strong":"rgba(38,74,66,0.78)","--surface-input":"rgba(16,38,34,0.60)",
+        "--hairline":"rgba(255,255,255,0.14)","--hairline-soft":"rgba(255,255,255,0.08)",
+        "--text-1":"#EEF7F4","--text-2":"rgba(238,247,244,0.65)","--text-3":"rgba(238,247,244,0.42)",
+        "--accent":"#3FC9B0","--accent-pressed":"#63D6C1","--accent-muted":"rgba(63,201,176,0.15)","--on-accent":"#05201B",
+        "--ok":"#6BCB9A","--warn":"#DFB766","--err":"#F08A7C","--info":"#6FB6D6","--pend":"#B2A2E3" }
+    },
+    sunset: {
+      light: { "--bg-page":"#FBE9DC","--bg-gradient":"linear-gradient(165deg,#FBE9DC 0%,#F8E4E8 55%,#EFE9F5 100%)",
+        "--surface":"rgba(255,255,255,0.74)","--surface-strong":"rgba(255,255,255,0.90)","--surface-input":"rgba(255,255,255,0.62)",
+        "--hairline":"rgba(255,255,255,0.70)","--hairline-soft":"rgba(42,29,24,0.10)",
+        "--text-1":"#2A1D18","--text-2":"rgba(42,29,24,0.62)","--text-3":"rgba(42,29,24,0.42)",
+        "--accent":"#C74A32","--accent-pressed":"#AC3D28","--accent-muted":"rgba(199,74,50,0.12)","--on-accent":"#FFFFFF",
+        "--ok":"#3D8F5F","--warn":"#C77D0A","--err":"#A62818","--info":"#3B7FA6","--pend":"#8E6BC7" },
+      dark: { "--bg-page":"#201412","--bg-gradient":"linear-gradient(165deg,#201412 0%,#2A1A1C 55%,#231A2A 100%)",
+        "--surface":"rgba(72,44,40,0.55)","--surface-strong":"rgba(92,58,52,0.78)","--surface-input":"rgba(46,28,24,0.60)",
+        "--hairline":"rgba(255,255,255,0.13)","--hairline-soft":"rgba(255,255,255,0.08)",
+        "--text-1":"#FBF1EC","--text-2":"rgba(251,241,236,0.65)","--text-3":"rgba(251,241,236,0.42)",
+        "--accent":"#F2907A","--accent-pressed":"#F7A694","--accent-muted":"rgba(242,144,122,0.16)","--on-accent":"#2A120D",
+        "--ok":"#6FCB9A","--warn":"#E5B75C","--err":"#F58B7F","--info":"#79B4DC","--pend":"#B9A6E5" }
+    },
+    ink: {
+      light: { "--bg-page":"#F5F4F2","--bg-gradient":"linear-gradient(165deg,#F5F4F2 0%,#F2F0EC 55%,#EFEDE8 100%)",
+        "--surface":"rgba(255,255,255,0.78)","--surface-strong":"rgba(255,255,255,0.92)","--surface-input":"rgba(255,255,255,0.65)",
+        "--hairline":"rgba(255,255,255,0.75)","--hairline-soft":"rgba(26,25,23,0.10)",
+        "--text-1":"#1A1917","--text-2":"rgba(26,25,23,0.62)","--text-3":"rgba(26,25,23,0.42)",
+        "--accent":"#8F6A1F","--accent-pressed":"#755415","--accent-muted":"rgba(143,106,31,0.12)","--on-accent":"#FFFFFF",
+        "--ok":"#3D7A44","--warn":"#8F6A1F","--err":"#B3352A","--info":"#4A6B8A","--pend":"#6B5FA0" },
+      dark: { "--bg-page":"#0C0C0E","--bg-gradient":"linear-gradient(165deg,#0C0C0E 0%,#121014 55%,#14120E 100%)",
+        "--surface":"rgba(38,36,32,0.55)","--surface-strong":"rgba(52,48,42,0.78)","--surface-input":"rgba(24,22,20,0.60)",
+        "--hairline":"rgba(255,255,255,0.12)","--hairline-soft":"rgba(255,255,255,0.07)",
+        "--text-1":"#F4F1E9","--text-2":"rgba(244,241,233,0.65)","--text-3":"rgba(244,241,233,0.42)",
+        "--accent":"#D9B45C","--accent-pressed":"#E4C377","--accent-muted":"rgba(217,180,92,0.14)","--on-accent":"#191307",
+        "--ok":"#7FBE8D","--warn":"#D9B45C","--err":"#E57F73","--info":"#8AAECB","--pend":"#B0A4D6" }
+    }
+  };
+
+  const SW = [["--bg-page","页面底"],["--surface","玻璃层"],["--text-1","正文"],["--accent","强调"],["--on-accent","强调上文字"],["--ok","成功"],["--warn","警示"],["--err","错误"]];
+  const ACCENT_DOT = { indigo:"#5856D6", abyss:"#0E6FD8", mint:"#0B7F6E", sunset:"#C74A32", ink:"#8F6A1F" };
+
+  let current = "abyss";
+  let theme = "light";
+
+  function applyPal(key, t) {
+    current = key;
+    theme = t || theme;
+    for (const [k, v] of Object.entries(C[key][theme])) document.documentElement.style.setProperty(k, v);
+    document.getElementById("palName").textContent = PALETTES[key].name + "（" + (theme === "dark" ? "深色" : "浅色") + "）";
+    document.getElementById("palNote").textContent = PALETTES[key].note;
+    const cs = getComputedStyle(document.documentElement);
+    document.getElementById("swatches").innerHTML = SW.map(([k, n]) =>
+      `<div class="sw"><div class="chip" style="background:${cs.getPropertyValue(k)}"></div><div class="n">${n}</div></div>`).join("");
+    document.querySelectorAll(".tab").forEach(el => el.classList.toggle("active", el.dataset.k === key));
+    document.getElementById("phone").style.borderColor = "rgba(0,0,0,0.10)";
+  }
+  function toggleTheme() { theme = theme === "dark" ? "light" : "dark"; applyPal(current, theme); buildQuick(); }
+  function buildTabs() {
+    document.getElementById("tabs").innerHTML = Object.keys(PALETTES).map(k =>
+      `<button class="tab" data-k="${k}" onclick="applyPal('${k}')"><span class="dot" style="background:${ACCENT_DOT[k]}"></span>${PALETTES[k].name.split(" ")[1] || PALETTES[k].name}</button>`).join("");
+  }
+  function buildQuick() {
+    document.getElementById("quickGrid").innerHTML = Object.keys(PALETTES).map(k => {
+      const t = C[k][theme];
+      return `<div class="q-card" onclick="applyPal('${k}')" style="${Object.entries(t).map(([p, v]) => `${p}:${v}`).join(";")}">
+        <div class="q-thumb">
+          <div class="q-bar"><span>鲸鱼</span><span>任务 · 设置</span></div>
+          <div class="q-mid"><div class="q-orb"></div><div class="q-greet">有什么想聊的？</div><div class="q-sub">文字或语音都可以</div></div>
+          <div class="q-input"></div><div class="q-voice"></div>
+        </div>
+        <div class="q-name"><div class="t">${PALETTES[k].name}</div><div class="v">强调 ${ACCENT_DOT[k]}</div></div>
+      </div>`;
+    }).join("");
+  }
+  buildTabs(); buildQuick(); applyPal("abyss", "light");
+</script>
+</body>
+</html>
