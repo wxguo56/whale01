@@ -128,6 +128,11 @@ final class PermissionCenter: ObservableObject {
             let hasNear = arguments.optionalObject("near") != nil
             let needsLocation = mode == "current" || (mode == nil && !hasRegion && !hasNear)
             required = needsLocation ? ["location"] : []
+        } else if tool == "get_weather" {
+            let hasPlace = !(arguments.optionalString("locationName") ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .isEmpty
+            required = hasPlace ? [] : ["location"]
         } else if tool == "open_navigation" {
             required = []
         } else if tool == "search_music_library" {

@@ -273,7 +273,7 @@ struct SettingsView: View {
             infoRow("版本", model.versionText)
             divider
             infoRow("隐私", "对话经 DeepSeek 处理，系统数据留在设备")
-            Text("鲸鱼只在获得确认后写入提醒、日历和短信草稿；天气与运动摘要需要对应系统能力授权。")
+            Text("鲸鱼只在获得确认后写入提醒、日历和短信草稿；天气读取公共预报接口，运动摘要需要 HealthKit 授权（免费签名构建不含该能力）。")
                 .font(.system(size: 12))
                 .foregroundStyle(WhaleTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -362,7 +362,7 @@ private struct PermissionSettingsRow: View {
         switch status {
         case "granted": return "已授权"
         case "denied": return "已拒绝 · 可在系统设置中修改"
-        case "unavailable": return "当前构建不可用"
+        case "unavailable": return "免费签名不含此能力"
         default: return "尚未请求"
         }
     }

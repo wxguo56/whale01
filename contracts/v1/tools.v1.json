@@ -5,15 +5,15 @@
       "name": "get_weather",
       "version": "1.0",
       "skill": "travel",
-      "description": "查询指定地点和区间的天气。地点必须明确且处于供应商预报范围内。",
+      "description": "查询指定地点和区间的天气。locationName 省略时使用手机当前位置（需要定位授权）；天气来自 Open-Meteo 公共预报接口，只支持未来 16 天内。",
       "requiresConfirmation": false,
       "requiresAuthorization": [],
       "inputSchema": {
         "type": "object",
-        "required": ["locationName", "startAt", "endAt", "timezone"],
+        "required": ["startAt", "endAt", "timezone"],
         "additionalProperties": false,
         "properties": {
-          "locationName": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "locationName": { "type": "string", "minLength": 1, "maxLength": 80, "description": "省略时使用手机当前位置" },
           "region": { "type": "string", "minLength": 1, "maxLength": 80 },
           "startAt": { "type": "string", "format": "date-time" },
           "endAt": { "type": "string", "format": "date-time" },

@@ -208,4 +208,61 @@ final class CoreTests: XCTestCase {
         )
         XCTAssertEqual(address, "浙江省杭州市西湖区 文三路 文三路 90号")
     }
+    @MainActor
+    func testWeatherCodeMappingUsesWMOValues() {
+        XCTAssertEqual(WeatherExecutor.summary(for: 0), "晴")
+        XCTAssertEqual(WeatherExecutor.summary(for: 61), "小雨")
+        XCTAssertEqual(WeatherExecutor.summary(for: 75), "大雪")
+        XCTAssertEqual(WeatherExecutor.summary(for: 95), "雷雨")
+        XCTAssertEqual(WeatherExecutor.conditionKey(for: 3), "cloudy")
+        XCTAssertEqual(WeatherExecutor.conditionKey(for: 82), "showers")
+        XCTAssertEqual(WeatherExecutor.conditionKey(for: 96), "thunderstorm")
+    }
+
+    @MainActor
+    func testWeatherForecastParsesProviderPayloadWithoutFabricating() throws {
+        let json = """
+        {"timezone":"Asia/Shanghai","daily":{"time":["2026-11-10","2026-11-11"],"weather_code":[61,0],"temperature_2m_max":[18.4,21.6],"temperature_2m_min":[11.2,12.8],"precipitation_probability_max":[70,10]}}
+        """
+        let payload = try WeatherExecutor.parseForecast(data: Data(json.utf8))
+        XCTAssertEqual(payload["dayCount"]?.doubleValue, 2)
+        XCTAssertEqual(payload["summary"]?.stringValue, "小雨")
+        XCTAssertEqual(payload["precipitationChance"]?.doubleValue, 70)
+        XCTAssertEqual(payload["timezone"]?.stringValue, "Asia/Shanghai")
+
+        let days = payload["days"]?.arrayValue ?? []
+        XCTAssertEqual(days.count, 2)
+        XCTAssertEqual(days[1].objectValue?["summary"]?.stringValue, "晴")
+        let temperatures = days[0].objectValue?["temperatureC"]?.objectValue
+        XCTAssertEqual(temperatures?["min"]?.doubleValue, 11.2)
+        XCTAssertEqual(temperatures?["max"]?.doubleValue, 18.4)
+    }
+
+    @MainActor
+    func testWeatherForecastRejectsEmptyProviderPayload() {
+        XCTAssertThrowsError(try WeatherExecutor.parseForecast(data: Data("{\"daily\":{\"time\":[]}}".utf8)))
+        XCTAssertThrowsError(try WeatherExecutor.parseForecast(data: Data("{}".utf8)))
+    }
+
+    @MainActor
+    func testWeatherAdviceMentionsUmbrellaAndHeat() {
+        let advice = WeatherExecutor.advice(high: 34, low: 26, chance: 80, code: 61)
+        XCTAssertTrue(advice.contains("带伞"))
+        XCTAssertTrue(advice.contains("防晒"))
+        XCTAssertEqual(WeatherExecutor.advice(high: 22, low: 15, chance: 5, code: 0), "暂无明显降水或极端气温信号")
+    }
+
+    @MainActor
+    func testWeatherDaySpanCountsInclusiveDays() {
+        XCTAssertEqual(WeatherExecutor.daySpan(from: "2026-11-10", to: "2026-11-10"), 1)
+        XCTAssertEqual(WeatherExecutor.daySpan(from: "2026-11-10", to: "2026-11-12"), 3)
+        XCTAssertEqual(WeatherExecutor.daySpan(from: "bad", to: "2026-11-12"), Int.max)
+    }
+
+    @MainActor
+    func testFreeBuildBlocksHealthButNotWeather() {
+        XCTAssertFalse(NativeToolRouter.freeBuildUnavailableTools.contains("get_weather"))
+        XCTAssertTrue(NativeToolRouter.freeBuildUnavailableTools.contains("get_activity_summary"))
+    }
 }
+

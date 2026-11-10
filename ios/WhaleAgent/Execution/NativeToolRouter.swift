@@ -2,9 +2,7 @@ import Foundation
 
 @MainActor
 final class NativeToolRouter {
-    #if FREE_SIGNING
-    private static let freeBuildUnavailableTools: Set<String> = ["get_weather", "get_activity_summary"]
-    #endif
+    static let freeBuildUnavailableTools: Set<String> = ["get_activity_summary"]
 
     private let permissions: PermissionCenter
     private let eventKit: EventKitExecutor
@@ -57,7 +55,7 @@ final class NativeToolRouter {
                 status: "failed",
                 error: ToolErrorPayload(
                     code: "unavailable_in_free_build",
-                    message: "免费签名版不包含 HealthKit / WeatherKit 能力，本次未执行；请改用提醒、日历、地点、音乐等能力。"
+                    message: "免费签名无法启用 HealthKit（需要 Apple 开发者团队的 HealthKit 授权），本次未执行运动摘要；天气查询已改用公共接口，不受影响。请改用提醒、日历、地点、天气、音乐等能力。"
                 )
             )
         }
