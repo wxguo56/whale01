@@ -127,7 +127,8 @@ private enum TodoQuickParser {
             }
         }
 
-        return Added(title: text.replacingOccurrences(of: "提醒我", with: "").trimmingCharacters(in: .whitespacesAndNewlines), dueAt: nil)
+        let cleaned = text.replacingOccurrences(of: "提醒我", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return Added(title: cleaned.isEmpty ? text : cleaned, dueAt: nil)
     }
 
     private static func resolveDay(in text: String, now: Date, calendar: Calendar) -> DayMatch? {
@@ -172,10 +173,12 @@ private enum TodoQuickParser {
         let nsText = text as NSString
         let fullRange = NSRange(location: 0, length: nsText.length)
 
-        if let regex = try? NSRegularExpression(pattern: "([0-9]{1,2})\\s*[:：]\\s*([0-9]{2})"),
+        if let regex = try? NSRegularExpression(pattern: "(上午|早上|中午|下午|傍晚|晚上|夜里)?\\s*([0-9]{1,2})\\s*[:：]\\s*([0-9]{2})"),
            let match = regex.firstMatch(in: text, range: fullRange) {
-            let hour = Int(nsText.substring(with: match.range(at: 1))) ?? -1
-            let minute = Int(nsText.substring(with: match.range(at: 2))) ?? -1
+            let period = match.range(at: 1).location == NSNotFound ? "" : nsText.substring(with: match.range(at: 1))
+            var hour = Int(nsText.substring(with: match.range(at: 2))) ?? -1
+            let minute = Int(nsText.substring(with: match.range(at: 3))) ?? -1
+            adjustPeriod(&hour, period: period)
             guard (0...23).contains(hour), (0...59).contains(minute) else { return nil }
             return TimeMatch(hour: hour, minute: minute, tokens: [nsText.substring(with: match.range)])
         }
@@ -192,6 +195,12 @@ private enum TodoQuickParser {
             let minuteText = nsText.substring(with: match.range(at: 3)).replacingOccurrences(of: "分", with: "").trimmingCharacters(in: .whitespaces)
             minute = minuteText == "半" ? 30 : (Int(minuteText) ?? 0)
         }
+        adjustPeriod(&hour, period: period)
+        guard (0...23).contains(hour), (0...59).contains(minute) else { return nil }
+        return TimeMatch(hour: hour, minute: minute, tokens: [nsText.substring(with: match.range)])
+    }
+
+    private static func adjustPeriod(_ hour: inout Int, period: String) {
         switch period {
         case "下午", "傍晚", "晚上", "夜里":
             if hour < 12 { hour += 12 }
@@ -200,8 +209,6 @@ private enum TodoQuickParser {
         default:
             break
         }
-        guard (0...23).contains(hour), (0...59).contains(minute) else { return nil }
-        return TimeMatch(hour: hour, minute: minute, tokens: [nsText.substring(with: match.range)])
     }
 
     private static func chineseNumber(_ text: String) -> Int? {
@@ -279,7 +286,7 @@ struct TodoView: View {
             .navigationBarHidden(true)
             .task { await reload() }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active, reminderStatus != "granted" {
+                if phase == .active {
                     Task { await reload() }
                 }
             }
@@ -598,11 +605,20 @@ struct TodoView: View {
                     showToast(message)
                 } else {
                     let parsed = TodoQuickParser.parseAdd(raw)
-                    let item = try await model.createTodoReminder(title: parsed.title, dueAt: parsed.dueAt)
+                    let title = parsed.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !title.isEmpty else {
+                        throw ToolExecutionError(code: "empty_reminder", message: "写点具体内容再添加。")
+                    }
+                    let item = try await model.createTodoReminder(title: title, dueAt: parsed.dueAt)
                     draft = ""
                     filter = .pending
+                    upsert(item)
                     await reload(silent: true)
-                    showToast(parsed.dueAt == nil ? "已加入 · \(item.title)" : "已加入 · \(dueText(parsed.dueAt!))")
+                    if let dueAt = parsed.dueAt {
+                        showToast("已加入 · \(dueText(dueAt))")
+                    } else {
+                        showToast("已加入 · \(item.title)")
+                    }
                 }
             } catch {
                 errorText = error.localizedDescription
@@ -615,15 +631,18 @@ struct TodoView: View {
         switch command {
         case .complete(let keyword):
             let target = try uniqueMatch(keyword, in: pendingItems, missing: "没有找到未完成的「\(keyword)」。")
-            _ = try await model.setTodoReminder(target, completed: true)
+            let updated = try await model.setTodoReminder(target, completed: true)
+            upsert(updated)
             return "已完成 · \(target.title)"
         case .restore(let keyword):
             let target = try uniqueMatch(keyword, in: completedItems, missing: "没有找到已完成的「\(keyword)」。")
-            _ = try await model.setTodoReminder(target, completed: false)
+            let updated = try await model.setTodoReminder(target, completed: false)
+            upsert(updated)
             return "已恢复 · \(target.title)"
         case .delete(let keyword):
             let target = try uniqueMatch(keyword, in: items, missing: "没有找到「\(keyword)」。")
             try await model.deleteTodoReminder(target)
+            removeLocal(target.id)
             return "已删除 · \(target.title)"
         }
     }
@@ -649,7 +668,8 @@ struct TodoView: View {
         errorText = nil
         Task {
             do {
-                _ = try await model.setTodoReminder(item, completed: !item.completed)
+                let updated = try await model.setTodoReminder(item, completed: !item.completed)
+                upsert(updated)
                 await reload(silent: true)
                 showToast(item.completed ? "已恢复 · \(item.title)" : "已完成 · \(item.title)")
             } catch {
@@ -666,6 +686,7 @@ struct TodoView: View {
         Task {
             do {
                 try await model.deleteTodoReminder(item)
+                removeLocal(item.id)
                 await reload(silent: true)
                 showToast("已删除 · \(item.title)")
             } catch {
@@ -690,6 +711,27 @@ struct TodoView: View {
             }
             model.refreshPermissions()
         }
+    }
+
+    private func upsert(_ item: TodoReminder) {
+        if let index = items.firstIndex(where: { $0.id == item.id }) {
+            items[index] = item
+        } else {
+            items.append(item)
+        }
+        items.sort { left, right in
+            if left.completed != right.completed { return !left.completed }
+            switch (left.dueAt, right.dueAt) {
+            case let (leftDate?, rightDate?): return leftDate < rightDate
+            case (_?, nil): return true
+            case (nil, _?): return false
+            default: return left.title.localizedStandardCompare(right.title) == .orderedAscending
+            }
+        }
+    }
+
+    private func removeLocal(_ id: String) {
+        items.removeAll { $0.id == id }
     }
 
     private func showToast(_ text: String) {

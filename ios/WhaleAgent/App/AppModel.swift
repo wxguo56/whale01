@@ -736,6 +736,10 @@ final class AppModel: ObservableObject {
     }
 
     func createTodoReminder(title: String, dueAt: Date?) async throws -> TodoReminder {
+        let cleanedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanedTitle.isEmpty else {
+            throw ToolExecutionError(code: "empty_reminder", message: "写点具体内容再添加。")
+        }
         guard await permissions.request("reminder") else {
             refreshPermissions()
             throw ToolExecutionError(
@@ -745,7 +749,7 @@ final class AppModel: ObservableObject {
             )
         }
         refreshPermissions()
-        let data = try await router.createReminder(title: title, dueAt: dueAt)
+        let data = try await router.createReminder(title: cleanedTitle, dueAt: dueAt)
         guard let item = TodoReminder(json: data) else {
             throw ToolExecutionError(code: "reminder_decode_failed", message: "提醒已写入，但返回内容无法读取，请下拉刷新确认。")
         }
