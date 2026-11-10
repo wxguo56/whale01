@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ConversationTabView: View {
     @ObservedObject var model: AppModel
+    @Binding var isDetailOpen: Bool
     let onOpenMusic: () -> Void
 
     @State private var showChat = false
@@ -45,6 +46,9 @@ struct ConversationTabView: View {
                     startVoiceOnAppear: $autoVoice,
                     focusOnAppear: $autoFocus
                 )
+            }
+            .onChange(of: showChat) { _, open in
+                isDetailOpen = open
             }
             .sheet(isPresented: $showVoice, onDismiss: handleVoiceDismiss) {
                 VoiceView(

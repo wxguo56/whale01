@@ -1,17 +1,23 @@
 import Combine
 import SwiftUI
+import UIKit
 
 @MainActor
 struct RootView: View {
     @StateObject private var model = AppModel()
     @State private var selectedTab: AppTab = .conversation
     @State private var showMusic = false
+    @State private var conversationDetailOpen = false
     @AppStorage("whale.appearance") private var appearance = "system"
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            withMiniPlayer(ConversationTabView(model: model, onOpenMusic: { showMusic = true }))
+            withMiniPlayer(ConversationTabView(
+                model: model,
+                isDetailOpen: $conversationDetailOpen,
+                onOpenMusic: { showMusic = true }
+            ))
                 .tag(AppTab.conversation)
                 .tabItem { Label("对话", systemImage: "bubble.left.and.bubble.right") }
 
@@ -24,6 +30,10 @@ struct RootView: View {
                 .tabItem { Label("我的", systemImage: "person") }
         }
         .tint(WhaleTheme.accent)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 20)
+                .onEnded(handleTabSwipe)
+        )
         .sheet(item: $model.presentedConfirmation) { item in
             ConfirmationSheet(model: model, item: item)
         }
@@ -68,6 +78,40 @@ struct RootView: View {
         case "light": return .light
         case "dark": return .dark
         default: return nil
+        }
+    }
+
+    /// Horizontal swipe switches the three root entries.
+    ///
+    /// The gesture is gated so it never competes with vertical scrolling, the
+    /// left-edge back gesture, the pushed conversation, or an open sheet.
+    private func handleTabSwipe(_ value: DragGesture.Value) {
+        guard !conversationDetailOpen, model.presentedConfirmation == nil, !showMusic else { return }
+        guard value.startLocation.x > 24 else { return }
+
+        let dx = value.translation.width
+        let dy = value.translation.height
+        guard abs(dx) >= 70, abs(dx) >= abs(dy) * 1.6 else { return }
+
+        let target: AppTab?
+        if dx < 0 {
+            switch selectedTab {
+            case .conversation: target = .records
+            case .records: target = .profile
+            case .profile: target = nil
+            }
+        } else {
+            switch selectedTab {
+            case .conversation: target = nil
+            case .records: target = .conversation
+            case .profile: target = .records
+            }
+        }
+
+        guard let target else { return }
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        withAnimation(.easeInOut(duration: 0.18)) {
+            selectedTab = target
         }
     }
 
