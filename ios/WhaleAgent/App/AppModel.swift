@@ -230,8 +230,8 @@ final class AppModel: ObservableObject {
             }
             if agentMode != "cloud" && health.status != "ok" {
                 errorText = "本机直连缺少 DeepSeek 密钥，请重新安装包含密钥的构建，或切换到云后端。"
-            } else if agentMode == "cloud" && health.executionMode == "mock" {
-                errorText = "云后端正在 Mock 模拟执行，已停止真实操作。请将服务端 EXECUTION_MODE 设为 ios 后重启。"
+            } else if agentMode == "cloud" && (health.executionMode == "mock" || health.modelMode == "mock") {
+                errorText = "云后端仍在演示模式（模型 \(health.modelMode)／执行 \(health.executionMode)），已停止真实操作。请配置真实 DeepSeek 并把 EXECUTION_MODE 设为 ios。"
             } else if errorText?.contains("演示执行模式") == true {
                 errorText = nil
             }
@@ -358,8 +358,8 @@ final class AppModel: ObservableObject {
             if !backendOnline || backendExecutionMode == "unknown" {
                 await health()
             }
-            if backendOnline && backendExecutionMode == "mock" {
-                let message = "云后端当前是 Mock 模拟执行，已阻止发送，避免把模拟结果当成真实数据。请将服务端 EXECUTION_MODE 设为 ios 后重启。"
+            if backendOnline && (backendExecutionMode == "mock" || modelMode == "mock") {
+                let message = "云后端当前是演示模式（模型 \(modelMode)／执行 \(backendExecutionMode)），已阻止发送，避免把模拟结果当成真实数据。请配置真实 DeepSeek 并把 EXECUTION_MODE 设为 ios。"
                 errorText = message
                 appendMessage(ChatMessage(role: .tool, text: "已阻止发送", detail: message))
                 return

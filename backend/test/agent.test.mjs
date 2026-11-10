@@ -337,6 +337,45 @@ test("延迟执行模式下回传工具结果后继续", async () => {
   assert.match(done.reply, /已创建提醒/);
 });
 
+test("回家导航没有地址时不搜索“家”，只追问", async () => {
+  let calls = 0;
+  const adapter = {
+    async chat() {
+      calls += 1;
+      if (calls === 1) {
+        return {
+          content: "",
+          toolCalls: [
+            {
+              id: "call_home_1",
+              name: "search_places",
+              arguments: JSON.stringify({ query: "家", locationMode: "current" })
+            }
+          ]
+        };
+      }
+      return { content: "请告诉我你的详细家庭地址，我再解析目的地。", toolCalls: [] };
+    }
+  };
+  const { agent } = await createTestRuntime({ adapter }, { EXECUTION_MODE: "ios" });
+  const result = await agent.start({
+    text: "导航回家",
+    now: FIXED_NOW,
+    timezone: TIMEZONE,
+    deferExecution: true
+  });
+
+  assert.equal(result.status, "completed_with_limits");
+  assert.equal(result.pending.length, 0);
+  assert.ok(
+    result.events.some(
+      (event) =>
+        event.type === "tool.rejected" &&
+        event.payload.error?.code === "missing_home_address"
+    )
+  );
+});
+
 test("设备模式下必须延迟执行，且能力表标注手机执行位置", async () => {
   const { agent } = await createTestRuntime({}, { EXECUTION_MODE: "ios" });
 

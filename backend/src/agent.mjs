@@ -530,6 +530,20 @@ export class Agent {
             continue;
           }
         }
+        if (call.name === "search_places" && state.task?.constraints?.homeNavigation) {
+          const query = String(args.query ?? "").trim();
+          const addressGiven = /(?:省|市|区|县|镇|乡|街|路|道|号|巷|弄|村|小区|大厦|楼)/.test(state.text);
+          if (/^(?:我?家|回家|家庭)$/.test(query) && !addressGiven) {
+            this.#reject(
+              state,
+              call,
+              "needs_input",
+              "missing_home_address",
+              "用户没有提供详细家庭地址，先追问；不要把“家”当成地图关键词搜索"
+            );
+            continue;
+          }
+        }
         const operationId = `op_${state.turnId}_${call.id}`;
         prepared.push({ call, tool, args, operationId });
         this.#emit(state, "tool.requested", {
