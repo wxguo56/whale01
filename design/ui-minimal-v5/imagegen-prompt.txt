@@ -1,0 +1,15 @@
+Use case: ui-mockup
+Asset type: one high-fidelity iPhone app homepage design image for the existing Whale01 personal assistant project.
+Primary request: create a genuinely minimal, single-homepage assistant interface. Necessary controls belong on the homepage. The conversation is the home; remove the permanent bottom navigation with the labels “对话”, “任务”, and “设置”.
+
+Composition: straight-on, flat full-screen portrait UI, approximately iPhone 16 Pro 402×874 logical proportions. No angled device, physical phone frame, desktop setting, or surrounding presentation board. Respect iOS top and bottom safe areas.
+Style: refined, practical native mobile UI. Existing direction uses deep charcoal and muted blue-green surfaces, soft white text, and a restrained soft mint accent. Make the background quiet and matte, the type clear and comfortable, and the spacing generous. Use subtle outlines rather than many boxed regions.
+
+Layout:
+1. A slim header with the exact small title “鲸鱼”. Two clearly distinct, small outline actions in the header: a task/history icon labeled “任务”, and a gear icon labeled “设置”. Each action has at least a 44pt touch area without looking oversized.
+2. A spacious conversation canvas. For this empty-home state, show only the exact calm phrase “有什么想聊的？” in modest readable type, not a giant marketing headline. No fabricated messages, statistics or task cards.
+3. One bottom input area above the system gesture safe area. On the left a small attachment “+”, in the center the exact placeholder “给鲸鱼发消息…”, and on the right one microphone action with the exact label “语音”. The input is empty, so there is no send arrow yet. No other microphone or voice-start button elsewhere.
+
+Text must be rendered verbatim in Chinese: “鲸鱼”, “任务”, “设置”, “有什么想聊的？”, “给鲸鱼发消息…”, “语音”. Use clean, legible native-style Chinese sans-serif typography; body reference around 17pt and secondary labels around 14pt.
+Constraints: no permanent bottom tab bar; no large avatar or glass hero card; no duplicate voice entry; no feature-card grid; no generic process slogans; no extra floating action buttons; no dense gradients, neon glow, particles, ornamental artwork, watermark, or explanatory red annotations. Convey simplicity and a clear primary input area while keeping task and settings access visible.
+Output intent: a believable, polished UI design mockup suitable for review and later native implementation, not concept art and not a screenshot of the current installed app.

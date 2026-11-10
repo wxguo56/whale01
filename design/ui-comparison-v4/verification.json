@@ -1,0 +1,89 @@
+{
+  "date": "2026-11-09",
+  "scope": "HTML design prototype; not native iOS acceptance",
+  "layout": {
+    "directions": 3,
+    "pagesPerDirection": 10,
+    "themesChecked": 2,
+    "combinationsChecked": 60,
+    "horizontalOverflowFailures": 0,
+    "referenceWidthPt": 402,
+    "referenceHeightPt": 874,
+    "browserConsoleErrors": 0
+  },
+  "interactions": {
+    "budgetFiltering": "All three display two priced candidates and exclude unknown prices",
+    "merchantDetail": "Selected merchant and reference price agree across all three",
+    "reminderEditing": "Edited title and 16:00 persist through text-size and keyboard switches in all three",
+    "reminderConfirmation": "All three display corresponding mock result",
+    "musicContinuity": "Selected track persists in mini players after page change",
+    "preferences": "Edited preference chips agree across all three",
+    "voiceInterruption": "Speaking can be interrupted to listening"
+  },
+  "responsiveChecks": [
+    {
+      "widthPx": 402,
+      "heightPx": 874,
+      "textSize": "large",
+      "page": "voice",
+      "directionsChecked": [
+        "a",
+        "b",
+        "c"
+      ],
+      "horizontalOverflowFailures": 0,
+      "stopControlsVisible": true,
+      "stopHeightPx": 72
+    },
+    {
+      "widthPx": 320,
+      "heightPx": 800,
+      "textSize": "large",
+      "keyboard": "illustrative",
+      "page": "confirmation",
+      "directionsChecked": [
+        "a",
+        "b",
+        "c"
+      ],
+      "horizontalOverflowFailures": 0,
+      "confirmControlsAboveKeyboard": true,
+      "keyboardContentFits": true
+    }
+  ],
+  "notVerified": [
+    "Native iOS safe areas and keyboard",
+    "Native history gestures",
+    "VoiceOver on iPhone",
+    "Real ASR/TTS",
+    "Real music audio",
+    "System record writes",
+    "Native rendering performance"
+  ],
+  "notes": [
+    "All business results are illustrative.",
+    "Choosing a design in the page records a comparison preference only."
+  ],
+  "entryRevision": {
+    "date": "2026-11-10",
+    "scope": "B input entry and shared voice return behavior",
+    "upperVoiceButtons": 0,
+    "bottomVoiceButtons": 1,
+    "separateVoiceAndSend": true,
+    "returnPreservesDraft": true,
+    "returnPreservesTwoFilteredCandidates": true,
+    "blankSubmitDoesNotStartVoice": true,
+    "smallScreen": {
+      "widthPx": 320,
+      "heightPx": 800,
+      "textSize": "large",
+      "keyboard": "illustrative",
+      "horizontalOverflow": false,
+      "voiceHitHeightPx": 44,
+      "sendHitHeightPx": 44,
+      "composerAboveKeyboard": true
+    },
+    "browserErrors": 0,
+    "nativeVerification": "not performed"
+  }
+}
