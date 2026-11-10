@@ -19,9 +19,6 @@ struct WhaleHomeCanvas: View {
                 greeting
                 suggestions
                 todayCard
-                if let recent = model.recentActions.first {
-                    recentCard(recent)
-                }
                 if model.isBusy {
                     busyCard
                 }
@@ -40,7 +37,11 @@ struct WhaleHomeCanvas: View {
     private func resumeCard(_ action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                WhaleIconTile(systemName: "arrow.uturn.backward", size: 42)
+                WhaleIconTile(
+                    systemName: model.recentActions.first?.icon ?? "arrow.uturn.backward",
+                    size: 42,
+                    tint: model.recentActions.first?.isSuccess == false ? WhaleTheme.coral : WhaleTheme.accent
+                )
                 VStack(alignment: .leading, spacing: 3) {
                     Text("继续上次对话")
                         .font(.system(size: 14, weight: .semibold))
@@ -360,36 +361,7 @@ struct WhaleHomeCanvas: View {
         return "下一项：\(next.startAt.formatted(.dateTime.month().day().hour().minute())) · \(next.title)"
     }
 
-    // MARK: - Recent / busy
-
-    private func recentCard(_ action: OperationRecord) -> some View {
-        Button(action: onOpenRecords) {
-            HStack(spacing: 12) {
-                WhaleIconTile(
-                    systemName: action.icon,
-                    size: 42,
-                    tint: action.isSuccess ? WhaleTheme.accent : WhaleTheme.coral
-                )
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("继续上次")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .tracking(0.7)
-                        .foregroundStyle(WhaleTheme.muted)
-                    Text(action.title)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.ink)
-                        .lineLimit(1)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.muted)
-            }
-            .whaleCard(padding: 14)
-        }
-        .buttonStyle(.plain)
-        .accessibilityHint("打开任务与记录")
-    }
+    // MARK: - Busy
 
     private var busyCard: some View {
         HStack(spacing: 12) {
