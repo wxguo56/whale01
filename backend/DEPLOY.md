@@ -3,6 +3,8 @@
 App 的正常网络形态是：手机通过公网 HTTPS 访问后端，后端再访问 DeepSeek。  
 当前开发期的 `trycloudflare.com` 地址由本机隧道提供，电脑关机或隧道重启后会失效；长期使用请把后端部署到云主机。
 
+一键入口：[Deploy to Render](https://render.com/deploy?repo=https://github.com/wxguo56/whale01)
+
 ## Render
 
 1. 在 Render 新建 Blueprint，选择仓库 `wxguo56/whale01`，它会读取根目录的 `render.yaml`。

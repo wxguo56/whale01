@@ -149,24 +149,15 @@ struct ProfileView: View {
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(1)
                 Spacer()
+                Button {
+                    Task { await model.health() }
+                } label: {
+                    Text("重连")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.accent)
+                }
+                .buttonStyle(.plain)
             }
-            SecureField("后端访问码", text: $model.apiToken)
-                .font(.system(size: 15))
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .padding(.horizontal, 14)
-                .frame(height: 44)
-                .background(WhaleTheme.soft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            Button {
-                model.saveAPIToken()
-            } label: {
-                Text("保存访问码")
-                    .font(.system(size: 14, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-            }
-            .foregroundStyle(WhaleTheme.accent)
-            .background(WhaleTheme.accentSoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             NavigationLink {
                 DeveloperSettingsView(model: model)
