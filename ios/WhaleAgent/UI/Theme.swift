@@ -75,6 +75,23 @@ enum WhaleTheme {
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
+
+    /// Composer send button. Matches the v9 reference: mint-to-sky paper plane
+    /// tile that stays legible on both the abyss and the morning-mist surface.
+    static let composerSendGradient = LinearGradient(
+        colors: [
+            Color(light: 0x3FCDBE, dark: 0x2FBFB2),
+            Color(light: 0x4E9BE8, dark: 0x3E86C9)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    static let rose = Color(light: 0xC0566F, dark: 0xF292A6)
+    static let blueSoft = Color(light: 0xE6EFFC, dark: 0x14283F)
+    static let amberSoft = Color(light: 0xFBF0DC, dark: 0x33260E)
+    static let roseSoft = Color(light: 0xFBE8EC, dark: 0x341A20)
+    static let bubble = Color(light: 0xFFFFFF, dark: 0x102622)
 }
 
 extension View {

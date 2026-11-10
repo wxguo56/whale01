@@ -1,9 +1,36 @@
+import AVFoundation
 import SwiftUI
+import UIKit
+import UserNotifications
 
-private struct PermissionRowSpec: Identifiable {
+private enum SettingsTone {
+    case mint, blue, amber, rose
+
+    var foreground: Color {
+        switch self {
+        case .mint: return WhaleTheme.accent
+        case .blue: return WhaleTheme.moon
+        case .amber: return WhaleTheme.warm
+        case .rose: return WhaleTheme.rose
+        }
+    }
+
+    var background: Color {
+        switch self {
+        case .mint: return WhaleTheme.accentSoft
+        case .blue: return WhaleTheme.blueSoft
+        case .amber: return WhaleTheme.amberSoft
+        case .rose: return WhaleTheme.roseSoft
+        }
+    }
+}
+
+private struct SettingsRowSpec: Identifiable {
     let key: String
     let title: String
+    let subtitle: String
     let icon: String
+    let tone: SettingsTone
 
     var id: String { key }
 }
@@ -17,34 +44,41 @@ struct SettingsView: View {
     @State private var showDeveloper = false
     @State private var memoryKey = ""
     @State private var memoryValue = ""
+    @State private var microphoneStatus = "unknown"
+    @State private var notificationStatus = "unknown"
 
-    private let permissionRows: [PermissionRowSpec] = [
-        PermissionRowSpec(key: "reminder", title: "提醒事项", icon: "bell.badge"),
-        PermissionRowSpec(key: "calendarRead", title: "日历读取", icon: "calendar"),
-        PermissionRowSpec(key: "calendarWrite", title: "日历写入", icon: "calendar.badge.plus"),
-        PermissionRowSpec(key: "location", title: "定位", icon: "location"),
-        PermissionRowSpec(key: "contacts", title: "通讯录", icon: "person.2"),
-        PermissionRowSpec(key: "messages", title: "信息", icon: "message"),
-        PermissionRowSpec(key: "music", title: "音乐库", icon: "music.note"),
-        PermissionRowSpec(key: "activityRead", title: "运动数据", icon: "figure.walk")
+    private let primaryPermissions: [SettingsRowSpec] = [
+        SettingsRowSpec(key: "location", title: "位置", subtitle: "精确位置 · 使用期间", icon: "location.fill", tone: .mint),
+        SettingsRowSpec(key: "microphone", title: "麦克风", subtitle: "语音输入与播报", icon: "mic.fill", tone: .blue),
+        SettingsRowSpec(key: "calendar", title: "日历", subtitle: "读取空闲时间 · 确认后写入", icon: "calendar", tone: .amber),
+        SettingsRowSpec(key: "notifications", title: "通知", subtitle: "任务完成与主动提醒", icon: "bell.fill", tone: .rose)
+    ]
+
+    private let extraPermissions: [SettingsRowSpec] = [
+        SettingsRowSpec(key: "reminder", title: "提醒事项", subtitle: "读取与写入待办", icon: "checklist", tone: .mint),
+        SettingsRowSpec(key: "contacts", title: "通讯录", subtitle: "发送短信时查找联系人", icon: "person.2.fill", tone: .blue),
+        SettingsRowSpec(key: "messages", title: "信息", subtitle: "生成短信草稿，不自动发送", icon: "message.fill", tone: .mint),
+        SettingsRowSpec(key: "music", title: "音乐库", subtitle: "读取本机歌曲与播放状态", icon: "music.note", tone: .rose),
+        SettingsRowSpec(key: "activityRead", title: "运动数据", subtitle: "读取步数与活动摘要", icon: "figure.walk", tone: .amber)
     ]
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 20) {
                     header
-                    identityCard
-                    appearanceCard
-                    voiceCard
-                    memoryCard
-                    permissionCard
-                    performanceCard
-                    developerCard
-                    aboutCard
+                    profileCard
+                    permissionSection
+                    preferenceSection
+                    appearanceSection
+                    memorySection
+                    serviceSection
+                    performanceSection
+                    developerSection
+                    versionCard
                 }
-                .padding(.horizontal, WhaleTheme.pagePadding)
-                .padding(.bottom, WhaleTabBar.height + 34)
+                .padding(.horizontal, 16)
+                .padding(.bottom, WhaleTabBar.height + 40)
             }
             .scrollIndicators(.hidden)
             .toolbar(.hidden, for: .navigationBar)
@@ -57,19 +91,24 @@ struct SettingsView: View {
             .task {
                 model.refreshPermissions()
                 model.reloadMemories()
+                refreshMicrophoneStatus()
+                await refreshNotificationStatus()
             }
         }
     }
 
+    // MARK: - Header
+
     private var header: some View {
         HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("设置")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundStyle(WhaleTheme.ink)
-                Text("偏好、授权与语音")
-                    .font(.system(size: 12))
+            VStack(alignment: .leading, spacing: 3) {
+                Text("CONTROL ROOM")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .tracking(1.3)
                     .foregroundStyle(WhaleTheme.muted)
+                Text("设置")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundStyle(WhaleTheme.ink)
             }
             Spacer()
             Button(action: onBackToChat) {
@@ -81,212 +120,585 @@ struct SettingsView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("回到对话")
         }
-        .padding(.top, 8)
-        .padding(.bottom, 2)
+        .padding(.top, 10)
     }
 
-    private var identityCard: some View {
-        HStack(spacing: 14) {
-            WhaleMarkView(size: 48)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("鲸鱼")
-                    .font(.system(size: 20, weight: .bold))
+    private var profileCard: some View {
+        HStack(spacing: 12) {
+            WhaleMarkView(size: 46)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("本机账户")
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(WhaleTheme.ink)
-                Text("版本 \(model.versionText)")
-                    .font(.system(size: 12))
+                Text("数据留在设备 · 授权后才读取")
+                    .font(.system(size: 11))
                     .foregroundStyle(WhaleTheme.muted)
             }
-            Spacer()
+
+            Spacer(minLength: 8)
+
             WhaleStatusPill(
                 text: model.backendOnline ? "在线" : "离线",
                 color: model.backendOnline ? WhaleTheme.success : WhaleTheme.warm
             )
         }
-        .whaleCard()
+        .padding(15)
+        .background(cardBackground)
     }
 
-    private var appearanceCard: some View {
-        card("外观") {
-            Picker("界面主题", selection: $appearance) {
-                Text("跟随系统").tag("system")
-                Text("浅色").tag("light")
-                Text("深色").tag("dark")
-            }
-            .pickerStyle(.segmented)
-        }
-    }
+    // MARK: - Permissions
 
-    private var voiceCard: some View {
-        card("语音") {
-            Toggle("自动播报回复", isOn: Binding(
-                get: { model.voiceReplyEnabled },
-                set: { model.setVoiceReply($0) }
-            ))
-            .tint(WhaleTheme.accent)
-            .font(.system(size: 15))
-            .foregroundStyle(WhaleTheme.ink)
+    private var permissionSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("能力与授权", trailing: "来自系统真实状态")
 
-            divider
-            infoRow("播报引擎", "系统中文语音")
-            divider
-            infoRow("语音识别", XfyunConfig.statusText)
-
-            Text("开始录音、发送新消息或点消息旁的停止按钮会立刻打断播报。讯飞合成尚未接入，当前播报使用系统中文语音。")
-                .font(.system(size: 12))
-                .foregroundStyle(WhaleTheme.muted)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var permissionCard: some View {
-        card("系统权限") {
-            ForEach(Array(permissionRows.enumerated()), id: \.element.id) { index, row in
-                PermissionSettingsRow(
-                    key: row.key,
-                    title: row.title,
-                    icon: row.icon,
-                    status: model.permissionsSnapshot[row.key] ?? "unknown",
-                    onRequest: { Task { await model.requestPermission(row.key) } },
-                    onOpenSettings: { model.openSystemSettings() }
-                )
-                if index < permissionRows.count - 1 {
-                    divider
-                }
-            }
-            Button {
-                model.refreshPermissions()
-            } label: {
-                Text("刷新权限状态")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.accent)
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: 40)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    private var memoryCard: some View {
-        card("记忆偏好") {
-            if model.memories.isEmpty {
-                Text("还没有保存偏好。可以记住饮食、音乐、回复风格等；偏好只影响建议，不会变成长期操作授权。")
-                    .font(.system(size: 12))
-                    .foregroundStyle(WhaleTheme.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                ForEach(model.memories) { preference in
-                    HStack(alignment: .top, spacing: 10) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(preference.key)
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(WhaleTheme.ink)
-                            Text(preference.value)
-                                .font(.system(size: 12))
-                                .foregroundStyle(WhaleTheme.muted)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        Spacer()
-                        Button {
-                            model.deleteMemory(preference)
-                        } label: {
-                            Image(systemName: "trash")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(WhaleTheme.danger)
-                                .frame(width: 34, height: 34)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("删除偏好 \(preference.key)")
+            settingsCard {
+                ForEach(Array(primaryPermissions.enumerated()), id: \.element.id) { index, spec in
+                    PermissionSettingsRow(
+                        spec: spec,
+                        status: status(for: spec),
+                        connectedLabel: spec.key == "calendar",
+                        action: { handle(spec) }
+                    )
+                    if index < primaryPermissions.count - 1 {
+                        rowDivider
                     }
-                    divider
                 }
             }
 
-            VStack(spacing: 8) {
-                TextField("偏好名称，例如：饮食", text: $memoryKey)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .font(.system(size: 13))
-                    .padding(.horizontal, 11)
-                    .padding(.vertical, 9)
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                HStack(spacing: 8) {
-                    TextField("内容，例如：不吃辣", text: $memoryValue)
+            sectionHeader("更多能力", trailing: model.permissionsSnapshot.isEmpty ? nil : "同样读取系统状态")
+                .padding(.top, 4)
+
+            settingsCard {
+                ForEach(Array(extraPermissions.enumerated()), id: \.element.id) { index, spec in
+                    PermissionSettingsRow(
+                        spec: spec,
+                        status: status(for: spec),
+                        connectedLabel: false,
+                        action: { handle(spec) }
+                    )
+                    if index < extraPermissions.count - 1 {
+                        rowDivider
+                    }
+                }
+            }
+        }
+    }
+
+    private func status(for spec: SettingsRowSpec) -> String {
+        switch spec.key {
+        case "microphone":
+            return microphoneStatus
+        case "notifications":
+            return notificationStatus
+        case "calendar":
+            return model.permissionsSnapshot["calendarRead"] ?? "unknown"
+        default:
+            return model.permissionsSnapshot[spec.key] ?? "unknown"
+        }
+    }
+
+    private func handle(_ spec: SettingsRowSpec) {
+        let current = status(for: spec)
+        if current == "granted" || current == "denied" || current == "unavailable" {
+            openSystemSettings()
+            return
+        }
+        switch spec.key {
+        case "microphone":
+            Task { await requestMicrophone() }
+        case "notifications":
+            Task { await requestNotifications() }
+        case "calendar":
+            Task { await model.requestPermission("calendarRead") }
+        default:
+            Task { await model.requestPermission(spec.key) }
+        }
+    }
+
+    private func refreshMicrophoneStatus() {
+        switch AVAudioApplication.shared.recordPermission {
+        case .granted: microphoneStatus = "granted"
+        case .denied: microphoneStatus = "denied"
+        case .undetermined: microphoneStatus = "unknown"
+        @unknown default: microphoneStatus = "unknown"
+        }
+    }
+
+    private func requestMicrophone() async {
+        let granted = await AVAudioApplication.requestRecordPermission()
+        microphoneStatus = granted ? "granted" : "denied"
+    }
+
+    private func refreshNotificationStatus() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            notificationStatus = "granted"
+        case .denied:
+            notificationStatus = "denied"
+        case .notDetermined:
+            notificationStatus = "unknown"
+        @unknown default:
+            notificationStatus = "unknown"
+        }
+    }
+
+    private func requestNotifications() async {
+        do {
+            let granted = try await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .sound, .badge])
+            notificationStatus = granted ? "granted" : "denied"
+        } catch {
+            notificationStatus = "denied"
+        }
+    }
+
+    private func openSystemSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
+    }
+
+    // MARK: - Preferences
+
+    private var preferenceSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("助手偏好", trailing: "随时可改")
+
+            settingsCard {
+                Toggle(isOn: Binding(
+                    get: { model.voiceReplyEnabled },
+                    set: { model.setVoiceReply($0) }
+                )) {
+                    rowLabel(
+                        title: "语音回应",
+                        subtitle: "回答时同时播放语音",
+                        icon: "mic.fill",
+                        tone: .blue
+                    )
+                }
+                .toggleStyle(.switch)
+                .tint(WhaleTheme.accent)
+                .frame(minHeight: 56)
+
+                rowDivider
+
+                HStack(spacing: 12) {
+                    rowLabel(
+                        title: "执行前确认",
+                        subtitle: "写日历、发消息等操作必须先确认",
+                        icon: "checkmark.shield.fill",
+                        tone: .mint
+                    )
+                    Spacer(minLength: 8)
+                    HStack(spacing: 3) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 9, weight: .semibold))
+                        Text("始终开启")
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundStyle(WhaleTheme.muted)
+                }
+                .frame(minHeight: 56)
+            }
+        }
+    }
+
+    // MARK: - Appearance
+
+    private var appearanceSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("外观", trailing: "跟随当日光线")
+
+            HStack(spacing: 9) {
+                appearanceOption("深海", "深色", mode: "dark", swatch: .dark)
+                appearanceOption("晨雾", "浅色", mode: "light", swatch: .light)
+                appearanceOption("自动", "跟随系统", mode: "system", swatch: .auto)
+            }
+        }
+    }
+
+    private enum AppearanceSwatch {
+        case dark, light, auto
+    }
+
+    private func appearanceOption(
+        _ title: String,
+        _ subtitle: String,
+        mode: String,
+        swatch: AppearanceSwatch
+    ) -> some View {
+        let selected = appearance == mode
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                appearance = mode
+            }
+        } label: {
+            VStack(spacing: 7) {
+                swatchPreview(swatch)
+                    .frame(height: 48)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                VStack(spacing: 1) {
+                    Text(title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
+                    Text(subtitle)
+                        .font(.system(size: 9))
+                        .foregroundStyle(WhaleTheme.muted)
+                }
+            }
+            .padding(8)
+            .frame(maxWidth: .infinity)
+            .background(WhaleTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(
+                        selected ? WhaleTheme.accent : WhaleTheme.line,
+                        lineWidth: selected ? 1.5 : 0.8
+                    )
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title)外观")
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private func swatchPreview(_ swatch: AppearanceSwatch) -> some View {
+        ZStack {
+            switch swatch {
+            case .dark:
+                LinearGradient(
+                    colors: [Color(red: 0.04, green: 0.12, blue: 0.14), Color(red: 0.07, green: 0.23, blue: 0.24)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .light:
+                LinearGradient(
+                    colors: [Color(red: 0.93, green: 0.98, blue: 0.97), .white],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .auto:
+                HStack(spacing: 0) {
+                    Color(red: 0.05, green: 0.15, blue: 0.17)
+                    Color(red: 0.97, green: 0.99, blue: 0.98)
+                }
+            }
+
+            VStack(spacing: 4) {
+                Capsule().fill(WhaleTheme.accent.opacity(0.8)).frame(width: 24, height: 3)
+                Capsule().fill(WhaleTheme.muted.opacity(0.35)).frame(width: 34, height: 3)
+                Capsule().fill(WhaleTheme.muted.opacity(0.22)).frame(width: 18, height: 3)
+            }
+        }
+    }
+
+    // MARK: - Memory
+
+    private var memorySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("记忆偏好", trailing: "只影响建议")
+
+            settingsCard {
+                if model.memories.isEmpty {
+                    Text("还没有保存偏好。可以记住饮食、音乐、回复风格；偏好只影响建议，不会变成长期操作授权。")
+                        .font(.system(size: 12))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    ForEach(model.memories) { preference in
+                        HStack(alignment: .top, spacing: 10) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(preference.key)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(WhaleTheme.ink)
+                                Text(preference.value)
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(WhaleTheme.muted)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer()
+                            Button {
+                                model.deleteMemory(preference)
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(WhaleTheme.danger)
+                                    .frame(width: 34, height: 34)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("删除偏好 \(preference.key)")
+                        }
+                        .frame(minHeight: 44)
+                        rowDivider
+                    }
+                }
+
+                VStack(spacing: 8) {
+                    TextField("偏好名称，例如：饮食", text: $memoryKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                         .font(.system(size: 13))
                         .padding(.horizontal, 11)
                         .padding(.vertical, 9)
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    Button("保存") {
-                        model.addMemory(key: memoryKey, value: memoryValue)
-                        memoryKey = ""
-                        memoryValue = ""
+                        .background(WhaleTheme.field, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                    HStack(spacing: 8) {
+                        TextField("内容，例如：不吃辣", text: $memoryValue)
+                            .font(.system(size: 13))
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 9)
+                            .background(WhaleTheme.field, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                        Button("保存") {
+                            model.addMemory(key: memoryKey, value: memoryValue)
+                            memoryKey = ""
+                            memoryValue = ""
+                        }
+                        .font(.system(size: 13, weight: .semibold))
+                        .tint(WhaleTheme.accent)
+                        .disabled(memoryKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                  || memoryValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
-                    .font(.system(size: 13, weight: .semibold))
-                    .tint(WhaleTheme.accent)
-                    .disabled(memoryKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                              || memoryValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
     }
 
-    private var performanceCard: some View {
-        card("性能") {
-            infoRow("首轮响应", TurnMetricsStore.summary)
-            divider
-            infoRow("设备操作", ToolMetricsStore.summary)
-            Text("分别记录模型首轮响应与设备执行耗时，不含用户确认等待；完整测量见 Beta 测试报告。")
-                .font(.system(size: 12))
-                .foregroundStyle(WhaleTheme.muted)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
+    // MARK: - Services
 
-    private var developerCard: some View {
-        card("开发") {
-            Button {
-                showDeveloper = true
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "hammer")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(WhaleTheme.accent)
-                    Text("开发设置与诊断")
-                        .font(.system(size: 15))
-                        .foregroundStyle(WhaleTheme.ink)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.muted)
-                }
-                .frame(minHeight: 44)
+    private var serviceSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("服务连接", trailing: "只显示真实接入")
+
+            settingsCard {
+                serviceRow(
+                    title: "DeepSeek",
+                    subtitle: model.agentMode == "cloud"
+                        ? "云后端 · \(model.modelMode)"
+                        : "本机直连 · \(model.modelMode)",
+                    badge: "D",
+                    badgeIcon: nil,
+                    badgeTone: .blue,
+                    connected: deepSeekConnected
+                )
+
+                rowDivider
+
+                serviceRow(
+                    title: "讯飞语音",
+                    subtitle: XfyunConfig.statusText,
+                    badge: "讯",
+                    badgeIcon: nil,
+                    badgeTone: .mint,
+                    connected: XfyunConfig.isConfigured
+                )
+
+                rowDivider
+
+                serviceRow(
+                    title: "网络",
+                    subtitle: model.agentMode == "cloud"
+                        ? "公网后端 · 不依赖局域网"
+                        : "本机直连 · 无需电脑中转",
+                    badge: "",
+                    badgeIcon: "globe",
+                    badgeTone: .blue,
+                    connected: networkConnected
+                )
             }
-            .buttonStyle(.plain)
         }
     }
 
-    private var aboutCard: some View {
-        card("关于") {
-            infoRow("应用", "鲸鱼")
-            divider
-            infoRow("版本", model.versionText)
-            divider
-            infoRow("隐私", "对话经 DeepSeek 处理，系统数据留在设备")
-            Text("鲸鱼只在获得确认后写入提醒、日历和短信草稿；天气读取公共预报接口，运动摘要需要 HealthKit 授权（免费签名构建不含该能力）。")
-                .font(.system(size: 12))
-                .foregroundStyle(WhaleTheme.muted)
-                .fixedSize(horizontal: false, vertical: true)
+    private var deepSeekConnected: Bool {
+        model.agentMode == "cloud" ? model.backendOnline : LocalAgentConfig.isConfigured
+    }
+
+    private var networkConnected: Bool {
+        model.agentMode == "cloud" ? model.backendOnline : LocalAgentConfig.isConfigured
+    }
+
+    private func serviceRow(
+        title: String,
+        subtitle: String,
+        badge: String,
+        badgeIcon: String?,
+        badgeTone: SettingsTone,
+        connected: Bool
+    ) -> some View {
+        HStack(spacing: 12) {
+            Group {
+                if let badgeIcon {
+                    Image(systemName: badgeIcon)
+                        .font(.system(size: 16, weight: .semibold))
+                } else {
+                    Text(badge)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                }
+            }
+            .foregroundStyle(badgeTone.foreground)
+            .frame(width: 38, height: 38)
+            .background(badgeTone.background, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                Text(subtitle)
+                    .font(.system(size: 11))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            StatusPill(
+                text: connected ? "已连接" : "未配置",
+                color: connected ? WhaleTheme.success : WhaleTheme.muted
+            )
+        }
+        .frame(minHeight: 56)
+    }
+
+    // MARK: - Performance / developer
+
+    private var performanceSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("性能", trailing: "本机测量")
+
+            settingsCard {
+                infoRow("首轮响应", TurnMetricsStore.summary)
+                rowDivider
+                infoRow("设备操作", ToolMetricsStore.summary)
+                Text("分别记录模型首轮响应与设备执行耗时，不含用户确认等待。")
+                    .font(.system(size: 11))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
-    private func card<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+    private var developerSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("维护", trailing: nil)
+
+            settingsCard {
+                Button {
+                    showDeveloper = true
+                } label: {
+                    HStack(spacing: 12) {
+                        rowLabel(
+                            title: "开发设置与诊断",
+                            subtitle: "运行方式、连接状态与权限快照",
+                            icon: "hammer.fill",
+                            tone: .amber
+                        )
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(WhaleTheme.muted)
+                    }
+                    .frame(minHeight: 56)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var versionCard: some View {
+        HStack(spacing: 10) {
+            WhaleMarkView(size: 34)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("WhaleAgent")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                Text("\(model.versionText) · UI v9")
+                    .font(.system(size: 11))
+                    .foregroundStyle(WhaleTheme.muted)
+            }
+
+            Spacer(minLength: 8)
+
+            Text("本机构建")
+                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .tracking(0.4)
+                .foregroundStyle(WhaleTheme.accent)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(WhaleTheme.accentSoft, in: Capsule())
+        }
+        .padding(13)
+        .background(cardBackground)
+    }
+
+    // MARK: - Building blocks
+
+    private func sectionHeader(_ title: String, trailing: String?) -> some View {
+        HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(WhaleTheme.ink)
+            Spacer()
+            if let trailing {
+                Text(trailing)
+                    .font(.system(size: 10))
+                    .foregroundStyle(WhaleTheme.muted)
+            }
+        }
+        .padding(.horizontal, 3)
+    }
+
+    private func settingsCard<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
             content()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .whaleCard()
+        .padding(.horizontal, 14)
+        .padding(.vertical, 4)
+        .background(cardBackground)
+    }
+
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .fill(WhaleTheme.card)
+            .overlay {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(WhaleTheme.line.opacity(0.9), lineWidth: 0.8)
+            }
+            .shadow(color: Color.black.opacity(0.05), radius: 14, y: 6)
+    }
+
+    private func rowLabel(title: String, subtitle: String, icon: String, tone: SettingsTone) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(tone.foreground)
+                .frame(width: 38, height: 38)
+                .background(tone.background, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                Text(subtitle)
+                    .font(.system(size: 11))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .lineLimit(2)
+            }
+        }
+    }
+
+    private var rowDivider: some View {
+        Rectangle()
+            .fill(WhaleTheme.line.opacity(0.7))
+            .frame(height: 0.5)
+            .padding(.leading, 50)
     }
 
     private func infoRow(_ title: String, _ value: String) -> some View {
@@ -300,68 +712,58 @@ struct SettingsView: View {
                 .foregroundStyle(WhaleTheme.ink)
                 .multilineTextAlignment(.trailing)
         }
-        .frame(minHeight: 24)
-    }
-
-    private var divider: some View {
-        Divider().overlay(WhaleTheme.glassStroke)
+        .frame(minHeight: 44)
     }
 }
 
+// MARK: - Rows
+
 private struct PermissionSettingsRow: View {
-    let key: String
-    let title: String
-    let icon: String
+    let spec: SettingsRowSpec
     let status: String
-    let onRequest: () -> Void
-    let onOpenSettings: () -> Void
+    let connectedLabel: Bool
+    let action: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(WhaleTheme.accent)
-                .frame(width: 30, height: 30)
-                .background(WhaleTheme.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: spec.icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(spec.tone.foreground)
+                    .frame(width: 38, height: 38)
+                    .background(spec.tone.background, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.system(size: 15))
-                    .foregroundStyle(WhaleTheme.ink)
-                Text(statusText)
-                    .font(.system(size: 11))
-                    .foregroundStyle(statusColor)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(spec.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
+                    Text(spec.subtitle)
+                        .font(.system(size: 11))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 8)
+
+                StatusPill(text: statusText, color: statusColor)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.muted.opacity(0.55))
             }
-
-            Spacer()
-
-            switch status {
-            case "granted":
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(WhaleTheme.success)
-            case "denied":
-                Button("设置", action: onOpenSettings)
-                    .font(.system(size: 12, weight: .semibold))
-                    .tint(WhaleTheme.accent)
-            case "unavailable":
-                Text("不可用")
-                    .font(.system(size: 11))
-                    .foregroundStyle(WhaleTheme.muted)
-            default:
-                Button("授权", action: onRequest)
-                    .font(.system(size: 12, weight: .semibold))
-                    .tint(WhaleTheme.accent)
-            }
+            .frame(minHeight: 56)
+            .contentShape(Rectangle())
         }
-        .frame(minHeight: 42)
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(spec.title)，\(statusText)")
     }
 
     private var statusText: String {
         switch status {
-        case "granted": return "已授权"
-        case "denied": return "已拒绝 · 可在系统设置中修改"
-        case "unavailable": return "免费签名不含此能力"
-        default: return "尚未请求"
+        case "granted": return connectedLabel ? "已连接" : "已授权"
+        case "denied": return "已拒绝"
+        case "unavailable": return "不可用"
+        default: return "未开启"
         }
     }
 
@@ -370,10 +772,31 @@ private struct PermissionSettingsRow: View {
         case "granted": return WhaleTheme.success
         case "denied": return WhaleTheme.danger
         case "unavailable": return WhaleTheme.muted
-        default: return WhaleTheme.warm
+        default: return WhaleTheme.muted
         }
     }
 }
+
+private struct StatusPill: View {
+    let text: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(color)
+                .frame(width: 5, height: 5)
+            Text(text)
+                .font(.system(size: 10, weight: .semibold))
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(color.opacity(0.12), in: Capsule())
+    }
+}
+
+// MARK: - Developer
 
 struct DeveloperSettingsView: View {
     @ObservedObject var model: AppModel

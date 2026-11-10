@@ -152,12 +152,7 @@ struct RecordsView: View {
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(2)
                 Spacer()
-                Text(taskStatusText(task.status))
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(taskStatusColor(task.status))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(taskStatusColor(task.status).opacity(0.12), in: Capsule())
+
             }
             HStack(spacing: 8) {
                 Text(task.updatedAt.formatted(date: .abbreviated, time: .shortened))
@@ -226,19 +221,7 @@ struct RecordsView: View {
                     .font(.system(size: 12))
                     .foregroundStyle(WhaleTheme.muted)
                 Spacer()
-                HStack(spacing: 4) {
-                    Image(systemName: action.isSuccess ? "checkmark.circle" : "questionmark.circle")
-                        .font(.system(size: 10, weight: .bold))
-                    Text(action.isSuccess ? "已完成" : "待核对")
-                        .font(.system(size: 11, weight: .semibold))
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(
-                    (action.isSuccess ? WhaleTheme.success : WhaleTheme.warm).opacity(0.14),
-                    in: Capsule()
-                )
-                .foregroundStyle(action.isSuccess ? WhaleTheme.success : WhaleTheme.warm)
+
             }
             Text(action.title)
                 .font(.system(size: 17, weight: .semibold))
@@ -254,26 +237,6 @@ struct RecordsView: View {
         .whaleCard(padding: 17)
     }
 
-    private func taskStatusText(_ status: String) -> String {
-        switch status {
-        case "completed": return "已完成"
-        case "completed_with_limits": return "部分完成"
-        case "awaiting_confirmation": return "待确认"
-        case "awaiting_tool_results": return "执行中"
-        case "failed": return "失败"
-        case "interrupted": return "已中断"
-        default: return "进行中"
-        }
-    }
-
-    private func taskStatusColor(_ status: String) -> Color {
-        switch status {
-        case "completed": return WhaleTheme.success
-        case "completed_with_limits", "awaiting_confirmation": return WhaleTheme.warm
-        case "failed", "interrupted": return WhaleTheme.danger
-        default: return WhaleTheme.accent
-        }
-    }
 
     private func label(for day: Date) -> String {
         let calendar = Calendar.current

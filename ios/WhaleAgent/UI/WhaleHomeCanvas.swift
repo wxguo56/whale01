@@ -1,8 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// The v9 home canvas. It is deliberately built from real model state:
-/// calendar permission and events, recent operations and playback status.
+/// The conversation starter. Tapping 对话 lands here: a real chat surface with
+/// a greeting, immediate prompts and the calendar state the phone actually has.
 struct WhaleHomeCanvas: View {
     @ObservedObject var model: AppModel
     let bottomInset: CGFloat
@@ -10,9 +10,9 @@ struct WhaleHomeCanvas: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                heroCard
-                quickGrid
+            VStack(alignment: .leading, spacing: 14) {
+                greeting
+                suggestions
                 todayCard
                 if let recent = model.recentActions.first {
                     recentCard(recent)
@@ -23,134 +23,85 @@ struct WhaleHomeCanvas: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
-            .padding(.top, 14)
+            .padding(.top, 12)
             .padding(.bottom, 28 + bottomInset)
         }
         .scrollIndicators(.hidden)
         .onTapGesture { dismissKeyboard() }
     }
 
-    private var heroCard: some View {
-        HStack(alignment: .bottom, spacing: 0) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 7) {
-                    Circle()
-                        .fill(WhaleTheme.accent)
-                        .frame(width: 6, height: 6)
-                        .shadow(color: WhaleTheme.accent, radius: 5)
-                    Text("在听 · 也在做")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.78))
-                    Spacer(minLength: 0)
-                }
+    // MARK: - Greeting
 
-                Spacer(minLength: 16)
+    private var greeting: some View {
+        HStack(alignment: .top, spacing: 9) {
+            WhaleMarkView(size: 30)
 
-                Text("今天，\n交给我。")
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .lineSpacing(1)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(greetingHeadline)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                Text("说一句话，鲸鱼会找到答案，\n也会把事情办完。")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.72))
+                Text("说一句，我来办。找地点、查天气、排日程，也可以直接让我记一件事。")
+                    .font(.system(size: 14))
+                    .foregroundStyle(WhaleTheme.muted)
                     .lineSpacing(3)
-                    .padding(.top, 9)
-
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.shield.fill")
-                        .font(.system(size: 10, weight: .semibold))
-                    Text("写入前先确认")
-                        .font(.system(size: 10, weight: .semibold))
-                    if calendarGranted {
-                        Text("·")
-                        Text(todayStatusText)
-                    }
-                }
-                .foregroundStyle(.white.opacity(0.62))
-                .padding(.top, 14)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, 20)
-            .padding(.top, 18)
-            .padding(.bottom, 18)
-
-            Image("WhaleMascot")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 138, height: 126)
-                .offset(x: 6, y: 8)
-                .accessibilityHidden(true)
-        }
-        .frame(minHeight: 210)
-        .background {
-            ZStack {
-                WhaleTheme.heroGradient
-                Circle()
-                    .fill(WhaleTheme.accent.opacity(0.28))
-                    .frame(width: 190, height: 190)
-                    .blur(radius: 54)
-                    .offset(x: 118, y: -88)
-                Circle()
-                    .fill(WhaleTheme.moon.opacity(0.17))
-                    .frame(width: 150, height: 150)
-                    .blur(radius: 44)
-                    .offset(x: 110, y: 90)
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [.white.opacity(0.08), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                WhaleTheme.bubble,
+                in: UnevenRoundedRectangle(
+                    topLeadingRadius: 18,
+                    bottomLeadingRadius: 6,
+                    bottomTrailingRadius: 18,
+                    topTrailingRadius: 18,
+                    style: .continuous
+                )
+            )
+            .overlay {
+                UnevenRoundedRectangle(
+                    topLeadingRadius: 18,
+                    bottomLeadingRadius: 6,
+                    bottomTrailingRadius: 18,
+                    topTrailingRadius: 18,
+                    style: .continuous
+                )
+                .strokeBorder(WhaleTheme.line.opacity(0.8), lineWidth: 0.8)
             }
+            .shadow(color: .black.opacity(0.06), radius: 12, y: 5)
+
+            Spacer(minLength: 0)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .strokeBorder(.white.opacity(0.16), lineWidth: 0.8)
-        }
-        .shadow(color: WhaleTheme.accent.opacity(0.16), radius: 24, y: 12)
     }
 
-    private var quickGrid: some View {
-        LazyVGrid(
-            columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ],
-            spacing: 12
-        ) {
-            quickCard(
-                title: "附近地点",
-                subtitle: "距离 · 价格 · 营业",
-                icon: "location.fill",
-                tint: WhaleTheme.accent
-            ) {
-                send("找我附近两公里内的餐厅，按距离和价格帮我筛选。")
+    private var greetingHeadline: String {
+        switch Calendar.current.component(.hour, from: Date()) {
+        case 0..<6: return "夜深了，我在。"
+        case 6..<11: return "早上好，今天交给我。"
+        case 11..<14: return "中午好，想先办哪件？"
+        case 14..<18: return "下午好，接下来做什么？"
+        default: return "晚上好，我在听。"
+        }
+    }
+
+    // MARK: - Prompts
+
+    private var suggestions: some View {
+        WhaleFlowLayout(spacing: 8, lineSpacing: 8) {
+            suggestion("附近找店", icon: "location.fill") {
+                send("帮我找附近安静、适合两个人吃饭的地方，按距离和价格筛选。")
             }
-            quickCard(
-                title: "整理纪要",
-                subtitle: "对话 · 待办 · 重点",
-                icon: "text.badge.checkmark",
-                tint: WhaleTheme.moon
-            ) {
-                send("帮我把今天的对话和任务整理成 3 条可执行待办。")
-            }
-            quickCard(
-                title: "今晚天气",
-                subtitle: "实时预报 · 带伞建议",
-                icon: "cloud.sun.fill",
-                tint: WhaleTheme.coral
-            ) {
+            suggestion("今晚天气", icon: "cloud.sun.fill") {
                 send("查一下我所在地今晚到明天的天气。")
             }
-            quickCard(
-                title: model.playback.track == nil ? "我想听歌" : "继续听歌",
-                subtitle: model.playback.track?.title ?? "本机音乐库",
-                icon: model.playback.isPlaying ? "pause.fill" : "play.fill",
-                tint: WhaleTheme.accentDeep
+            suggestion("整理待办", icon: "checklist") {
+                send("把今天的对话和任务整理成 3 条可执行待办。")
+            }
+            suggestion(
+                model.playback.track == nil ? "我想听歌" : "继续听歌",
+                icon: model.playback.isPlaying ? "pause.fill" : "music.note"
             ) {
                 if model.playback.track != nil {
                     Task { await model.togglePlayback() }
@@ -161,65 +112,28 @@ struct WhaleHomeCanvas: View {
         }
     }
 
-    private func quickCard(
-        title: String,
-        subtitle: String,
-        icon: String,
-        tint: Color,
-        action: @escaping () -> Void
-    ) -> some View {
+    private func suggestion(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Image(systemName: icon)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(tint)
-                        .frame(width: 34, height: 34)
-                        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
-                    Spacer(minLength: 4)
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(WhaleTheme.muted.opacity(0.6))
-                }
-
-                Spacer(minLength: 14)
-
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.accent)
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(1)
-                Text(subtitle)
-                    .font(.system(size: 10))
-                    .foregroundStyle(WhaleTheme.muted)
-                    .lineLimit(1)
-                    .padding(.top, 3)
             }
-            .frame(maxWidth: .infinity, minHeight: 102, alignment: .leading)
-            .padding(14)
-            .background {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(WhaleTheme.card.opacity(0.72))
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [tint.opacity(0.08), .clear],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                }
-            }
+            .padding(.horizontal, 13)
+            .frame(height: 38)
+            .background(.ultraThinMaterial, in: Capsule())
             .overlay {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+                Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
             }
-            .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
         .buttonStyle(.plain)
     }
+
+    // MARK: - Real calendar
 
     private var todayCard: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -230,7 +144,7 @@ struct WhaleHomeCanvas: View {
                         .tracking(0.8)
                         .foregroundStyle(WhaleTheme.muted)
                     Text(calendarGranted ? todayTitle : "今天还没有读取日历")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(WhaleTheme.ink)
                 }
                 Spacer(minLength: 8)
@@ -353,6 +267,8 @@ struct WhaleHomeCanvas: View {
         return "下一项：\(next.startAt.formatted(.dateTime.month().day().hour().minute())) · \(next.title)"
     }
 
+    // MARK: - Recent / busy
+
     private func recentCard(_ action: OperationRecord) -> some View {
         Button(action: onOpenRecords) {
             HStack(spacing: 12) {
@@ -372,9 +288,6 @@ struct WhaleHomeCanvas: View {
                         .lineLimit(1)
                 }
                 Spacer()
-                Text(action.isSuccess ? "已完成" : "待核对")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(action.isSuccess ? WhaleTheme.success : WhaleTheme.warm)
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(WhaleTheme.muted)

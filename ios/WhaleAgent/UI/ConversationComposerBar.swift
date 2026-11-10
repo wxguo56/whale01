@@ -7,7 +7,7 @@ import UniformTypeIdentifiers
 /// focused text field inside a paging `ScrollView` can make UIKit scroll the
 /// whole pager to keep the field visible, which shows up as the chat jumping.
 struct ConversationComposerBar: View {
-    static let reservedHeight: CGFloat = 76
+    static let reservedHeight: CGFloat = 66
 
     @ObservedObject var model: AppModel
     @StateObject private var voice = VoiceInputController()
@@ -20,122 +20,20 @@ struct ConversationComposerBar: View {
     @State private var importError: String?
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 7) {
+            if let voiceError = voice.errorText {
+                notice(voiceError)
+            }
+            if let importError {
+                notice(importError)
+            }
             if voice.isRecording {
                 voiceStrip
             }
-
-            HStack(alignment: .bottom, spacing: 9) {
-                Menu {
-                    Button { showPhotoPicker = true } label: {
-                        Label("从照片识别", systemImage: "photo")
-                    }
-                    Button { showFileImporter = true } label: {
-                        Label("从文件识别 PDF/图片", systemImage: "doc")
-                    }
-                } label: {
-                    Group {
-                        if model.isExtractingDocument {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Image(systemName: "paperclip")
-                                .font(.system(size: 19, weight: .medium))
-                                .foregroundStyle(WhaleTheme.ink)
-                        }
-                    }
-                    .frame(width: 44, height: 44)
-                }
-                .buttonStyle(.plain)
-                .disabled(model.isBusy || model.isExtractingDocument)
-                .opacity(model.isBusy || model.isExtractingDocument ? 0.45 : 1)
-                .accessibilityLabel("导入照片或文件识别文字")
-
-                Button {
-                    focused = false
-                    Task { await voice.toggle() }
-                } label: {
-                    Image(systemName: voice.isRecording ? "waveform" : "mic")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(voice.isRecording ? WhaleTheme.danger : WhaleTheme.ink)
-                        .frame(width: 44, height: 44)
-                }
-                .buttonStyle(.plain)
-                .disabled(model.isBusy)
-                .opacity(model.isBusy ? 0.45 : 1)
-                .accessibilityLabel(voice.isRecording ? "停止语音输入" : "语音输入")
-
-                TextField("告诉鲸鱼你想做什么", text: $draft)
-                    .lineLimit(1)
-                    .frame(height: 22)
-                    .focused($focused)
-                    .padding(.horizontal, 15)
-                    .padding(.vertical, 11)
-                    .background(WhaleTheme.field, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .strokeBorder(WhaleTheme.line, lineWidth: 0.8)
-                    }
-                    .disabled(model.isBusy)
-                    .submitLabel(.send)
-                    .onSubmit { submit() }
-
-                Button {
-                    focused = false
-                } label: {
-                    Image(systemName: "keyboard.chevron.compact.down")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.muted)
-                        .frame(width: 44, height: 44)
-                }
-                .buttonStyle(.plain)
-                .opacity(focused ? 1 : 0)
-                .allowsHitTesting(focused)
-                .accessibilityHidden(!focused)
-                .accessibilityLabel("收起键盘")
-
-                Button(action: submit) {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(WhaleTheme.onAccent)
-                        .frame(width: 44, height: 44)
-                        .background(WhaleTheme.auroraGradient, in: Circle())
-                        .shadow(color: WhaleTheme.accent.opacity(0.22), radius: 8, y: 3)
-                }
-                .disabled(model.isBusy || isDraftEmpty)
-                .opacity(model.isBusy || isDraftEmpty ? 0.45 : 1)
-                .accessibilityLabel("发送")
-            }
-            .padding(.horizontal, 14)
-            .padding(.top, 9)
-            .padding(.bottom, 10)
-
-            if let voiceError = voice.errorText {
-                Text(voiceError)
-                    .font(.system(size: 11))
-                    .foregroundStyle(WhaleTheme.warm)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
-            }
-
-            if let importError {
-                Text(importError)
-                    .font(.system(size: 11))
-                    .foregroundStyle(WhaleTheme.warm)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
-            }
+            composer
         }
-        .background {
-            WhaleChromeBackground()
-                .ignoresSafeArea(edges: .bottom)
-        }
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(WhaleTheme.line.opacity(0.7))
-                .frame(height: 0.5)
-        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 6)
         .photosPicker(
             isPresented: $showPhotoPicker,
             selection: $photoItem,
@@ -168,6 +66,120 @@ struct ConversationComposerBar: View {
         }
     }
 
+    // MARK: - Composer
+
+    private var composer: some View {
+        HStack(spacing: 2) {
+            Menu {
+                Button { showPhotoPicker = true } label: {
+                    Label("从照片识别", systemImage: "photo")
+                }
+                Button { showFileImporter = true } label: {
+                    Label("从文件识别 PDF/图片", systemImage: "doc")
+                }
+            } label: {
+                Group {
+                    if model.isExtractingDocument {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "plus")
+                            .font(.system(size: 19, weight: .medium))
+                            .foregroundStyle(WhaleTheme.ink)
+                    }
+                }
+                .frame(width: 38, height: 38)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(model.isBusy || model.isExtractingDocument)
+            .opacity(model.isBusy || model.isExtractingDocument ? 0.4 : 1)
+            .accessibilityLabel("导入照片或文件识别文字")
+
+            TextField("发消息，或按住说话", text: $draft)
+                .font(.system(size: 15))
+                .foregroundStyle(WhaleTheme.ink)
+                .lineLimit(1)
+                .frame(height: 24)
+                .padding(.horizontal, 4)
+                .focused($focused)
+                .disabled(model.isBusy)
+                .submitLabel(.send)
+                .onSubmit { submit() }
+
+            if focused {
+                Button {
+                    focused = false
+                } label: {
+                    Image(systemName: "keyboard.chevron.compact.down")
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .frame(width: 38, height: 38)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("收起键盘")
+            } else {
+                Button {
+                    focused = false
+                    Task { await voice.toggle() }
+                } label: {
+                    Image(systemName: voice.isRecording ? "waveform" : "mic")
+                        .font(.system(size: 19, weight: .medium))
+                        .foregroundStyle(voice.isRecording ? WhaleTheme.danger : WhaleTheme.ink)
+                        .frame(width: 38, height: 38)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(model.isBusy)
+                .opacity(model.isBusy ? 0.4 : 1)
+                .accessibilityLabel(voice.isRecording ? "停止语音输入" : "语音输入")
+            }
+
+            Button(action: submit) {
+                Image(systemName: "paperplane.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 38, height: 38)
+                    .background(
+                        WhaleTheme.composerSendGradient,
+                        in: RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    )
+                    .shadow(color: WhaleTheme.accent.opacity(0.24), radius: 10, y: 4)
+            }
+            .buttonStyle(.plain)
+            .disabled(model.isBusy || isDraftEmpty)
+            .opacity(model.isBusy || isDraftEmpty ? 0.5 : 1)
+            .accessibilityLabel("发送")
+        }
+        .padding(.leading, 5)
+        .padding(.trailing, 5)
+        .padding(.vertical, 6)
+        .background {
+            RoundedRectangle(cornerRadius: 23, style: .continuous)
+                .fill(WhaleTheme.card.opacity(0.97))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 23, style: .continuous)
+                        .strokeBorder(WhaleTheme.line.opacity(0.9), lineWidth: 0.8)
+                }
+                .shadow(color: Color.black.opacity(0.13), radius: 18, y: 8)
+        }
+        .animation(.easeInOut(duration: 0.16), value: focused)
+    }
+
+    private func notice(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11))
+            .foregroundStyle(WhaleTheme.warm)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+            }
+    }
+
     private var isDraftEmpty: Bool {
         draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -180,7 +192,7 @@ struct ConversationComposerBar: View {
                 .padding(.top, 5)
             Text(voice.transcript.isEmpty ? "正在听你说…" : voice.transcript)
                 .font(.system(size: 13))
-                .foregroundStyle(WhaleTheme.muted)
+                .foregroundStyle(WhaleTheme.ink)
                 .lineLimit(3)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button("停止") { voice.stop() }
@@ -188,9 +200,13 @@ struct ConversationComposerBar: View {
                 .tint(WhaleTheme.danger)
                 .frame(minHeight: 32)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(WhaleTheme.danger.opacity(0.07))
+        .padding(.horizontal, 13)
+        .padding(.vertical, 9)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(WhaleTheme.danger.opacity(0.24), lineWidth: 0.8)
+        }
     }
 
     private func submit() {
