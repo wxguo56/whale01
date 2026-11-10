@@ -230,8 +230,8 @@ final class AppModel: ObservableObject {
             }
             if agentMode != "cloud" && health.status != "ok" {
                 errorText = "本机直连缺少 DeepSeek 密钥，请重新安装包含密钥的构建，或切换到云后端。"
-            } else if health.executionMode == "mock" {
-                errorText = "当前服务仍是演示执行模式，真实系统操作不会在手机上发生。"
+            } else if agentMode == "cloud" && health.executionMode == "mock" {
+                errorText = "云后端正在 Mock 模拟执行，已停止真实操作。请将服务端 EXECUTION_MODE 设为 ios 后重启。"
             } else if errorText?.contains("演示执行模式") == true {
                 errorText = nil
             }
@@ -354,6 +354,17 @@ final class AppModel: ObservableObject {
     func send(text rawText: String, displayText: String? = nil, speakReply: Bool = false) async {
         let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isBusy else { return }
+        if agentMode == "cloud" {
+            if !backendOnline || backendExecutionMode == "unknown" {
+                await health()
+            }
+            if backendOnline && backendExecutionMode == "mock" {
+                let message = "云后端当前是 Mock 模拟执行，已阻止发送，避免把模拟结果当成真实数据。请将服务端 EXECUTION_MODE 设为 ios 后重启。"
+                errorText = message
+                appendMessage(ChatMessage(role: .tool, text: "已阻止发送", detail: message))
+                return
+            }
+        }
         if !(await ResultOutbox.shared.list()).isEmpty {
             await flushResultOutbox()
             if !(await ResultOutbox.shared.list()).isEmpty {

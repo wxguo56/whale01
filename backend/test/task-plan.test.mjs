@@ -27,9 +27,26 @@ test("附近查价任务保留定位、半径与价格缺口", () => {
 
 test("导航任务只在用户明确要求时建立", () => {
   assert.equal(buildTaskPlan("帮我看看明天下午的安排"), null);
+  assert.equal(buildTaskPlan("把照片发过去"), null);
   const task = buildTaskPlan("带我去");
   assert.ok(task);
   assert.equal(task.constraints.navigationRequested, true);
+});
+
+test("回家导航要求先取得真实家庭地址，不能直接当已规划", () => {
+  const task = buildTaskPlan("导航回家");
+  assert.ok(task);
+  assert.equal(task.constraints.navigationRequested, true);
+  assert.equal(task.constraints.homeNavigation, true);
+  assert.ok(task.remaining.includes("取得家庭地址并解析真实目的地"));
+  assert.ok(task.remaining.includes("把选定地点交给系统地图"));
+
+  updateTaskFromToolResult(task, "search_places", {
+    status: "success",
+    data: { count: 1, locationMode: "region", radiusApplied: false }
+  });
+  assert.deepEqual(task.remaining, ["把选定地点交给系统地图"]);
+  assert.equal(finalizeTask(task).state, "completed_with_limits");
 });
 
 test("搜索成功后移除地点缺口并记录半径事实", () => {

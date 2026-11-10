@@ -150,6 +150,12 @@ test("EXECUTION_MODE 支持 device/ios 并统一为 ios", () => {
   );
 });
 
+test("默认按真实模式启动，不自动回落到 Mock", () => {
+  const config = loadConfig({});
+  assert.equal(config.modelMode, "deepseek");
+  assert.equal(config.executionMode, "ios");
+});
+
 test("设备工具清单只包含手机系统能力，摘要仍由后端模型处理", () => {
   assert.equal(isDeviceTool("create_reminder"), true);
   assert.equal(isDeviceTool("play_music"), true);

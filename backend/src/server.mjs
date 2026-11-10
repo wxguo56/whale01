@@ -62,7 +62,7 @@ export function createHttpServer(runtime) {
         const text = body.text;
         const now = body.now ?? new Date().toISOString();
         const timezone = body.timezone ?? "Asia/Shanghai";
-        const autoConfirm = body.autoConfirm ?? runtime.config.modelMode === "mock";
+        const autoConfirm = body.autoConfirm ?? false;
         const deferExecution = body.deferExecution ?? false;
         const conversationId = body.conversationId;
         const permissions = body.permissions ?? {};

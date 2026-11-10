@@ -171,7 +171,37 @@ actor LocalAgentEngine: AgentTransport {
             batches: 0,
             permissions: permissions
         )
-        let message = try await callModel(history: history, permissions: permissions)
+        if let clarification = RealDataGuard.preflightReply(for: text) {
+            history.append(
+                DSMessage(role: "assistant", content: clarification, tool_calls: nil, tool_call_id: nil, name: nil)
+            )
+            saveHistory(history, for: conversation)
+            turns.removeValue(forKey: turn.turnId)
+            saveTurns()
+            return makeResponse(status: "completed", turn: turn, reply: clarification, pending: [])
+        }
+
+        let realDataIntent = RealDataGuard.intent(for: text)
+        var message = try await callModel(history: history, permissions: permissions)
+        if let realDataIntent,
+           (message.tool_calls ?? []).isEmpty,
+           !RealDataGuard.isClarifying(message.content ?? "") {
+            history.append(
+                DSMessage(
+                    role: "assistant",
+                    content: message.content,
+                    tool_calls: nil,
+                    tool_call_id: nil,
+                    name: nil
+                )
+            )
+            if let instruction = RealDataGuard.toolInstruction(for: realDataIntent) {
+                history.append(
+                    DSMessage(role: "system", content: instruction, tool_calls: nil, tool_call_id: nil, name: nil)
+                )
+            }
+            message = try await callModel(history: history, permissions: permissions)
+        }
         return try await advance(message: message, history: &history, turn: &turn)
     }
 
@@ -219,6 +249,17 @@ actor LocalAgentEngine: AgentTransport {
                 reply: "这一轮已经执行了 3 批工具。为了不再重复写入，我先停在这里；你可以查看记录后继续。",
                 pending: []
             )
+        }
+
+        let context = latestTurnContext(history)
+        if let intent = RealDataGuard.intent(for: context.userText),
+           let required = intent.requiredTool,
+           !context.tools.contains(required),
+           let instruction = RealDataGuard.toolInstruction(for: intent) {
+            history.append(
+                DSMessage(role: "system", content: instruction, tool_calls: nil, tool_call_id: nil, name: nil)
+            )
+            saveHistory(history, for: turn.conversationId)
         }
 
         turns[turn.turnId] = turn
@@ -277,7 +318,11 @@ actor LocalAgentEngine: AgentTransport {
             return makeResponse(status: status, turn: turn, reply: message.content, pending: pending)
         }
 
-        let reply = message.content?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let proposedReply = message.content?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let context = latestTurnContext(history)
+        let reply = RealDataGuard.intent(for: context.userText).map {
+            RealDataGuard.finalReply(for: $0, usedTools: context.tools, proposed: proposedReply)
+        } ?? proposedReply
         history.append(
             DSMessage(
                 role: "assistant",
@@ -296,6 +341,36 @@ actor LocalAgentEngine: AgentTransport {
             reply: reply.isEmpty ? "我这次没有生成可执行的动作。" : reply,
             pending: []
         )
+    }
+
+    private func latestTurnContext(_ history: [DSMessage]) -> (userText: String, tools: Set<String>) {
+        var userText = ""
+        var callNames: [String: String] = [:]
+        var successfulIds = Set<String>()
+        for message in history.reversed() {
+            if message.role == "user" {
+                userText = message.content ?? ""
+                break
+            }
+            if message.role == "assistant", let calls = message.tool_calls {
+                for call in calls {
+                    callNames[call.id] = call.function.name
+                }
+            }
+            if message.role == "tool",
+               let callId = message.tool_call_id,
+               let content = message.content,
+               let data = content.data(using: .utf8),
+               let raw = try? JSONSerialization.jsonObject(with: data),
+               let object = raw as? [String: Any],
+               object["status"] as? String == "success" {
+                let payload = object["data"] as? [String: Any]
+                if (payload?["simulated"] as? Bool) != true {
+                    successfulIds.insert(callId)
+                }
+            }
+        }
+        return (userText, Set(successfulIds.compactMap { callNames[$0] }))
     }
 
     private func callModel(history: [DSMessage], permissions: [String: String]) async throws -> DSMessage {

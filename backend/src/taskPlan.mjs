@@ -1,7 +1,8 @@
 const NEARBY_PATTERN = /附近|周边|离我|当前位置|我这|旁边/;
 const MERCHANT_PATTERN = /店|餐厅|咖啡|烧烤|火锅|商场|超市|酒吧|饭店|馆|摊/;
 const PRICE_PATTERN = /价格|多少钱|人均|预算|贵不贵|性价比|菜单|收费/;
-const NAVIGATION_PATTERN = /导航|带我去|怎么走|路线|过去/;
+const NAVIGATION_PATTERN = /导航|带我去|怎么走|路线|带我过去|送我过去/;
+const HOME_NAVIGATION_PATTERN = /导航回家|带我回家|送我回家|怎么回家|回家怎么走|回家路线|回家的路线/;
 const REGION_NEARBY_PATTERN = /([\u4e00-\u9fa5]{2,12})(?:附近|周边|一带|这边)/;
 const REGION_SUFFIX_PATTERN = /市|区|县|镇|乡|街道|路|街|大道|广场|公园|机场|车站|大学|学院|商圈|景区|湖|山|岛|湾|港/;
 const REGION_WORDS = ["我家", "家里", "公司", "单位", "学校", "这里", "这儿", "身边", "附近", "当前", "这边"];
@@ -39,6 +40,12 @@ export function parseRadiusMeters(text) {
   return Math.min(Math.max(Math.round(meters), 100), 50_000);
 }
 
+export function isHomeNavigation(text) {
+  const compact = String(text ?? "").replace(/\s+/g, "");
+  if (HOME_NAVIGATION_PATTERN.test(compact)) return true;
+  return ["回家", "我要回家", "我想回家", "回我家"].includes(compact);
+}
+
 export function detectRegion(text) {
   const match = REGION_NEARBY_PATTERN.exec(text);
   if (!match) return null;
@@ -61,7 +68,8 @@ export function buildTaskPlan(text) {
   const nearby = NEARBY_PATTERN.test(input);
   const merchant = MERCHANT_PATTERN.test(input);
   const priceRequested = PRICE_PATTERN.test(input) && (nearby || merchant);
-  const navigationRequested = NAVIGATION_PATTERN.test(input);
+  const homeNavigation = isHomeNavigation(input);
+  const navigationRequested = NAVIGATION_PATTERN.test(input) || homeNavigation;
   const radiusMeters = parseRadiusMeters(input);
   const region = detectRegion(input);
 
@@ -84,6 +92,10 @@ export function buildTaskPlan(text) {
   }
   if (navigationRequested) {
     constraints.navigationRequested = true;
+    if (homeNavigation) {
+      constraints.homeNavigation = true;
+      remaining.push("取得家庭地址并解析真实目的地");
+    }
     remaining.push("把选定地点交给系统地图");
   }
 
@@ -106,6 +118,9 @@ export function updateTaskFromToolResult(task, toolName, result) {
       task.remaining = task.remaining.filter(
         (item) => item !== "取得当前位置并搜索候选地点" && item !== "在明确地区搜索候选地点"
       );
+      if (task.constraints.homeNavigation && Number(data.count) > 0) {
+        task.remaining = task.remaining.filter((item) => item !== "取得家庭地址并解析真实目的地");
+      }
       if (data.locationMode) task.constraints.locationMode = data.locationMode;
       if (Number.isFinite(data.radiusMeters)) task.constraints.radiusMeters = data.radiusMeters;
       if (data.radiusMeters && data.radiusApplied !== true) {

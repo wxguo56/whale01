@@ -88,6 +88,44 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(error.status, "execution_unknown")
     }
 
+    func testRealDataIntentKeepsHomeNavigationSeparate() {
+        XCTAssertEqual(RealDataGuard.intent(for: "导航回家"), RealDataIntent.homeNavigation)
+        XCTAssertEqual(RealDataGuard.intent(for: "我在哪"), RealDataIntent.currentLocation)
+        XCTAssertEqual(RealDataGuard.intent(for: "附近有咖啡店吗"), RealDataIntent.nearbyPlaces)
+        XCTAssertEqual(RealDataGuard.intent(for: "明天会下雨吗"), RealDataIntent.weather)
+        XCTAssertNil(RealDataGuard.intent(for: "我回家了"))
+        XCTAssertNil(RealDataGuard.intent(for: "把照片发过去"))
+    }
+
+    func testHomeAddressRequiresARealAddress() {
+        let vague = MemoryPreference(id: "home", key: "家庭地址", value: "杭州", updatedAt: Date())
+        XCTAssertNil(RealDataGuard.homeAddress(in: [vague]))
+
+        let detailed = MemoryPreference(
+            id: "home-full",
+            key: "家庭地址",
+            value: "浙江省杭州市西湖区文三路 100 号",
+            updatedAt: Date()
+        )
+        XCTAssertEqual(RealDataGuard.homeAddress(in: [detailed]), detailed.value)
+    }
+
+    func testHomeNavigationCannotClaimRouteWithoutToolResult() {
+        let missingAddress = RealDataGuard.finalReply(
+            for: .homeNavigation,
+            usedTools: [],
+            proposed: "已经带你回家了"
+        )
+        XCTAssertTrue(missingAddress.contains("不能规划回家路线"))
+
+        let searchOnly = RealDataGuard.finalReply(
+            for: .homeNavigation,
+            usedTools: ["search_places"],
+            proposed: "路线已经规划好"
+        )
+        XCTAssertTrue(searchOnly.contains("还没有把目的地交给地图"))
+    }
+
     func testHistoryTrimDropsOrphanToolMessages() {
         let call = DSToolCall(
             id: "call_1",

@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { allowedToolNames, buildCapabilityManifest, isDeviceTool } from "./capabilities.mjs";
+import {
+  allowedToolNames,
+  buildCapabilityManifest,
+  implementedToolNames,
+  isDeviceTool
+} from "./capabilities.mjs";
 import { ConversationStore } from "./conversation.mjs";
 import { buildSystemPrompt } from "./prompt.mjs";
 import {
@@ -97,10 +102,11 @@ export class Agent {
     }
     const capabilities = buildCapabilityManifest({
       registry: this.registry,
-      implemented:
-        this.executionMode === "mock"
-          ? this.executor.capabilities?.() ?? []
-          : this.registry.names(),
+      implemented: implementedToolNames({
+        executionMode: this.executionMode,
+        registry: this.registry,
+        executor: this.executor
+      }),
       permissions,
       executionMode: this.executionMode,
       locationFor: (name) => (this.executionMode === "mock" ? "backend-mock" : isDeviceTool(name) ? "phone" : "backend")
@@ -320,10 +326,11 @@ export class Agent {
   capabilities() {
     return buildCapabilityManifest({
       registry: this.registry,
-      implemented:
-        this.executionMode === "mock"
-          ? this.executor.capabilities?.() ?? []
-          : this.registry.names(),
+      implemented: implementedToolNames({
+        executionMode: this.executionMode,
+        registry: this.registry,
+        executor: this.executor
+      }),
       permissions: {},
       executionMode: this.executionMode,
       locationFor: (name) => (this.executionMode === "mock" ? "backend-mock" : isDeviceTool(name) ? "phone" : "backend")
@@ -610,7 +617,17 @@ export class Agent {
       const previous = this.operationLog.get(item.operationId);
       let result;
 
-      if (previous?.status === "success" && previous.result) {
+      if (this.executionMode !== "mock" && !isDeviceTool(item.tool.name)) {
+        result = {
+          status: "unsupported",
+          data: null,
+          error: {
+            code: "server_side_not_implemented",
+            message: `真实执行模式下后端不执行 ${item.tool.name}；该能力应由手机执行，或直接基于本轮真实资料回答`
+          },
+          deduplicated: false
+        };
+      } else if (previous?.status === "success" && previous.result) {
         result = { ...previous.result, deduplicated: true };
       } else if (previous?.status === "started") {
         result = {

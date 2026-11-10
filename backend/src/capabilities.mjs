@@ -69,6 +69,13 @@ export const DEVICE_TOOLS = new Set([
   "search_merchant_prices"
 ]);
 
+export const SIMULATED_SERVER_TOOLS = new Set(["summarize_shared_content"]);
+
+export function implementedToolNames({ executionMode, registry, executor }) {
+  if (executionMode === "mock") return executor?.capabilities?.() ?? [];
+  return registry.names().filter((name) => !SIMULATED_SERVER_TOOLS.has(name));
+}
+
 export function isDeviceTool(name) {
   return DEVICE_TOOLS.has(name);
 }

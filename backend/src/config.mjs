@@ -3,11 +3,11 @@ import { fileURLToPath } from "node:url";
 const dataPath = (name) => fileURLToPath(new URL(`../data/${name}`, import.meta.url));
 
 export function loadConfig(env = process.env) {
-  const modelMode = env.MODEL_MODE ?? (env.DEEPSEEK_API_KEY ? "deepseek" : "mock");
+  const modelMode = env.MODEL_MODE ?? "deepseek";
   if (!["mock", "deepseek"].includes(modelMode)) {
     throw new Error(`MODEL_MODE 必须是 mock 或 deepseek，当前为 ${modelMode}`);
   }
-  const executionModeRaw = env.EXECUTION_MODE ?? "mock";
+  const executionModeRaw = env.EXECUTION_MODE ?? "ios";
   if (!["mock", "device", "ios"].includes(executionModeRaw)) {
     throw new Error(`EXECUTION_MODE 必须是 mock、device 或 ios，当前为 ${executionModeRaw}`);
   }

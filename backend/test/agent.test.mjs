@@ -357,9 +357,11 @@ test("设备模式下必须延迟执行，且能力表标注手机执行位置",
   assert.equal(reminder.executionLocation, "phone");
   assert.equal(reminder.implemented, true);
   assert.equal(summarize.executionLocation, "backend");
+  assert.equal(summarize.implemented, false);
+  assert.equal(summarize.availability, "not_implemented");
 });
 
-test("设备模式下只把手机工具挂起，模型侧摘要先在后端执行", async () => {
+test("设备模式下模拟摘要工具不可用，只挂起手机工具", async () => {
   let callIndex = 0;
   const adapter = {
     async chat() {
@@ -399,7 +401,14 @@ test("设备模式下只把手机工具挂起，模型侧摘要先在后端执�
 
   assert.equal(started.status, "awaiting_tool_results");
   assert.deepEqual(started.pending.map((item) => item.tool), ["create_reminder"]);
-  assert.ok(started.events.some((event) => event.type === "tool.result" && event.payload.tool === "summarize_shared_content"));
+  assert.ok(
+    started.events.some(
+      (event) =>
+        event.type === "tool.rejected" &&
+        event.payload.tool === "summarize_shared_content" &&
+        event.payload.status === "unsupported"
+    )
+  );
 
   const done = await agent.submitToolResults(started.turnId, [
     {

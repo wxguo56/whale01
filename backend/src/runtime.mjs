@@ -14,7 +14,21 @@ export async function createRuntime(env = process.env, overrides = {}) {
   const operationLog = overrides.operationLog ?? (await OperationLog.open(config.paths.operationLog));
   const executor =
     overrides.executor ??
-    new MockDeviceExecutor({ remindersPath: config.paths.reminders, calendarPath: config.paths.calendar });
+    (config.executionMode === "mock"
+      ? new MockDeviceExecutor({ remindersPath: config.paths.reminders, calendarPath: config.paths.calendar })
+      : {
+          capabilities: () => [],
+          async execute({ tool }) {
+            return {
+              status: "unsupported",
+              data: null,
+              error: {
+                code: "server_side_not_implemented",
+                message: `真实执行模式下后端不执行 ${tool}；请由手机执行或直接基于本轮资料回答`
+              }
+            };
+          }
+        });
   const adapter =
     overrides.adapter ??
     (config.modelMode === "deepseek" ? new DeepSeekAdapter(config.deepseek) : new MockModelAdapter());

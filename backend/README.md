@@ -1,11 +1,11 @@
 # 代号鲸鱼01 服务端
 
-用途：在 Windows 上验证真实 DeepSeek 自然语言理解、工具决策、会话状态与 Mock 设备执行。它不是 iOS 工程，也不替代 EventKit、HealthKit、MusicKit 或真机验收。
+用途：在 Windows 上验证真实 DeepSeek 自然语言理解、工具决策、会话状态与设备执行编排。它不是 iOS 工程，也不替代 EventKit、HealthKit、MusicKit 或真机验收。
 
 当前边界必须分开表述：
 
 - **模型链路：真实 DeepSeek**。网页输入经后端到达 `deepseek-chat`。
-- **工具执行：Mock**。提醒、日历、天气、健康、地点、导航、短信草稿、音乐全部由 `MockDeviceExecutor` 模拟，不写入真实系统、不产生真实音频。
+- **工具执行：默认真实设备模式**。服务端只做工具编排，系统能力由手机执行；只有显式设置 `EXECUTION_MODE=mock` 时才使用 `MockDeviceExecutor` 做测试演示。
 
 ## 运行
 
@@ -23,7 +23,7 @@ npm test
 
 ```dotenv
 MODEL_MODE=deepseek
-EXECUTION_MODE=mock
+EXECUTION_MODE=ios          # 真机使用必须为 ios；mock 仅用于本地测试
 DEEPSEEK_API_KEY=<在本地安全填写>
 DEEPSEEK_MODEL=deepseek-chat
 HOST=0.0.0.0
@@ -61,7 +61,7 @@ Invoke-WebRequest http://127.0.0.1:8787/healthz -UseBasicParsing
 {
   "status": "ok",
   "modelMode": "deepseek",
-  "executionMode": "mock",
+  "executionMode": "ios",
   "adapterConfigured": true,
   "tools": 15,
   "contractVersion": "1.0"

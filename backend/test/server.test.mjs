@@ -50,6 +50,31 @@ test("HTTP 闭环与事件流", async () => {
   }
 });
 
+test("HTTP 默认不自动确认写操作", async () => {
+  const runtime = await createTestRuntime();
+  const server = await startServer(runtime, { port: 0 });
+  const { port } = server.address();
+  const base = `http://127.0.0.1:${port}`;
+
+  try {
+    const response = await fetch(`${base}/v1/turns`, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({
+        text: "明天下午三点提醒我取快递",
+        now: FIXED_NOW,
+        timezone: TIMEZONE
+      })
+    });
+    const body = await response.json();
+    assert.equal(body.status, "awaiting_confirmation");
+    assert.equal(body.pending.length, 1);
+    assert.equal(body.events.some((event) => event.type === "tool.result"), false);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test("设备模式 HTTP：挂起手机工具、标注执行位置并接受回传", async () => {
   const runtime = await createTestRuntime({}, { EXECUTION_MODE: "ios" });
   const server = await startServer(runtime, { port: 0 });
