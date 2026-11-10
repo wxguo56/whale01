@@ -24,7 +24,7 @@ struct ChatView: View {
         .navigationTitle("对话")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarBackground(.thinMaterial, for: .navigationBar)
+        .toolbarBackground(.regularMaterial, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 8) {
