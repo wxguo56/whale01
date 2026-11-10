@@ -146,12 +146,11 @@ struct ConversationSurface: View {
                     }
 
                     Color.clear
-                        .frame(height: 1)
+                        .frame(height: 20 + bottomInset)
                         .id(Self.bottomAnchor)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 18)
-                .padding(.bottom, 20 + bottomInset)
             }
             .scrollDismissesKeyboard(.interactively)
             .scrollBounceBehavior(.basedOnSize)
