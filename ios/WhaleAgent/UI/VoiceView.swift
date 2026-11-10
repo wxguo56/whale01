@@ -34,12 +34,6 @@ struct VoiceView: View {
             waveBars
                 .padding(.top, 6)
 
-            if let error = visibleError {
-                errorCard(error)
-                    .padding(.horizontal, 26)
-                    .padding(.top, 6)
-            }
-
             Spacer(minLength: 6)
             controls
             Text("停止后自动发送，或转成文字继续编辑。")
@@ -183,10 +177,6 @@ struct VoiceView: View {
         }
     }
 
-    private var visibleError: String? {
-        localHint ?? voice.errorText
-    }
-
     private var stateTitle: String {
         if localHint != nil { return "还没听清" }
         if voice.errorText != nil { return "需要用文字" }
@@ -267,25 +257,6 @@ struct VoiceView: View {
         isFinishing = true
         voice.stop()
         onCancel()
-    }
-
-    private func errorCard(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "mic.slash")
-                .font(.system(size: 13))
-                .foregroundStyle(WhaleTheme.warm)
-            Text(text)
-                .font(.system(size: 12))
-                .foregroundStyle(WhaleTheme.ink)
-                .lineLimit(2)
-            Spacer(minLength: 0)
-        }
-        .padding(10)
-        .background(WhaleTheme.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(WhaleTheme.line, lineWidth: 1)
-        }
     }
 
     private func barHeight(_ index: Int) -> CGFloat {
