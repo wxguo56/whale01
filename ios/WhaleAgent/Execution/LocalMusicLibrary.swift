@@ -43,6 +43,7 @@ final class LocalMusicLibrary: ObservableObject {
     @Published private(set) var isPlaying = false
     @Published private(set) var positionSec: Double = 0
     @Published private(set) var lastError: String?
+    var prefersShuffle = false
 
     private var player: AVAudioPlayer?
     private var ticker: Timer?
@@ -232,10 +233,25 @@ final class LocalMusicLibrary: ObservableObject {
         guard let currentTrackId, let index = tracks.firstIndex(where: { $0.id == currentTrackId }) else {
             return false
         }
-        let target = direction == "previous" ? index - 1 : index + 1
+        if direction == "previous" {
+            let target = index - 1
+            guard tracks.indices.contains(target) else { return false }
+            try? play(track: tracks[target])
+            return true
+        }
+        if prefersShuffle, tracks.count > 1 {
+            try? play(track: tracks[randomIndex(excluding: index)])
+            return true
+        }
+        let target = index + 1
         guard tracks.indices.contains(target) else { return false }
         try? play(track: tracks[target])
         return true
+    }
+
+    private func randomIndex(excluding index: Int) -> Int {
+        let pool = tracks.indices.filter { $0 != index }
+        return pool.randomElement() ?? index
     }
 
     func snapshot() -> [String: Any] {
@@ -283,8 +299,15 @@ final class LocalMusicLibrary: ObservableObject {
     private func handleFinished() {
         isPlaying = false
         positionSec = 0
-        guard let currentTrackId, let index = tracks.firstIndex(where: { $0.id == currentTrackId }),
-              tracks.indices.contains(index + 1) else {
+        guard let currentTrackId, let index = tracks.firstIndex(where: { $0.id == currentTrackId }) else {
+            stopTicker()
+            return
+        }
+        if prefersShuffle, tracks.count > 1 {
+            try? play(track: tracks[randomIndex(excluding: index)])
+            return
+        }
+        guard tracks.indices.contains(index + 1) else {
             stopTicker()
             return
         }

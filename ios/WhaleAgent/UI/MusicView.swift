@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -8,6 +9,8 @@ struct MusicView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showImporter = false
     @State private var showSourceInfo = false
+    @State private var libraryExpanded = false
+    @State private var browsedAlbumId: String?
 
     var body: some View {
         NavigationStack {
@@ -15,11 +18,8 @@ struct MusicView: View {
                 VStack(spacing: 20) {
                     searchField
                     playerCard
-                    if !model.musicAlbums.isEmpty {
-                        albumSection
-                    }
-                    neteaseCard
                     librarySection
+                    neteaseCard
                     if model.permissionsSnapshot["music"] != "granted" {
                         permissionCard
                     }
@@ -97,20 +97,25 @@ struct MusicView: View {
     }
 
     private var playerCard: some View {
-        VStack(spacing: 15) {
-            playerArtwork
-                .frame(width: 214, height: 214)
-                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-                .shadow(color: WhaleTheme.accent.opacity(0.2), radius: 18, y: 10)
+        VStack(spacing: 16) {
+            VinylDisc(
+                artwork: displayArtwork,
+                title: displayTitle,
+                isPlaying: model.playback.isPlaying,
+                palette: albumColors(for: displayTitle)
+            )
+            .frame(width: 246, height: 246)
+            .contentShape(Circle())
+            .gesture(albumSwipe)
 
             VStack(spacing: 5) {
-                Text(model.playback.track?.title ?? "选一首开始播放")
+                Text(displayTitle)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
-                Text(subtitle)
-                    .font(.system(size: 13))
+                Text(displaySubtitle)
+                    .font(.system(size: 12))
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(1)
             }
@@ -142,7 +147,7 @@ struct MusicView: View {
                     Image(systemName: "backward.fill")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(WhaleTheme.ink)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 52, height: 44)
                 }
                 .disabled(model.isMusicBusy)
 
@@ -158,39 +163,82 @@ struct MusicView: View {
                 .disabled(model.isMusicBusy)
 
                 Button {
-                    Task { await model.playNext() }
+                    model.toggleMusicPlayMode()
                 } label: {
-                    Image(systemName: "forward.fill")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.ink)
-                        .frame(width: 44, height: 44)
+                    VStack(spacing: 3) {
+                        Image(systemName: model.musicPlayMode.icon)
+                            .font(.system(size: 17, weight: .semibold))
+                        Text(model.musicPlayMode.title)
+                            .font(.system(size: 9, weight: .semibold))
+                    }
+                    .foregroundStyle(WhaleTheme.ink)
+                    .frame(width: 62, height: 44)
+                    .contentShape(Rectangle())
                 }
-                .disabled(model.isMusicBusy)
+                .accessibilityLabel(model.musicPlayMode.title)
             }
+
+            Text("左右滑动唱片切换专辑")
+                .font(.system(size: 10))
+                .foregroundStyle(WhaleTheme.muted.opacity(0.85))
         }
         .padding(.top, 2)
     }
 
-    @ViewBuilder
-    private var playerArtwork: some View {
-        if let image = model.playback.track?.artwork {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-        } else {
-            ZStack {
-                LinearGradient(
-                    colors: [WhaleTheme.accent.opacity(0.88), WhaleTheme.accentDeep],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                Image(systemName: model.playback.isPlaying ? "waveform" : "music.note")
-                    .font(.system(size: 64, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.9))
-            }
+    private var displayedAlbum: MusicAlbumItem? {
+        if let browsedAlbumId,
+           let album = model.musicAlbums.first(where: { $0.albumId == browsedAlbumId }) {
+            return album
         }
+        if let albumId = model.playback.track?.albumId, !albumId.isEmpty,
+           let album = model.musicAlbums.first(where: { $0.albumId == albumId }) {
+            return album
+        }
+        return model.musicAlbums.first
     }
 
+    private var displayArtwork: UIImage? {
+        displayedAlbum?.artwork ?? model.playback.track?.artwork
+    }
+
+    private var displayTitle: String {
+        displayedAlbum?.title ?? model.playback.track?.title ?? "选一首开始播放"
+    }
+
+    private var displaySubtitle: String {
+        if let album = displayedAlbum {
+            return "\(album.artist) · \(album.trackCount) 首"
+        }
+        return subtitle
+    }
+
+    private var albumSwipe: some Gesture {
+        DragGesture(minimumDistance: 18)
+            .onEnded { value in
+                let dx = value.translation.width
+                guard abs(dx) > 42, abs(dx) > abs(value.translation.height) else { return }
+                shiftAlbum(dx < 0 ? 1 : -1)
+            }
+    }
+
+    private func shiftAlbum(_ step: Int) {
+        guard !model.isMusicBusy else { return }
+        if !model.musicAlbums.isEmpty {
+            let albums = model.musicAlbums
+            let currentIndex = albums.firstIndex(where: { $0.albumId == displayedAlbum?.albumId }) ?? 0
+            let next = (currentIndex + step + albums.count) % albums.count
+            withAnimation(.easeInOut(duration: 0.2)) {
+                browsedAlbumId = albums[next].albumId
+            }
+            Task { await model.play(albums[next]) }
+        } else if model.musicTracks.count > 1 {
+            let tracks = model.musicTracks
+            let currentIndex = tracks.firstIndex(where: { $0.trackId == model.playback.track?.trackId }) ?? 0
+            let next = (currentIndex + step + tracks.count) % tracks.count
+            browsedAlbumId = nil
+            Task { await model.play(tracks[next]) }
+        }
+    }
     private var subtitle: String {
         guard let track = model.playback.track else {
             return "系统音乐资料库 · 本机文件 · 网易云"
@@ -233,6 +281,7 @@ struct MusicView: View {
 
     private func albumCard(_ album: MusicAlbumItem) -> some View {
         Button {
+            browsedAlbumId = album.albumId
             Task { await model.play(album) }
         } label: {
             VStack(alignment: .leading, spacing: 7) {
@@ -342,6 +391,67 @@ struct MusicView: View {
     }
 
     private var librarySection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.22)) {
+                    libraryExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 11) {
+                    Image(systemName: "music.note.list")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.accent)
+                        .frame(width: 36, height: 36)
+                        .background(WhaleTheme.accentSoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("曲库")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(WhaleTheme.ink)
+                        Text(librarySummary)
+                            .font(.system(size: 11))
+                            .foregroundStyle(WhaleTheme.muted)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .rotationEffect(.degrees(libraryExpanded ? 180 : 0))
+                }
+                .frame(minHeight: 56)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if libraryExpanded {
+                VStack(alignment: .leading, spacing: 16) {
+                    if !model.musicAlbums.isEmpty {
+                        albumSection
+                    }
+                    libraryContent
+                }
+                .padding(.top, 14)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 2)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+        }
+    }
+
+    private var librarySummary: String {
+        let trackPart = "\(model.musicTracks.count) 首"
+        guard !model.musicAlbums.isEmpty else { return trackPart }
+        return "\(trackPart) · \(model.musicAlbums.count) 张专辑"
+    }
+
+    private var libraryContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("我的曲库")
@@ -424,6 +534,7 @@ struct MusicView: View {
         VStack(spacing: 0) {
             ForEach(Array(model.musicTracks.enumerated()), id: \.element.id) { index, track in
                 Button {
+                    browsedAlbumId = nil
                     Task { await model.play(track) }
                 } label: {
                     HStack(spacing: 12) {
@@ -567,5 +678,75 @@ struct MusicView: View {
         guard seconds > 0, seconds.isFinite else { return "0:00" }
         let value = Int(seconds.rounded())
         return String(format: "%d:%02d", value / 60, value % 60)
+    }
+}
+
+private struct VinylDisc: View {
+    let artwork: UIImage?
+    let title: String
+    let isPlaying: Bool
+    let palette: [Color]
+
+    @State private var angle: Double = 0
+    @State private var ticker = Timer.publish(every: 1.0 / 24.0, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color(red: 0.15, green: 0.15, blue: 0.17), Color(red: 0.03, green: 0.03, blue: 0.04)],
+                        center: .center,
+                        startRadius: 8,
+                        endRadius: 250
+                    )
+                )
+
+            ForEach(0..<7, id: \.self) { ring in
+                Circle()
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.8)
+                    .padding(CGFloat(16 + ring * 15))
+            }
+
+            Circle()
+                .fill(Color.white.opacity(0.05))
+                .padding(52)
+
+            label
+                .frame(width: 134, height: 134)
+                .clipShape(Circle())
+                .overlay {
+                    Circle().strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+                }
+
+            Circle()
+                .fill(Color(red: 0.03, green: 0.03, blue: 0.04))
+                .frame(width: 14, height: 14)
+
+            Circle()
+                .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
+        }
+        .rotationEffect(.degrees(angle))
+        .shadow(color: Color.black.opacity(0.32), radius: 22, y: 12)
+        .onReceive(ticker) { _ in
+            guard isPlaying else { return }
+            angle = (angle + 1.2).truncatingRemainder(dividingBy: 360)
+        }
+    }
+
+    @ViewBuilder
+    private var label: some View {
+        if let artwork {
+            Image(uiImage: artwork)
+                .resizable()
+                .scaledToFill()
+        } else {
+            ZStack {
+                LinearGradient(colors: palette, startPoint: .topLeading, endPoint: .bottomTrailing)
+                Text(String(title.prefix(1)))
+                    .font(.system(size: 46, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.9))
+            }
+        }
     }
 }

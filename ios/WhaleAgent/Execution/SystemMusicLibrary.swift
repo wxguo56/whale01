@@ -205,6 +205,10 @@ final class SystemMusicLibrary {
         }
     }
 
+    func setShuffle(_ enabled: Bool) {
+        player.shuffleMode = enabled ? .songs : .off
+    }
+
     func pause() throws {
         guard player.playbackState == .playing else { throw SystemMusicError.noActivePlayback }
         player.pause()

@@ -50,6 +50,25 @@ struct ChatMessage: Identifiable, Equatable, Codable {
     }
 }
 
+enum MusicPlayMode: String {
+    case sequential
+    case shuffle
+
+    static let storageKey = "whale.music.playMode"
+
+    var title: String {
+        self == .shuffle ? "随机播放" : "顺序播放"
+    }
+
+    var icon: String {
+        self == .shuffle ? "shuffle" : "repeat"
+    }
+
+    var toggled: MusicPlayMode {
+        self == .shuffle ? .sequential : .shuffle
+    }
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published var backendURL: String
@@ -82,6 +101,9 @@ final class AppModel: ObservableObject {
     @Published private(set) var playback = PlaybackSnapshot.idle
     @Published private(set) var musicError: String?
     @Published private(set) var isMusicBusy = false
+    @Published private(set) var musicPlayMode = MusicPlayMode(
+        rawValue: UserDefaults.standard.string(forKey: MusicPlayMode.storageKey) ?? ""
+    ) ?? .sequential
     @Published private(set) var musicDidLoad = false
     @Published private(set) var isExecutingTool = false
     @Published private(set) var isSpeakingReply = false
@@ -130,6 +152,7 @@ final class AppModel: ObservableObject {
                 self?.appendMessage(ChatMessage(role: .tool, text: "短信／邮件草稿", detail: text))
             }
         speech.setEnabled(voiceReplyEnabled)
+        applyMusicPlayMode()
         speech.onStateChange = { [weak self] speaking in
             self?.isSpeakingReply = speaking
             if !speaking {
@@ -885,7 +908,29 @@ final class AppModel: ObservableObject {
     }
 
     func playNext() async {
+        if musicPlayMode == .shuffle, let pick = randomTrackCandidate() {
+            await play(pick)
+            return
+        }
         await skipMusic(direction: "next")
+    }
+
+    func toggleMusicPlayMode() {
+        musicPlayMode = musicPlayMode.toggled
+        UserDefaults.standard.set(musicPlayMode.rawValue, forKey: MusicPlayMode.storageKey)
+        applyMusicPlayMode()
+    }
+
+    private func applyMusicPlayMode() {
+        let shuffle = musicPlayMode == .shuffle
+        LocalMusicLibrary.shared.prefersShuffle = shuffle
+        SystemMusicLibrary.shared.setShuffle(shuffle)
+    }
+
+    private func randomTrackCandidate() -> MusicTrackItem? {
+        let currentId = playback.track?.trackId
+        let pool = musicTracks.filter { $0.trackId != currentId }
+        return pool.randomElement()
     }
 
     func playPrevious() async {
