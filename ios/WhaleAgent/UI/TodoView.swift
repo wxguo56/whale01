@@ -244,7 +244,6 @@ struct TodoView: View {
     @State private var busyIds: Set<String> = []
     @State private var errorText: String?
     @State private var toast: String?
-    @State private var showAllRecords = false
     @FocusState private var composerFocused: Bool
 
     private var reminderStatus: String { model.permissionsSnapshot["reminder"] ?? "unknown" }
@@ -274,7 +273,6 @@ struct TodoView: View {
                         content
                         if let errorText { errorBanner(errorText) }
                         hint
-                        recentRecordsSection
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 10)
@@ -321,9 +319,6 @@ struct TodoView: View {
                 }
             }
             .onDisappear { voice.stop() }
-            .sheet(isPresented: $showAllRecords) {
-                RecordsView(model: model, showsClose: true, onClose: { showAllRecords = false })
-            }
         }
 
     private var header: some View {
@@ -562,35 +557,6 @@ struct TodoView: View {
             .foregroundStyle(WhaleTheme.muted.opacity(0.85))
             .fixedSize(horizontal: false, vertical: true)
             .padding(.top, 2)
-    }
-
-    @ViewBuilder
-    private var recentRecordsSection: some View {
-        if !model.recentActions.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("最近记录")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(WhaleTheme.muted)
-                    Spacer()
-                    Button { showAllRecords = true } label: {
-                        HStack(spacing: 3) {
-                            Text("全部")
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 9, weight: .bold))
-                        }
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.accent)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.top, 10)
-
-                ForEach(Array(model.recentActions.prefix(3))) { action in
-                    OperationRecordCard(action: action, compact: true)
-                }
-            }
-        }
     }
 
     private func errorBanner(_ message: String) -> some View {

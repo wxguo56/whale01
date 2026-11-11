@@ -2,20 +2,24 @@ import SwiftUI
 import UIKit
 
 /// The conversation starter. Tapping 对话 lands here: a real chat surface with
-/// a greeting, immediate prompts and the calendar state the phone actually has.
+/// a rotating daily note, immediate prompts and the state the phone actually has.
 struct WhaleHomeCanvas: View {
     @ObservedObject var model: AppModel
     let bottomInset: CGFloat
     let onOpenRecords: () -> Void
     let onOpenMusic: () -> Void
     let onOpenTodo: () -> Void
+    @State private var weatherDays: [WeatherDaySummary] = []
+    @State private var weatherLocation = ""
+    @State private var weatherLoading = false
+    @State private var weatherError: String?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                greeting
-                musicEntry
+                dailyQuote
                 suggestions
+                weatherCard
                 todayCard
                 if model.isBusy {
                     busyCard
@@ -28,173 +32,108 @@ struct WhaleHomeCanvas: View {
         }
         .scrollIndicators(.hidden)
         .onTapGesture { dismissKeyboard() }
+        .task { await loadWeatherIfNeeded() }
+        .onChange(of: model.permissionsSnapshot["location"]) { _, status in
+            guard status == "granted" else { return }
+            Task { await loadWeather(force: true) }
+        }
     }
 
-    // MARK: - Greeting
+    // MARK: - Daily quote
 
-    private var greeting: some View {
-        HStack(alignment: .top, spacing: 9) {
-            WhaleMarkView(size: 30)
+    private static let dailyQuotes: [String] = [
+        "今天也慢慢来，鲸鱼陪你一起往前。",
+        "你已经比昨天更靠近想去的地方。",
+        "先照顾好自己，再去照顾世界。",
+        "慢一点没关系，方向对就好。",
+        "今天的努力，会在某天悄悄回报你。",
+        "允许自己休息，休息也是前进的一部分。",
+        "你不需要完美，只需要继续。",
+        "把小事做好，日子就会亮起来。",
+        "心里有光，走到哪里都不算黑。",
+        "今天遇到的难题，会成为明天的底气。",
+        "深呼吸，事情一件一件来。",
+        "你值得被温柔对待，先从自己开始。",
+        "别急着证明自己，时间会替你说话。",
+        "每一次坚持，都在悄悄改变你。",
+        "今天也要记得，为自己留一点喜欢。",
+        "你已经做得很好，真的。",
+        "世界很大，你的节奏刚刚好。",
+        "把注意力放回当下，一切会清晰起来。",
+        "愿你今天被小事治愈，被好消息敲门。",
+        "不必追赶别人，你有自己的海。",
+        "再普通的一天，也值得认真过。",
+        "你正在成为更好的自己，别怀疑。",
+        "累了就靠岸，鲸鱼一直在。",
+        "今天的好运，正在路上。",
+        "把烦恼交给海风，把力气留给自己。",
+        "你走的每一步，都算数。",
+        "心里装一点期待，日子就有了光。",
+        "别怕慢，怕的是停在原地责怪自己。",
+        "今天也要好好吃饭，好好睡觉。",
+        "无论今天怎样，明天仍有新的海。"
+    ]
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(greetingHeadline)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.ink)
-                    .fixedSize(horizontal: false, vertical: true)
+    private static let slotOpeners: [String] = [
+        "夜深了", "凌晨了", "天快亮了", "早上好", "上午好", "快到中午",
+        "中午好", "午后好", "下午好", "傍晚好", "晚上好", "夜里好"
+    ]
 
-                Text("说一句，我来办。找地点、查天气、排日程，也可以直接让我记一件事。")
-                    .font(.system(size: 14))
-                    .foregroundStyle(WhaleTheme.muted)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
+    private var dailyQuote: some View {
+        TimelineView(.periodic(from: Date(), by: 60)) { context in
+            let quote = Self.quote(at: context.date)
+            HStack(alignment: .top, spacing: 10) {
+                WhaleMarkView(size: 30)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("鲸鱼对你说")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .tracking(0.8)
+                        .foregroundStyle(WhaleTheme.accent)
+                    Text(quote)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(
-                WhaleTheme.bubble,
-                in: UnevenRoundedRectangle(
-                    topLeadingRadius: 18,
-                    bottomLeadingRadius: 6,
-                    bottomTrailingRadius: 18,
-                    topTrailingRadius: 18,
-                    style: .continuous
-                )
-            )
-            .overlay {
-                UnevenRoundedRectangle(
-                    topLeadingRadius: 18,
-                    bottomLeadingRadius: 6,
-                    bottomTrailingRadius: 18,
-                    topTrailingRadius: 18,
-                    style: .continuous
-                )
-                .strokeBorder(WhaleTheme.line.opacity(0.8), lineWidth: 0.8)
-            }
-            .shadow(color: .black.opacity(0.06), radius: 12, y: 5)
-
-            Spacer(minLength: 0)
-        }
-    }
-
-    private var greetingHeadline: String {
-        switch Calendar.current.component(.hour, from: Date()) {
-        case 0..<6: return "夜深了，我在。"
-        case 6..<11: return "早上好，今天交给我。"
-        case 11..<14: return "中午好，想先办哪件？"
-        case 14..<18: return "下午好，接下来做什么？"
-        default: return "晚上好，我在听。"
-        }
-    }
-
-    // MARK: - Music entry
-
-    private var musicEntry: some View {
-        HStack(spacing: 12) {
-            Button(action: onOpenMusic) {
-                HStack(spacing: 12) {
-                    musicCover
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(model.playback.isPlaying ? "正在播放" : "音乐")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .tracking(0.8)
-                            .foregroundStyle(WhaleTheme.accent)
-                        Text(musicHeadline)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(WhaleTheme.ink)
-                            .lineLimit(1)
-                        Text(musicSubtitle)
-                            .font(.system(size: 11))
-                            .foregroundStyle(WhaleTheme.muted)
-                            .lineLimit(1)
-                    }
-
-                    Spacer(minLength: 4)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("打开音乐，\\(musicHeadline)")
-
-            Button {
-                Task { await model.togglePlayback() }
-            } label: {
-                Image(systemName: model.playback.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(WhaleTheme.accent, in: Circle())
-                    .shadow(color: WhaleTheme.accent.opacity(0.35), radius: 9, y: 4)
-            }
-            .buttonStyle(.plain)
-            .disabled(model.playback.track == nil || model.isMusicBusy)
-            .opacity(model.playback.track == nil ? 0.4 : 1)
-            .accessibilityLabel(model.playback.isPlaying ? "暂停音乐" : "播放音乐")
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 11)
-        .background {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [WhaleTheme.accent.opacity(0.12), WhaleTheme.card.opacity(0.92)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            .background {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [WhaleTheme.accent.opacity(0.10), WhaleTheme.card.opacity(0.9)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                )
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
-        }
-        .shadow(color: .black.opacity(0.06), radius: 12, y: 5)
-    }
-
-    private var musicCover: some View {
-        ZStack {
-            if let image = model.playback.track?.artwork {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                LinearGradient(
-                    colors: [WhaleTheme.moon.opacity(0.92), WhaleTheme.accentDeep],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                Circle()
-                    .stroke(Color.white.opacity(0.22), lineWidth: 1)
-                    .frame(width: 34, height: 34)
-                Circle()
-                    .fill(Color.black.opacity(0.5))
-                    .frame(width: 9, height: 9)
-                Image(systemName: "music.note")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.92))
-                    .offset(x: 13, y: -12)
             }
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+            }
+            .shadow(color: .black.opacity(0.05), radius: 10, y: 4)
         }
-        .frame(width: 54, height: 54)
-        .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.8)
-        }
-        .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
     }
 
-    private var musicHeadline: String {
-        model.playback.track?.title ?? "打开黑胶播放器"
+    private static func quote(at date: Date) -> String {
+        let calendar = Calendar.current
+        let dayCount = calendar.ordinality(of: .day, in: .era, for: date) ?? 0
+        let index = ((dayCount % dailyQuotes.count) + dailyQuotes.count) % dailyQuotes.count
+        let slot = min(slotOpeners.count - 1, calendar.component(.hour, from: date) / 2)
+        return "\\(slotOpeners[slot])，\\(dailyQuotes[index])"
     }
 
-    private var musicSubtitle: String {
+    // MARK: - Music
+
+    private var musicQuickSubtitle: String {
         guard let track = model.playback.track else {
-            return "曲库 · \\(model.musicPlayMode.title) · 可导入本机文件"
+            return "曲库 · \\(model.musicPlayMode.title)"
         }
-        if track.album.isEmpty || track.album == "本机文件" {
-            return track.artist
-        }
-        return "\\(track.artist) · \\(track.album)"
+        return (model.playback.isPlaying ? "正在播放 · " : "") + track.title
     }
 
     // MARK: - Prompts
@@ -228,14 +167,13 @@ struct WhaleHomeCanvas: View {
             }
 
             quickCard(
-                title: "今晚天气",
-                subtitle: "温度·降雨·空气",
-                icon: "cloud.sun.rain.fill",
+                title: "音乐",
+                subtitle: musicQuickSubtitle,
+                icon: "music.note",
                 tint: WhaleTheme.coral,
-                soft: WhaleTheme.amberSoft
-            ) {
-                send("查一下我所在地今晚到明天的天气。")
-            }
+                soft: WhaleTheme.amberSoft,
+                action: onOpenMusic
+            )
 
             quickCard(
                 title: "记录回顾",
@@ -300,6 +238,226 @@ struct WhaleHomeCanvas: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(title)，\(subtitle)")
+    }
+
+    // MARK: - Weather
+
+    private var locationStatus: String {
+        model.permissionsSnapshot["location"] ?? "unknown"
+    }
+
+    private var weatherCard: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            HStack(spacing: 8) {
+                Image(systemName: "cloud.sun.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.coral)
+                Text("天气详情")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                Spacer(minLength: 6)
+                if !weatherLocation.isEmpty {
+                    Text(weatherLocation)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .lineLimit(1)
+                }
+                if weatherLoading {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .tint(WhaleTheme.accent)
+                } else if locationStatus == "granted", !weatherDays.isEmpty {
+                    Button {
+                        Task { await loadWeather(force: true) }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(WhaleTheme.muted)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("刷新天气")
+                }
+            }
+
+            if locationStatus != "granted" {
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: "location.circle.fill")
+                        .font(.system(size: 28, weight: .medium))
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(WhaleTheme.coral, WhaleTheme.coral.opacity(0.12))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(locationStatus == "denied" ? "定位权限未开启" : "查看所在地的真实天气")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(WhaleTheme.ink)
+                        Text("授权后显示温度、降水和穿衣建议。没有数据时不会生成示例天气。")
+                            .font(.system(size: 11))
+                            .foregroundStyle(WhaleTheme.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 4)
+                }
+
+                Button(locationStatus == "denied" ? "去系统设置" : "开启定位并查看") {
+                    if locationStatus == "denied" {
+                        model.openSystemSettings()
+                    } else {
+                        Task {
+                            await model.requestPermission("location")
+                            if model.permissionsSnapshot["location"] == "granted" {
+                                await loadWeather(force: true)
+                            }
+                        }
+                    }
+                }
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(WhaleTheme.accent)
+                .buttonStyle(.plain)
+            } else if let weatherError {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("暂时没有取得天气数据")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
+                    Text(weatherError)
+                        .font(.system(size: 11))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button("重新查询") {
+                        Task { await loadWeather(force: true) }
+                    }
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.accent)
+                    .buttonStyle(.plain)
+                }
+            } else if let today = weatherDays.first {
+                HStack(alignment: .center, spacing: 14) {
+                    Image(systemName: today.icon)
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(WhaleTheme.coral, WhaleTheme.moon)
+                        .font(.system(size: 35, weight: .medium))
+                        .frame(width: 54, height: 54)
+                        .background(WhaleTheme.coral.opacity(0.09), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(today.dayLabel)
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .tracking(0.7)
+                            .foregroundStyle(WhaleTheme.muted)
+                        Text(today.summary)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundStyle(WhaleTheme.ink)
+                        HStack(spacing: 8) {
+                            Text(today.temperatureText)
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundStyle(WhaleTheme.ink)
+                            if let rain = today.precipitationText {
+                                Text(rain)
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(WhaleTheme.moon)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(WhaleTheme.moon.opacity(0.1), in: Capsule())
+                            }
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+
+                if !today.advice.isEmpty {
+                    Text(today.advice)
+                        .font(.system(size: 11))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if weatherDays.count > 1 {
+                    Rectangle()
+                        .fill(WhaleTheme.line)
+                        .frame(height: 0.5)
+
+                    VStack(spacing: 9) {
+                        ForEach(Array(weatherDays.dropFirst().prefix(3))) { day in
+                            HStack(spacing: 9) {
+                                Text(day.dayLabel)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(WhaleTheme.muted)
+                                    .frame(width: 48, alignment: .leading)
+                                Image(systemName: day.icon)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(WhaleTheme.coral)
+                                    .frame(width: 18)
+                                Text(day.summary)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(WhaleTheme.ink)
+                                    .lineLimit(1)
+                                Spacer(minLength: 4)
+                                if let rain = day.precipitationText {
+                                    Text(rain)
+                                        .font(.system(size: 9, weight: .medium))
+                                        .foregroundStyle(WhaleTheme.moon)
+                                }
+                                Text(day.temperatureText)
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(WhaleTheme.ink)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
+                }
+
+                HStack(spacing: 5) {
+                    Spacer()
+                    Text("Open-Meteo · 真实预报")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(WhaleTheme.muted.opacity(0.75))
+                }
+            } else {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(WhaleTheme.accent)
+                    Text("正在读取所在地天气…")
+                        .font(.system(size: 12))
+                        .foregroundStyle(WhaleTheme.muted)
+                    Spacer(minLength: 0)
+                }
+                .frame(height: 48)
+            }
+        }
+        .whaleCard(padding: 16)
+    }
+
+    private func loadWeatherIfNeeded() async {
+        guard locationStatus == "granted", weatherDays.isEmpty, !weatherLoading else { return }
+        await loadWeather(force: false)
+    }
+
+    private func loadWeather(force: Bool) async {
+        guard locationStatus == "granted" else { return }
+        guard !weatherLoading else { return }
+        if !force, !weatherDays.isEmpty { return }
+        weatherLoading = true
+        weatherError = nil
+        defer { weatherLoading = false }
+
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: Date())
+        let end = calendar.date(byAdding: .day, value: 3, to: start) ?? start.addingTimeInterval(259_200)
+        do {
+            let data = try await WeatherExecutor().query(arguments: [
+                "startAt": .string(ToolDate.iso(start)),
+                "endAt": .string(ToolDate.iso(end)),
+                "timezone": .string(TimeZone.current.identifier)
+            ])
+            let days = WeatherDaySummary.list(from: data)
+            guard !days.isEmpty else {
+                weatherError = "天气接口本次没有返回逐日预报，请稍后重试。"
+                return
+            }
+            weatherDays = days
+            weatherLocation = data.objectValue?.optionalString("locationName") ?? "当前位置"
+        } catch {
+            weatherError = error.localizedDescription
+        }
     }
 
     // MARK: - Real calendar
@@ -416,7 +574,7 @@ struct WhaleHomeCanvas: View {
     }
 
     private var todayTitle: String {
-        if todayEvents.isEmpty { return "今天先留一点空" }
+        if todayEvents.isEmpty { return "今天暂无安排" }
         return "今天还剩 \(todayEvents.count) 件事"
     }
 
