@@ -18,6 +18,7 @@ struct WhaleHomeCanvas: View {
                     resumeCard(onResumeConversation)
                 }
                 greeting
+                musicEntry
                 suggestions
                 todayCard
                 if model.isBusy {
@@ -123,6 +124,117 @@ struct WhaleHomeCanvas: View {
         }
     }
 
+    // MARK: - Music entry
+
+    private var musicEntry: some View {
+        HStack(spacing: 12) {
+            Button(action: onOpenMusic) {
+                HStack(spacing: 12) {
+                    musicCover
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(model.playback.isPlaying ? "正在播放" : "音乐")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .tracking(0.8)
+                            .foregroundStyle(WhaleTheme.accent)
+                        Text(musicHeadline)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(WhaleTheme.ink)
+                            .lineLimit(1)
+                        Text(musicSubtitle)
+                            .font(.system(size: 11))
+                            .foregroundStyle(WhaleTheme.muted)
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 4)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("打开音乐，\\(musicHeadline)")
+
+            Button {
+                Task { await model.togglePlayback() }
+            } label: {
+                Image(systemName: model.playback.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(WhaleTheme.accent, in: Circle())
+                    .shadow(color: WhaleTheme.accent.opacity(0.35), radius: 9, y: 4)
+            }
+            .buttonStyle(.plain)
+            .disabled(model.playback.track == nil || model.isMusicBusy)
+            .opacity(model.playback.track == nil ? 0.4 : 1)
+            .accessibilityLabel(model.playback.isPlaying ? "暂停音乐" : "播放音乐")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .background {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [WhaleTheme.accent.opacity(0.12), WhaleTheme.card.opacity(0.92)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+        }
+        .shadow(color: .black.opacity(0.06), radius: 12, y: 5)
+    }
+
+    private var musicCover: some View {
+        ZStack {
+            if let image = model.playback.track?.artwork {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                LinearGradient(
+                    colors: [WhaleTheme.moon.opacity(0.92), WhaleTheme.accentDeep],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                Circle()
+                    .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                    .frame(width: 34, height: 34)
+                Circle()
+                    .fill(Color.black.opacity(0.5))
+                    .frame(width: 9, height: 9)
+                Image(systemName: "music.note")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.92))
+                    .offset(x: 13, y: -12)
+            }
+        }
+        .frame(width: 54, height: 54)
+        .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.8)
+        }
+        .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
+    }
+
+    private var musicHeadline: String {
+        model.playback.track?.title ?? "打开黑胶播放器"
+    }
+
+    private var musicSubtitle: String {
+        guard let track = model.playback.track else {
+            return "曲库 · \\(model.musicPlayMode.title) · 可导入本机文件"
+        }
+        if track.album.isEmpty || track.album == "本机文件" {
+            return track.artist
+        }
+        return "\\(track.artist) · \\(track.album)"
+    }
+
     // MARK: - Prompts
 
     private var suggestions: some View {
@@ -164,13 +276,13 @@ struct WhaleHomeCanvas: View {
             }
 
             quickCard(
-                title: "音乐视听",
-                subtitle: "本机音乐",
-                icon: "music.note",
-                tint: WhaleTheme.rose,
-                soft: WhaleTheme.roseSoft
+                title: "记录回顾",
+                subtitle: "提醒·日程·操作",
+                icon: "clock.arrow.circlepath",
+                tint: WhaleTheme.moon,
+                soft: WhaleTheme.blueSoft
             ) {
-                onOpenMusic()
+                onOpenRecords()
             }
         }
     }
