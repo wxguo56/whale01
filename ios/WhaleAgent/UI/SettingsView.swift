@@ -177,6 +177,67 @@ struct SettingsView: View {
         )
     }
 
+    private var header: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("CONTROL ROOM")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .tracking(1.3)
+                    .foregroundStyle(WhaleTheme.muted)
+                Text("设置")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundStyle(WhaleTheme.ink)
+            }
+            Spacer()
+            Button(action: onBackToChat) {
+                Image(systemName: "bubble.left.and.bubble.right")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .whaleGlassCircle()
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("回到对话")
+        }
+        .padding(.top, 10)
+    }
+
+    private var profileCard: some View {
+        Button {
+            showProfileEditor = true
+        } label: {
+            HStack(spacing: 12) {
+                WhaleMarkView(size: 46)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(profileNickname.isEmpty ? "个人资料" : profileNickname)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .lineLimit(1)
+                    Text(profileBio.isEmpty ? "填写昵称和介绍，鲸鱼会更懂你" : profileBio)
+                        .font(.system(size: 11))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 8)
+
+                HStack(spacing: 7) {
+                    WhaleStatusPill(
+                        text: model.backendOnline ? "在线" : "离线",
+                        color: model.backendOnline ? WhaleTheme.success : WhaleTheme.warm
+                    )
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.muted.opacity(0.7))
+                }
+            }
+            .padding(15)
+            .background(SettingsChrome.cardBackground)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("编辑个人资料")
+    }
+
     // MARK: - Categories
 
     private var categorySection: some View {
