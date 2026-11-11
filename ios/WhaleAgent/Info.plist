@@ -83,6 +83,8 @@
   <string>用于把语音转写成文字，方便你直接说话安排事情。</string>
   <key>NSAppleMusicUsageDescription</key>
   <string>用于搜索你的音乐库并播放你选择的歌曲。</string>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>需要访问本地网络，以便连接你在同一网络下运行的 WhaleAgent 后端服务。</string>
   <key>NSAppTransportSecurity</key>
   <dict>
     <key>NSAllowsArbitraryLoads</key>
