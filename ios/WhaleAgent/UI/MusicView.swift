@@ -12,6 +12,7 @@ struct MusicView: View {
     @State private var libraryExpanded = false
     @State private var browsedAlbumId: String?
     @State private var dragOffset: CGFloat = 0
+    @State private var cardOpacity: Double = 1
     @State private var isSwitchingAlbum = false
 
     var body: some View {
@@ -179,23 +180,8 @@ struct MusicView: View {
         .padding(.top, 2)
     }
 
-    private var deckSpacing: CGFloat { 64 }
-
     private var albumDeck: some View {
-        let slots = deckSlots()
-        return ZStack {
-            ForEach(slots) { slot in
-                deckDisc(slot.album)
-                    .scaleEffect(deckScale(delta: slot.delta))
-                    .opacity(deckOpacity(delta: slot.delta))
-                    .offset(
-                        x: CGFloat(slot.delta) * deckSpacing + dragOffset,
-                        y: deckLift(delta: slot.delta)
-                    )
-                    .allowsHitTesting(false)
-                    .zIndex(1)
-            }
-
+        ZStack {
             VinylDisc(
                 artwork: displayArtwork,
                 title: displayTitle,
@@ -203,66 +189,18 @@ struct MusicView: View {
                 palette: albumColors(for: displayTitle)
             )
             .frame(width: 246, height: 246)
-            .scaleEffect(deckScale(delta: 0))
-            .opacity(deckOpacity(delta: 0))
-            .offset(x: dragOffset, y: deckLift(delta: 0))
-            .shadow(color: Color.black.opacity(0.3), radius: 20, y: 12)
+            .offset(x: dragOffset * 0.35)
+            .scaleEffect(1 - min(abs(dragOffset), 180) / 180 * 0.05)
+            .opacity(cardOpacity)
+            .shadow(color: Color.black.opacity(0.45), radius: 26, y: 16)
             .contentShape(Circle())
             .gesture(albumSwipe)
-            .zIndex(3)
 
             Tonearm(isPlaying: model.playback.isPlaying)
-                .offset(x: 84, y: -92)
-                .allowsHitTesting(false)
-                .zIndex(4)
+                .offset(x: 96, y: -34)
+                .zIndex(2)
         }
         .frame(width: 300, height: 268)
-    }
-
-    private func deckDisc(_ album: MusicAlbumItem?) -> some View {
-        VinylBody(
-            artwork: album?.artwork,
-            title: album?.title ?? "",
-            palette: albumColors(for: album?.title ?? "")
-        )
-        .frame(width: 246, height: 246)
-        .shadow(color: Color.black.opacity(0.28), radius: 16, y: 10)
-    }
-
-    private func deckEffectiveDelta(_ delta: Int) -> CGFloat {
-        CGFloat(delta) + dragOffset / deckSpacing
-    }
-
-    private func deckScale(delta: Int) -> CGFloat {
-        let eff = min(abs(deckEffectiveDelta(delta)), 2.4)
-        return 1 - eff * 0.16
-    }
-
-    private func deckOpacity(delta: Int) -> Double {
-        let eff = min(abs(deckEffectiveDelta(delta)), 2.4)
-        return max(0.06, 1 - Double(eff) * 0.46)
-    }
-
-    private func deckLift(delta: Int) -> CGFloat {
-        let eff = min(abs(deckEffectiveDelta(delta)), 2.4)
-        return eff * 10
-    }
-
-    private func deckSlots() -> [DeckSlot] {
-        let albums = model.musicAlbums
-        guard albums.count > 1,
-              let currentId = displayedAlbum?.albumId,
-              let index = albums.firstIndex(where: { $0.albumId == currentId }) else {
-            return []
-        }
-        var slots: [DeckSlot] = []
-        for magnitude in 1...2 {
-            for sign in [-1, 1] {
-                let candidate = albums[(index + sign * magnitude + albums.count * 2) % albums.count]
-                slots.append(DeckSlot(id: sign * magnitude, delta: sign * magnitude, album: candidate))
-            }
-        }
-        return slots
     }
 
     private var displayedAlbum: MusicAlbumItem? {
@@ -305,7 +243,7 @@ struct MusicView: View {
                 }
                 let dx = value.translation.width
                 let projected = dx + value.predictedEndTranslation.width
-                guard abs(dx) > abs(value.translation.height), abs(projected) > 90 else {
+                guard abs(dx) > abs(value.translation.height), abs(projected) > 60 else {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) { dragOffset = 0 }
                     return
                 }
@@ -316,13 +254,20 @@ struct MusicView: View {
     private func completeSwipe(_ step: Int) {
         guard !isSwitchingAlbum else { return }
         isSwitchingAlbum = true
-        withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
-            dragOffset = -CGFloat(step) * deckSpacing
+        withAnimation(.easeIn(duration: 0.16)) {
+            dragOffset = -CGFloat(step) * 90
+            cardOpacity = 0
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.34) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
             shiftAlbum(step)
-            dragOffset = 0
-            isSwitchingAlbum = false
+            dragOffset = CGFloat(step) * 90
+            withAnimation(.easeOut(duration: 0.26)) {
+                dragOffset = 0
+                cardOpacity = 1
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+                isSwitchingAlbum = false
+            }
         }
     }
 
@@ -784,52 +729,72 @@ struct MusicView: View {
     }
 }
 
-private struct DeckSlot: Identifiable {
-    let id: Int
-    let delta: Int
-    let album: MusicAlbumItem
-}
-
 private struct VinylBody: View {
     let artwork: UIImage?
     let title: String
     let palette: [Color]
+    var angle: Double = 0
 
     var body: some View {
+        ZStack {
+            record
+                .rotationEffect(.degrees(angle))
+            specular
+            rim
+        }
+    }
+
+    private var record: some View {
         ZStack {
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [Color(red: 0.15, green: 0.15, blue: 0.17), Color(red: 0.03, green: 0.03, blue: 0.04)],
-                        center: .center,
-                        startRadius: 8,
-                        endRadius: 250
+                        colors: [
+                            Color(red: 0.13, green: 0.13, blue: 0.15),
+                            Color(red: 0.06, green: 0.06, blue: 0.07),
+                            Color(red: 0.02, green: 0.02, blue: 0.03)
+                        ],
+                        center: UnitPoint(x: 0.34, y: 0.28),
+                        startRadius: 2,
+                        endRadius: 150
                     )
                 )
 
-            ForEach(0..<7, id: \.self) { ring in
-                Circle()
-                    .stroke(Color.white.opacity(0.05), lineWidth: 0.8)
-                    .padding(CGFloat(16 + ring * 15))
+            Canvas { context, size in
+                let center = CGPoint(x: size.width / 2, y: size.height / 2)
+                let radius = min(size.width, size.height) / 2
+                var ring = radius * 0.55
+                var step = 0
+                while ring < radius * 0.985 {
+                    let alpha = step % 6 == 0 ? 0.055 : 0.02
+                    let rect = CGRect(x: center.x - ring, y: center.y - ring, width: ring * 2, height: ring * 2)
+                    context.stroke(Path(ellipseIn: rect), with: .color(.white.opacity(alpha)), lineWidth: 0.5)
+                    ring += 1.6
+                    step += 1
+                }
             }
 
             Circle()
-                .fill(Color.white.opacity(0.05))
-                .padding(52)
+                .stroke(Color.black.opacity(0.55), lineWidth: 3)
+                .padding(46)
+                .blur(radius: 2)
 
             label
-                .frame(width: 134, height: 134)
+                .frame(width: 128, height: 128)
                 .clipShape(Circle())
                 .overlay {
-                    Circle().strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+                    Circle().strokeBorder(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.4), Color.white.opacity(0.06), Color.white.opacity(0.3)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.2
+                    )
                 }
+                .shadow(color: Color.black.opacity(0.45), radius: 5, y: 2)
 
-            Circle()
-                .fill(Color(red: 0.03, green: 0.03, blue: 0.04))
-                .frame(width: 14, height: 14)
-
-            Circle()
-                .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
+            spindle
         }
     }
 
@@ -843,10 +808,76 @@ private struct VinylBody: View {
             ZStack {
                 LinearGradient(colors: palette, startPoint: .topLeading, endPoint: .bottomTrailing)
                 Text(String(title.prefix(1)))
-                    .font(.system(size: 46, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .font(.system(size: 44, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.9))
             }
         }
+    }
+
+    private var spindle: some View {
+        Circle()
+            .fill(
+                LinearGradient(
+                    colors: [Color(white: 0.97), Color(white: 0.62), Color(white: 0.9)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .frame(width: 13, height: 13)
+            .overlay {
+                Circle().strokeBorder(Color.black.opacity(0.4), lineWidth: 0.6)
+            }
+            .overlay {
+                Circle().fill(Color.black.opacity(0.6)).frame(width: 4.5, height: 4.5)
+            }
+            .shadow(color: Color.black.opacity(0.5), radius: 2, y: 1)
+    }
+
+    private var specular: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    AngularGradient(
+                        gradient: Gradient(stops: [
+                            .init(color: .clear, location: 0.00),
+                            .init(color: .white.opacity(0.20), location: 0.075),
+                            .init(color: .clear, location: 0.17),
+                            .init(color: .clear, location: 0.50),
+                            .init(color: .white.opacity(0.12), location: 0.575),
+                            .init(color: .clear, location: 0.67)
+                        ]),
+                        center: .center
+                    )
+                )
+
+            Ellipse()
+                .fill(
+                    RadialGradient(
+                        colors: [Color.white.opacity(0.22), Color.white.opacity(0.0)],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 92
+                    )
+                )
+                .frame(width: 190, height: 116)
+                .rotationEffect(.degrees(-32))
+                .offset(x: -44, y: -56)
+                .blur(radius: 14)
+        }
+        .compositingGroup()
+        .allowsHitTesting(false)
+    }
+
+    private var rim: some View {
+        Circle()
+            .strokeBorder(
+                LinearGradient(
+                    colors: [Color.white.opacity(0.42), Color.white.opacity(0.04), Color.white.opacity(0.22)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                lineWidth: 1.4
+            )
     }
 }
 
@@ -860,12 +891,10 @@ private struct VinylDisc: View {
     @State private var ticker = Timer.publish(every: 1.0 / 24.0, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        VinylBody(artwork: artwork, title: title, palette: palette)
-            .rotationEffect(.degrees(angle))
-            .shadow(color: Color.black.opacity(0.32), radius: 22, y: 12)
+        VinylBody(artwork: artwork, title: title, palette: palette, angle: angle)
             .onReceive(ticker) { _ in
                 guard isPlaying else { return }
-                angle = (angle + 1.2).truncatingRemainder(dividingBy: 360)
+                angle = (angle + 1.0).truncatingRemainder(dividingBy: 360)
             }
     }
 }
@@ -873,52 +902,130 @@ private struct VinylDisc: View {
 private struct Tonearm: View {
     let isPlaying: Bool
 
+    private let frameHeight: CGFloat = 164
+    private let pivotY: CGFloat = 26
+
     var body: some View {
         ZStack(alignment: .top) {
-            arm
-                .rotationEffect(.degrees(isPlaying ? 24 : -14), anchor: .top)
-                .animation(.spring(response: 0.55, dampingFraction: 0.72), value: isPlaying)
+            VStack(spacing: 0) {
+                counterweight
+                    .frame(height: 26)
+                tube
+                    .frame(height: 112)
+                headshell
+                    .frame(height: 26)
+            }
+            .frame(width: 34, height: frameHeight, alignment: .top)
+            .rotationEffect(
+                .degrees(isPlaying ? 14 : -6),
+                anchor: UnitPoint(x: 0.5, y: pivotY / frameHeight)
+            )
+            .animation(.spring(response: 0.62, dampingFraction: 0.72), value: isPlaying)
 
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(white: 0.94), Color(white: 0.58), Color(white: 0.34)],
-                        center: UnitPoint(x: 0.35, y: 0.3),
-                        startRadius: 1,
-                        endRadius: 16
-                    )
-                )
-                .frame(width: 26, height: 26)
-                .overlay {
-                    Circle().strokeBorder(Color.white.opacity(0.35), lineWidth: 0.8)
-                }
-                .shadow(color: Color.black.opacity(0.35), radius: 4, y: 2)
+            base
+                .offset(y: pivotY - 17)
         }
-        .frame(width: 26, height: 26, alignment: .top)
+        .frame(width: 34, height: frameHeight, alignment: .top)
+        .shadow(color: Color.black.opacity(0.4), radius: 6, y: 3)
     }
 
-    private var arm: some View {
-        VStack(spacing: -2) {
-            Capsule()
+    private var counterweight: some View {
+        Capsule(style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: [Color(white: 0.22), Color(white: 0.64), Color(white: 0.28), Color(white: 0.56)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .frame(width: 20)
+            .overlay(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.35))
+                    .frame(width: 1.6)
+                    .padding(.vertical, 5)
+                    .padding(.leading, 5)
+            }
+            .overlay {
+                Capsule().strokeBorder(Color.black.opacity(0.45), lineWidth: 0.6)
+            }
+    }
+
+    private var tube: some View {
+        Capsule(style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: [Color(white: 0.98), Color(white: 0.70), Color(white: 0.36), Color(white: 0.80)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .frame(width: 6.5)
+            .overlay(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.5))
+                    .frame(width: 1.4)
+                    .padding(.leading, 1.6)
+            }
+    }
+
+    private var headshell: some View {
+        ZStack(alignment: .bottom) {
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [Color(white: 0.9), Color(white: 0.55)],
-                        startPoint: .leading,
-                        endPoint: .trailing
+                        colors: [Color(white: 0.93), Color(white: 0.58), Color(white: 0.74)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 6, height: 104)
-                .shadow(color: Color.black.opacity(0.32), radius: 3, y: 1)
-
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .fill(Color(white: 0.8))
-                .frame(width: 16, height: 20)
+                .frame(width: 17, height: 22)
                 .overlay {
-                    RoundedRectangle(cornerRadius: 3, style: .continuous)
-                        .strokeBorder(Color.black.opacity(0.28), lineWidth: 0.6)
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .strokeBorder(Color.black.opacity(0.4), lineWidth: 0.7)
+                }
+
+            Capsule()
+                .fill(Color(white: 0.20))
+                .frame(width: 2.4, height: 9)
+                .offset(y: 7)
+        }
+        .frame(width: 34, height: 26)
+    }
+
+    private var base: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [Color(white: 0.98), Color(white: 0.66), Color(white: 0.30), Color(white: 0.84)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 34, height: 34)
+                .overlay {
+                    Circle().strokeBorder(Color.black.opacity(0.5), lineWidth: 1)
+                }
+                .shadow(color: Color.black.opacity(0.5), radius: 5, y: 3)
+
+            Circle()
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.8), Color.white.opacity(0.1)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
+                .frame(width: 24, height: 24)
+
+            Circle()
+                .fill(Color(white: 0.16))
+                .frame(width: 9, height: 9)
+                .overlay {
+                    Circle().strokeBorder(Color.white.opacity(0.4), lineWidth: 0.6)
                 }
         }
-        .frame(width: 26)
-        .offset(y: 10)
     }
 }
