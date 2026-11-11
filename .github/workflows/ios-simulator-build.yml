@@ -62,7 +62,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            build | tee build.log
+            build
 
       - name: Run native unit tests
         working-directory: ios
@@ -77,12 +77,10 @@ jobs:
             -derivedDataPath build \
             test | tee test.log
 
-      - name: Upload build log
+      - name: Upload test log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-simulator-build-log
-          path: |
-            ios/build.log
-            ios/test.log
+          name: ios-simulator-test-log
+          path: ios/test.log
           if-no-files-found: warn
