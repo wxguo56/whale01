@@ -17,7 +17,7 @@ final class DirectContentClient: @unchecked Sendable {
         let requireAIKeyword: Bool
     }
 
-    private struct MarketSymbol {
+    struct MarketSymbol {
         let symbol: String
         let code: String
         let market: String
@@ -311,9 +311,11 @@ final class DirectContentClient: @unchecked Sendable {
         let (data, response) = try await session.data(for: request)
         try Self.check(response)
         guard let text = Self.decodeGBK(data) ?? String(data: data, encoding: .utf8),
-              let match = Self.capture("suggestvalue=\"([\\s\\S]*?)\"", in: text) else {
+              let captured = Self.capture("suggestvalue=\"([\\s\\S]*?)\"", in: text),
+              captured.count > 1 else {
             return []
         }
+        let match = captured[1]
         var results: [StockSearchResult] = []
         var seen = Set<String>()
         for row in match.split(separator: ";") {
@@ -341,9 +343,11 @@ final class DirectContentClient: @unchecked Sendable {
         let (data, response) = try await session.data(for: request)
         try Self.check(response)
         guard let text = Self.decodeGBK(data) ?? String(data: data, encoding: .utf8),
-              let match = Self.capture("v_hint=\"([\\s\\S]*?)\"", in: text) else {
+              let captured = Self.capture("v_hint=\"([\\s\\S]*?)\"", in: text),
+              captured.count > 1 else {
             return []
         }
+        let match = captured[1]
         var results: [StockSearchResult] = []
         var seen = Set<String>()
         for row in match.split(separator: "^") {
@@ -375,7 +379,7 @@ final class DirectContentClient: @unchecked Sendable {
 
     // MARK: - Parsing
 
-    private static func parseQuote(symbol raw: String, body: String) -> StockQuote? {
+    static func parseQuote(symbol raw: String, body: String) -> StockQuote? {
         let fields = body.components(separatedBy: "~")
         guard fields.count > 45, !fields[1].isEmpty, !fields[2].isEmpty else { return nil }
         guard let price = numberFromText(fields[3]) else { return nil }
@@ -416,7 +420,7 @@ final class DirectContentClient: @unchecked Sendable {
         return "\(String(chars[0...3]))-\(String(chars[4...5]))-\(String(chars[6...7]))T\(String(chars[8...9])):\(String(chars[10...11])):\(String(chars[12...13]))+08:00"
     }
 
-    private static func normalizeSymbol(_ input: String) -> MarketSymbol? {
+    static func normalizeSymbol(_ input: String) -> MarketSymbol? {
         let value = input.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().replacingOccurrences(of: " ", with: "")
         if let groups = capture("^(sh|sz|bj)([0-9]{6})$", in: value) { return makeSymbol(groups[1], groups[2]) }
         if let groups = capture("^([0-9]{6})\\.(sh|sz|bj)$", in: value) { return makeSymbol(groups[2], groups[1]) }
@@ -451,7 +455,7 @@ final class DirectContentClient: @unchecked Sendable {
         }
     }
 
-    private static func tag(_ name: String, in block: String) -> String {
+    static func tag(_ name: String, in block: String) -> String {
         let escaped = NSRegularExpression.escapedPattern(for: name)
         return capture("<\(escaped)(?:\\s[^>]*)?>([\\s\\S]*?)</\(escaped)>", in: block)?[1] ?? ""
     }
@@ -588,14 +592,19 @@ final class DirectContentClient: @unchecked Sendable {
         return number
     }
 
-    private static func capture(_ pattern: String, in text: String) -> [String]? {
+    static func capture(_ pattern: String, in text: String) -> [String]? {
         guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
         let range = NSRange(text.startIndex..., in: text)
         guard let match = regex.firstMatch(in: text, options: [], range: range) else { return nil }
-        return (1..<match.numberOfRanges).map { index in
-            guard let range = Range(match.range(at: index), in: text) else { return "" }
-            return String(text[range])
+        var groups = [""]
+        for index in 1..<match.numberOfRanges {
+            guard let range = Range(match.range(at: index), in: text) else {
+                groups.append("")
+                continue
+            }
+            groups.append(String(text[range]))
         }
+        return groups
     }
 
     private static func globalMatches(_ pattern: String, in text: String) -> [[String]] {

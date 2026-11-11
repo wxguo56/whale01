@@ -291,5 +291,46 @@ final class CoreTests: XCTestCase {
         XCTAssertFalse(NativeToolRouter.freeBuildUnavailableTools.contains("get_weather"))
         XCTAssertTrue(NativeToolRouter.freeBuildUnavailableTools.contains("get_activity_summary"))
     }
-}
+    func testDirectContentCaptureUsesOneBasedGroups() {
+        let groups = DirectContentClient.capture("^(sh|sz)([0-9]{6})$", in: "sh600519")
+        XCTAssertEqual(groups?[1], "sh")
+        XCTAssertEqual(groups?[2], "600519")
+    }
 
+    func testDirectContentTagReturnsTextWithoutCrashing() {
+        let block = "<item><title>AI 芯片新进展</title><link>https://example.com/a</link></item>"
+        XCTAssertEqual(DirectContentClient.tag("title", in: block), "AI 芯片新进展")
+    }
+
+    func testDirectContentNormalizesSymbols() {
+        XCTAssertEqual(DirectContentClient.normalizeSymbol("sh600519")?.symbol, "sh600519")
+        XCTAssertEqual(DirectContentClient.normalizeSymbol("600519.SH")?.symbol, "sh600519")
+        XCTAssertEqual(DirectContentClient.normalizeSymbol("600519")?.symbol, "sh600519")
+        XCTAssertEqual(DirectContentClient.normalizeSymbol("000001")?.symbol, "sz000001")
+    }
+    func testDirectContentParsesTencentQuote() {
+        var fields = [String](repeating: "0", count: 50)
+        fields[1] = "贵州茅台"
+        fields[2] = "600519"
+        fields[3] = "1402.30"
+        fields[4] = "1439.00"
+        fields[5] = "1435.00"
+        fields[6] = "1000"
+        fields[30] = "20261111161439"
+        fields[31] = "-36.70"
+        fields[32] = "-2.55"
+        fields[33] = "1440.00"
+        fields[34] = "1399.00"
+        fields[37] = "12345"
+        fields[38] = "0.5"
+        fields[39] = "20.1"
+        fields[44] = "17600"
+        fields[45] = "20000"
+        let quote = DirectContentClient.parseQuote(symbol: "sh600519", body: fields.joined(separator: "~"))
+        XCTAssertEqual(quote?.name, "贵州茅台")
+        XCTAssertEqual(quote?.price, 1402.30)
+        XCTAssertEqual(quote?.changePercent, -2.55)
+        XCTAssertEqual(quote?.marketCap, 2_000_000_000_000)
+        XCTAssertNil(DirectContentClient.parseQuote(symbol: "sh600519", body: "1~2~3"))
+    }
+}
