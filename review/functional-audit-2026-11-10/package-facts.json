@@ -1,0 +1,52 @@
+{
+  "version": "0.5.0",
+  "build": "35",
+  "bundleID": "com.whale01.whaleagent.alt",
+  "bytes": 1215661,
+  "sha256": "b91b8d3aa4d239674c00da567a209295fe66eed254fc98432c427c3d1adf6d70",
+  "toolManifestCount": 25,
+  "directCallableCount": 24,
+  "toolNames": [
+    "get_weather",
+    "list_calendar_events",
+    "create_calendar_event",
+    "create_reminder",
+    "get_activity_summary",
+    "search_places",
+    "open_navigation",
+    "summarize_shared_content",
+    "prepare_message",
+    "search_music_library",
+    "play_music",
+    "pause_music",
+    "resume_music",
+    "skip_music_track",
+    "get_playback_state",
+    "list_reminders",
+    "update_reminder",
+    "delete_reminder",
+    "update_calendar_event",
+    "delete_calendar_event",
+    "list_memory",
+    "set_memory",
+    "delete_memory",
+    "search_web",
+    "fetch_web_content"
+  ],
+  "deepseekConfigured": true,
+  "xfyunConfigFlags": {
+    "XFYUN_APP_ID": false,
+    "XFYUN_API_KEY": false,
+    "XFYUN_API_SECRET": false
+  },
+  "extensions": [
+    "WhaleAgentShare.appex"
+  ],
+  "backgroundModes": [
+    "audio"
+  ],
+  "contractCount": 25,
+  "contractNamesEqualPackage": true,
+  "nativeCount": 25,
+  "nativeNamesEqualPackage": true
+}

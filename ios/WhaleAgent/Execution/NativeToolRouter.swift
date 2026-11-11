@@ -14,6 +14,7 @@ final class NativeToolRouter {
     private let web: WebContentExecutor
     private let merchantPrice: MerchantPriceExecutor
     private let ledger: OperationLedger
+    private let discover = DiscoverClient()
 
     private static let executionTimeout: Double = 20
 
@@ -577,6 +578,104 @@ final class NativeToolRouter {
         ])
     }
 
+    private func addWatchlist(_ arguments: [String: JSONValue]) async throws -> JSONValue {
+        let query = try arguments.requiredString("query")
+        let stock = try await resolveStock(query)
+        let added = WatchlistStore.shared.add(stock.symbol)
+        return watchlistPayload(stock: stock, added: added, removed: false)
+    }
+
+    private func removeWatchlist(_ arguments: [String: JSONValue]) async throws -> JSONValue {
+        let query = try arguments.requiredString("query")
+        let stock = try await resolveStock(query)
+        let removed = WatchlistStore.shared.remove(stock.symbol)
+        return watchlistPayload(stock: stock, added: false, removed: removed)
+    }
+
+    private func listWatchlist() async throws -> JSONValue {
+        let symbols = WatchlistStore.shared.symbols
+        var names: [String: (name: String, code: String, market: String)] = [:]
+        if !symbols.isEmpty, let response = try? await discover.quotes(symbols: symbols) {
+            for quote in response.quotes {
+                names[quote.symbol] = (quote.name, quote.code, quote.market)
+            }
+        }
+        let items = symbols.map { symbol -> JSONValue in
+            let info = names[symbol]
+            return .object([
+                "symbol": .string(symbol),
+                "name": .string(info?.name ?? symbol),
+                "code": .string(info?.code ?? symbol),
+                "market": .string(info?.market ?? ""),
+                "resolved": .bool(info != nil)
+            ])
+        }
+        return .object([
+            "count": .number(Double(symbols.count)),
+            "items": .array(items),
+            "source": .string("本机自选列表")
+        ])
+    }
+
+    private func resolveStock(_ raw: String) async throws -> StockSearchResult {
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else {
+            throw ToolExecutionError(code: "invalid_arguments", message: "股票名称或代码不能为空")
+        }
+        if text.range(of: "^(sh|sz|bj)[0-9]{6}$", options: [.regularExpression, .caseInsensitive]) != nil {
+            let response = try await discover.quotes(symbols: [text.lowercased()])
+            if let quote = response.quotes.first {
+                return StockSearchResult(
+                    symbol: quote.symbol,
+                    code: quote.code,
+                    name: quote.name,
+                    market: quote.market,
+                    type: "stock"
+                )
+            }
+            throw ToolExecutionError(code: "symbol_not_found", message: "没有取到 \(text) 的行情，无法确认这只股票，本次未写入自选")
+        }
+
+        let response = try await discover.search(text)
+        if response.results.isEmpty {
+            throw ToolExecutionError(code: "stock_not_found", message: "没有找到「\(text)」对应的 A 股或指数，本次未写入自选")
+        }
+        let exact = response.results.filter { $0.name == text || $0.code == text }
+        if exact.count == 1 { return exact[0] }
+        if response.results.count == 1 { return response.results[0] }
+        let candidates = response.results.prefix(5)
+            .map { "\($0.name)（\($0.symbol)）" }
+            .joined(separator: "、")
+        throw ToolExecutionError(
+            code: "ambiguous_stock",
+            message: "「\(text)」匹配到多只股票：\(candidates)。请先让用户确认具体哪一只，本次未写入自选"
+        )
+    }
+
+    private func watchlistPayload(stock: StockSearchResult, added: Bool, removed: Bool) -> JSONValue {
+        let symbols = WatchlistStore.shared.symbols
+        let message: String
+        if removed {
+            message = "已从本机自选移除 \(stock.name)"
+        } else if added {
+            message = "已将 \(stock.name) 加入本机自选"
+        } else {
+            message = "\(stock.name) 已在本机自选中，没有重复写入"
+        }
+        return .object([
+            "symbol": .string(stock.symbol),
+            "code": .string(stock.code),
+            "name": .string(stock.name),
+            "market": .string(stock.market),
+            "added": .bool(added),
+            "removed": .bool(removed),
+            "watchlistCount": .number(Double(symbols.count)),
+            "watchlist": .array(symbols.map { .string($0) }),
+            "message": .string(message),
+            "source": .string("本机自选；行情仍需后端公开延迟报价")
+        ])
+    }
+
     private func route(_ pending: PendingTool) async throws -> JSONValue {
         switch pending.tool {
         case "create_reminder":
@@ -643,6 +742,12 @@ final class NativeToolRouter {
             )
         case "search_merchant_prices":
             return try await merchantPrice.search(arguments: pending.arguments)
+        case "add_to_watchlist":
+            return try await addWatchlist(pending.arguments)
+        case "remove_from_watchlist":
+            return try await removeWatchlist(pending.arguments)
+        case "list_watchlist":
+            return try await listWatchlist()
         case "summarize_shared_content":
             throw ToolExecutionError(
                 code: "use_share_entry",

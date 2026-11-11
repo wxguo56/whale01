@@ -593,6 +593,134 @@
           "limit": { "type": "integer", "minimum": 1, "maximum": 12 }
         }
       }
+    },
+    {
+      "name": "get_tech_news",
+      "version": "1.0",
+      "skill": "research",
+      "description": "读取真实的 AI 科技或时事新闻列表。只返回标题、摘要、来源、发布时间和原文链接；不得把列表当成全文。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["channel"],
+        "additionalProperties": false,
+        "properties": {
+          "channel": { "type": "string", "enum": ["ai", "headline"] },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 12 }
+        }
+      }
+    },
+    {
+      "name": "get_stock_quote",
+      "version": "1.0",
+      "skill": "research",
+      "description": "查询真实 A 股或指数行情。query 可以是股票名称、代码或多个代码。返回延迟约 15 分钟的公开行情、来源和最近成交时间；不得据此给出投资建议或假装实时。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["query"],
+        "additionalProperties": false,
+        "properties": {
+          "query": { "type": "string", "minLength": 1, "maxLength": 100 }
+        }
+      }
+    },
+    {
+      "name": "search_stock",
+      "version": "1.0",
+      "skill": "research",
+      "description": "按名称或代码搜索真实 A 股与指数，返回代码、市场和名称。搜索结果不是行情，报价必须再调用 get_stock_quote。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["query"],
+        "additionalProperties": false,
+        "properties": {
+          "query": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 10 }
+        }
+      }
+    },
+    {
+      "name": "get_stock_kline",
+      "version": "1.0",
+      "skill": "research",
+      "description": "读取真实 A 股日线历史，返回日期、开高低收、成交量与成交额。数据为公开延迟行情，不是实时 Level-2。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["query"],
+        "additionalProperties": false,
+        "properties": {
+          "query": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "days": { "type": "integer", "minimum": 5, "maximum": 500 }
+        }
+      }
+    },
+    {
+      "name": "get_stock_intraday",
+      "version": "1.0",
+      "skill": "research",
+      "description": "读取真实 A 股当日分时价格序列。数据来自公开延迟行情，用于描述当日走势，不构成实时交易依据。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["query"],
+        "additionalProperties": false,
+        "properties": {
+          "query": { "type": "string", "minLength": 1, "maxLength": 100 }
+        }
+      }
+    },
+    {
+      "name": "add_to_watchlist",
+      "version": "1.0",
+      "skill": "research",
+      "description": "把确认过的 A 股或指数加入手机本机自选列表。query 可以是名称或代码；匹配到多只时必须先让用户确认，不能猜测。只写本机自选，不修改券商账户。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["query"],
+        "additionalProperties": false,
+        "properties": {
+          "query": { "type": "string", "minLength": 1, "maxLength": 80 }
+        }
+      }
+    },
+    {
+      "name": "remove_from_watchlist",
+      "version": "1.0",
+      "skill": "research",
+      "description": "从手机本机自选列表移除一只 A 股或指数。query 可以是名称或代码。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["query"],
+        "additionalProperties": false,
+        "properties": {
+          "query": { "type": "string", "minLength": 1, "maxLength": 80 }
+        }
+      }
+    },
+    {
+      "name": "list_watchlist",
+      "version": "1.0",
+      "skill": "research",
+      "description": "读取手机本机自选列表。返回代码、名称和市场；行情需要再调用 get_stock_quote。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
     }
   ]
 }

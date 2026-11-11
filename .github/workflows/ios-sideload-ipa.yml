@@ -39,7 +39,7 @@ jobs:
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -archivePath build/WhaleAgent.xcarchive \
-          MARKETING_VERSION=0.5.0 \
+          MARKETING_VERSION=0.5.1 \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             WHALE_API_TOKEN="${{ secrets.WHALE_API_TOKEN }}" \
             DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
@@ -62,20 +62,20 @@ jobs:
 
       - name: Encrypt IPA for public storage
         working-directory: ios
-        env:
-          IPA_PASS: ${{ secrets.IPA_PASS }}
         run: |
           set -e
-          if [ -z "$IPA_PASS" ]; then
-            echo "::error::Missing IPA_PASS secret. Refusing to upload a plaintext IPA."
-            exit 1
-          fi
-          openssl enc -aes-256-cbc -pbkdf2 -salt \
+          PASS_FILE="$(mktemp)"
+          openssl rand -hex 32 > "$PASS_FILE"
+          openssl enc -aes-256-cbc -pbkdf2 -salt -md sha256 \
             -in build/WhaleAgent-Sideload.ipa \
             -out build/WhaleAgent-Sideload.ipa.enc \
-            -pass env:IPA_PASS
+            -pass "file:$PASS_FILE"
+          openssl rsautl -encrypt -pubin -inkey ../.github/ipa-public.pem -pkcs \
+            -in "$PASS_FILE" \
+            -out build/WhaleAgent-pass.enc
+          rm -f "$PASS_FILE"
           shasum -a 256 build/WhaleAgent-Sideload.ipa > build/WhaleAgent-Sideload.sha256
-          ls -l build/WhaleAgent-Sideload.ipa.enc
+          ls -l build/WhaleAgent-Sideload.ipa.enc build/WhaleAgent-pass.enc
 
       - name: Verify binary architectures
         working-directory: ios
@@ -88,6 +88,7 @@ jobs:
           name: WhaleAgent-Sideload-ipa-enc
           path: |
             ios/build/WhaleAgent-Sideload.ipa.enc
+            ios/build/WhaleAgent-pass.enc
             ios/build/WhaleAgent-Sideload.sha256
 
       - name: Show build identity

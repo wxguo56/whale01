@@ -1,0 +1,16 @@
+import fs from 'node:fs';
+import path from 'node:path';
+const root='F:/VS_t/代号鲸鱼01',web=path.join(root,'web/data-routing-2026-11-10'),review=path.join(root,'review/data-routing-2026-11-10');
+let html=fs.readFileSync(path.join(web,'index.html'),'utf8');
+const css=fs.readFileSync(path.join(web,'styles.css'),'utf8');
+const raw=fs.readFileSync(path.join(web,'data.json'),'utf8'),d=JSON.parse(raw);
+const data='window.ROUTING_DATA = '+JSON.stringify(d).replaceAll('<','\\u003c')+';';
+const app=fs.readFileSync(path.join(web,'app.js'),'utf8');
+fs.writeFileSync(path.join(web,'data.js'),data);
+html=html.replace('<link rel="stylesheet" href="styles.css">','<style>'+css+'</style>').replace('<script src="data.js" defer></script>','').replace('<script src="app.js" defer></script>','').replace('</body>','<script>'+data+'</script><script>'+app+'</script></body>');
+html=html.replace('href="standalone.html" download','href="#top"').replace('下载单文件 HTML','已是单文件 HTML');
+html=html.replace('href="data.json" download',`href="data:application/json;base64,${Buffer.from(raw).toString('base64')}" download="data.json"`);
+fs.writeFileSync(path.join(web,'standalone.html'),html);
+const md=[`# 鲸鱼 App 数据路径说明`,``, `快照：${d.meta.snapshot}；源码 ${d.meta.sourceCommit}。`, ``, `DeepSeek是服务，Wi-Fi/移动数据是传输通道，本机/供应商是执行与数据来源。它们不是互斥选项。`, ``, `默认local指手机直连远端deepseek-chat；cloud指手机先连接自有后端，再由后端进入模型。当前没有手机本地大语言模型的代码路径。`, ``, `当前天气源为Open-Meteo；网页为Bing与目标网站；地图为Apple；语音识别按讯飞配置或系统分支；直接音乐/日程界面有不经模型的本机入口。`, ``, `图文报告：http://127.0.0.1:8088/data-routing-2026-11-10/index.html`, ``, `单文件：${web}/standalone.html。`, ``, `## 核验范围`, ``, d.meta.scope, ``, `没有发出新的模型、搜索、天气或语音服务测试请求。本报告不把源码路径当作当前手机抓包/验收结果。`, ``, `## 功能逐项`, ``, ...d.rows.flatMap(r=>[`### ${r.id} ${r.name}`, ``, `对话入口：${r.chat}`, ``, `直接入口：${r.direct}`, ``, `来源：${r.provider}`, ``, `网络：${r.network}`, ``, `离线：${r.offline}`, ``, `模型数据：${r.payload}`, ``, `依据：${r.evidence}`, ``]), `## 数据说明`, ``, `当前LocalAgentEngine统一编码ToolResultPayload作为模型工具结果，未看到通用客户端脱敏层。位置和天气结果可能含坐标，日历/提醒、曲目、联系人草稿可含相关内容。偏好注入提示词；部分历史再使用。`, ``, `原始媒体与提取文字要区分：当前麦克风音频走讯飞/系统Speech；DeepSeek接受转写文字；音乐音频不作为输入；OCR本机处理后当前导入流程自动发送前5000字供总结。`, ``];
+fs.writeFileSync(path.join(review,'数据路径说明.md'),md.join('\n'));
+console.log(JSON.stringify({items:d.rows.length,standaloneBytes:Buffer.byteLength(html),externalScripts:(html.match(/<script[^>]+src=/g)||[]).length,externalStyles:(html.match(/<link[^>]+stylesheet/g)||[]).length}));

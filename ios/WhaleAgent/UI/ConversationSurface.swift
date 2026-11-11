@@ -13,6 +13,7 @@ struct ConversationSurface: View {
     let onOpenRecords: () -> Void
     let onOpenMusic: () -> Void
     let onOpenTodo: () -> Void
+    let onOpenDiscover: (DiscoverChannel) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -36,7 +37,8 @@ struct ConversationSurface: View {
             bottomInset: bottomInset,
             onOpenRecords: onOpenRecords,
             onOpenMusic: onOpenMusic,
-            onOpenTodo: onOpenTodo
+            onOpenTodo: onOpenTodo,
+            onOpenDiscover: onOpenDiscover
         )
     }
 

@@ -9,6 +9,8 @@ struct RootView: View {
     @State private var page: AppTab? = .conversation
     @State private var showMusic = false
     @State private var showRecords = false
+    @State private var showDiscover = false
+    @State private var discoverChannel: DiscoverChannel = .ai
     @State private var settingsDetailOpen = false
     @State private var contentBottom: CGFloat = 0
     @AppStorage("whale.appearance") private var appearance = "system"
@@ -26,7 +28,8 @@ struct RootView: View {
                             onOpenRecords: { showRecords = true },
                             onOpenSettings: { go(.settings) },
                             onOpenMusic: { showMusic = true },
-                            onOpenTodo: { go(.records) }
+                            onOpenTodo: { go(.records) },
+                            onOpenDiscover: openDiscover
                         )
                         .frame(width: proxy.size.width, height: proxy.size.height)
                         .id(AppTab.conversation)
@@ -92,6 +95,9 @@ struct RootView: View {
         .sheet(isPresented: $showRecords) {
             RecordsView(model: model, showsClose: true, onClose: { showRecords = false })
         }
+        .fullScreenCover(isPresented: $showDiscover) {
+            DiscoverView(initialChannel: discoverChannel)
+        }
         .animation(.easeInOut(duration: 0.2), value: model.playback.track?.trackId)
         .preferredColorScheme(colorScheme)
         .task {
@@ -137,6 +143,11 @@ struct RootView: View {
                 page = tab
             }
         }
+    }
+
+    private func openDiscover(_ channel: DiscoverChannel) {
+        discoverChannel = channel
+        showDiscover = true
     }
 
     private var colorScheme: ColorScheme? {

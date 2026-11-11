@@ -11,7 +11,9 @@ Always overwrites C:\Users\<user>\WhaleAgent-Sideload.ipa and its .sha256 sideca
 param(
     [long]$RunId = 0,
     [string]$Repo = "wxguo56/whale01",
-    [string]$Destination = (Join-Path $env:USERPROFILE "WhaleAgent-Sideload.ipa")
+    [string]$Destination = (Join-Path $env:USERPROFILE "WhaleAgent-Sideload.ipa"),
+    [string]$IpaPass = $env:IPA_PASS,
+    [string]$PrivateKeyPath = (Join-Path $env:USERPROFILE ".whale\ipa-private.pem")
 )
 
 $ErrorActionPreference = "Stop"
@@ -39,8 +41,13 @@ if ($RunId -eq 0) {
 }
 
 $artifacts = (Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/actions/runs/$RunId/artifacts" -Headers $headers).artifacts
-$artifact = $artifacts | Where-Object { $_.name -eq "WhaleAgent-Sideload-ipa" } | Select-Object -First 1
-if (-not $artifact) { throw "Run $RunId has no WhaleAgent-Sideload-ipa artifact." }
+$artifact = $artifacts | Where-Object { $_.name -eq "WhaleAgent-Sideload-ipa-enc" } | Select-Object -First 1
+$encrypted = $true
+if (-not $artifact) {
+    $artifact = $artifacts | Where-Object { $_.name -eq "WhaleAgent-Sideload-ipa" } | Select-Object -First 1
+    $encrypted = $false
+}
+if (-not $artifact) { throw "Run $RunId has no WhaleAgent-Sideload IPA artifact." }
 
 $work = Join-Path $env:TEMP ("whale-publish-" + [Guid]::NewGuid().ToString("N").Substring(0, 8))
 New-Item -ItemType Directory -Force -Path $work | Out-Null
@@ -49,7 +56,53 @@ $zip = Join-Path $work "ipa.zip"
 Invoke-WebRequest -Uri "https://api.github.com/repos/$Repo/actions/artifacts/$($artifact.id)/zip" -Headers $headers -OutFile $zip
 Expand-Archive -Path $zip -DestinationPath $work -Force
 $ipa = Get-ChildItem -Path $work -Recurse -Filter "WhaleAgent-Sideload.ipa" | Select-Object -First 1
-if (-not $ipa) { throw "Artifact did not contain WhaleAgent-Sideload.ipa." }
+if (-not $ipa) {
+    $enc = Get-ChildItem -Path $work -Recurse -Filter "WhaleAgent-Sideload.ipa.enc" | Select-Object -First 1
+    if (-not $enc) { throw "Artifact did not contain a usable IPA or encrypted IPA." }
+    if (-not $encrypted) { throw "Found an encrypted IPA in an unexpected artifact." }
+    if (-not $IpaPass) {
+        $wrapped = Get-ChildItem -Path $work -Recurse -Filter "WhaleAgent-pass.enc" | Select-Object -First 1
+        if ($wrapped -and (Test-Path -LiteralPath $PrivateKeyPath)) {
+            $rsa = [System.Security.Cryptography.RSA]::Create()
+            $rsa.ImportFromPem((Get-Content -LiteralPath $PrivateKeyPath -Raw))
+            $passBytes = $rsa.Decrypt(
+                [System.IO.File]::ReadAllBytes($wrapped.FullName),
+                [System.Security.Cryptography.RSAEncryptionPadding]::Pkcs1
+            )
+            $rsa.Dispose()
+            $IpaPass = [System.Text.Encoding]::UTF8.GetString($passBytes).Trim()
+        }
+    }
+    if (-not $IpaPass) { throw "Artifact is encrypted. Provide -IpaPass, set IPA_PASS, or place the RSA private key at $PrivateKeyPath." }
+
+    # OpenSSL-compatible: "Salted__" + 8-byte salt, AES-256-CBC, PBKDF2-HMAC-SHA256, 10000 rounds.
+    $raw = [System.IO.File]::ReadAllBytes($enc.FullName)
+    $magic = [System.Text.Encoding]::ASCII.GetString($raw, 0, 8)
+    if ($magic -ne "Salted__") { throw "Encrypted IPA is not in OpenSSL salted format." }
+    $salt = $raw[8..15]
+    $cipherLength = $raw.Length - 16
+    $kdf = [System.Security.Cryptography.Rfc2898DeriveBytes]::new(
+        $IpaPass,
+        $salt,
+        10000,
+        [System.Security.Cryptography.HashAlgorithmName]::SHA256
+    )
+    $key = $kdf.GetBytes(32)
+    $iv = $kdf.GetBytes(16)
+    $aes = [System.Security.Cryptography.Aes]::Create()
+    $aes.Mode = [System.Security.Cryptography.CipherMode]::CBC
+    $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
+    $aes.Key = $key
+    $aes.IV = $iv
+    $decryptor = $aes.CreateDecryptor()
+    $plain = $decryptor.TransformFinalBlock($raw, 16, $cipherLength)
+    $ipaPath = Join-Path $work "WhaleAgent-Sideload.ipa"
+    [System.IO.File]::WriteAllBytes($ipaPath, $plain)
+    $aes.Dispose()
+    $kdf.Dispose()
+    $ipa = Get-Item -LiteralPath $ipaPath
+    Write-Host "decrypted IPA_PASS artifact"
+}
 
 $destinationDir = Split-Path -Parent $Destination
 New-Item -ItemType Directory -Force -Path $destinationDir | Out-Null

@@ -51,6 +51,7 @@ export class Agent {
     adapter,
     registry,
     executor,
+    serverExecutor = null,
     operationLog,
     caps,
     contractVersion = "1.0",
@@ -63,6 +64,7 @@ export class Agent {
     this.adapter = adapter;
     this.registry = registry;
     this.executor = executor;
+    this.serverExecutor = serverExecutor;
     this.operationLog = operationLog;
     this.caps = caps;
     this.contractVersion = contractVersion;
@@ -631,7 +633,8 @@ export class Agent {
       const previous = this.operationLog.get(item.operationId);
       let result;
 
-      if (this.executionMode !== "mock" && !isDeviceTool(item.tool.name)) {
+      const runsOnServer = this.executionMode !== "mock" && !isDeviceTool(item.tool.name);
+      if (runsOnServer && !this.serverExecutor) {
         result = {
           status: "unsupported",
           data: null,
@@ -658,7 +661,8 @@ export class Agent {
           arguments: item.args
         });
         try {
-          result = await this.executor.execute({
+          const executor = runsOnServer ? this.serverExecutor : this.executor;
+          result = await executor.execute({
             tool: item.tool.name,
             arguments: item.args,
             operationId: item.operationId,

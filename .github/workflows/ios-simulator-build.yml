@@ -55,7 +55,7 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
-          MARKETING_VERSION=0.5.0 \
+          MARKETING_VERSION=0.5.1 \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             WHALE_API_TOKEN="${{ secrets.WHALE_API_TOKEN }}" \
             DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \

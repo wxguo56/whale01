@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#050c0b">
+<title>鲸鱼 · 资讯与行情 UI 方案</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="whaleGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7cf4df"/><stop offset="1" stop-color="#5b9fe8"/></linearGradient>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.6" cy="10.6" r="6.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15.2 15.2 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.4 2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8L12 3.4Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="8.4" y="3" width="7.2" height="11.2" rx="3.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5.6 11.5a6.4 6.4 0 0 0 12.8 0M12 18v3M9 21h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M4.5 11.2 20 4l-5.1 16-3.2-6.4-7.2-2.4Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m11.7 13.6 4.4-4.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" fill="currentColor"/><path d="m18.5 15 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z" fill="currentColor"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.4V12l3 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.8" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 12h17M12 3.2c2.2 2.5 3.4 5.5 3.4 8.8S14.2 18.3 12 20.8c-2.2-2.5-3.4-5.5-3.4-8.8S9.8 5.7 12 3.2Z" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V3M7.5 7.5 12 3l4.5 4.5M5 13v6.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2 1-4.4A7.5 7.5 0 1 1 20 11.5Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h8M16 7h4M4 17h4M12 17h8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="14" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="17" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M3.5 9.2a13.5 13.5 0 0 1 17 0M6.5 12.7a9 9 0 0 1 11 0M9.6 16.1a4.4 4.4 0 0 1 4.8 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="19.2" r="1.1" fill="currentColor"/></symbol>
+    <symbol id="i-signal" viewBox="0 0 24 24"><path d="M4 18v-3M9 18v-6M14 18V8M19 18V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="page-head"><span><b>WHALE AGENT</b> · UI PROPOSAL 35</span><span>DISCOVER · NEWS &amp; MARKET · 2026.11</span></div>
+
+<main class="stage">
+  <section class="intro">
+    <div class="kicker">DISCOVER / V1</div>
+    <h1>把 AI 科技、时事和<br><span>A 股</span> 装进鲸鱼的一天</h1>
+    <p>不改三个主入口。首页加两张轻卡片，点开进入全屏「发现」；资讯和行情共用深海玻璃层级，说一句话也能直达。</p>
+    <div class="principle"><i>01</i><div><b>首页只放两张卡</b><small>AI 今日头条 + 自选股快照，不把首页变成门户。</small></div></div>
+    <div class="principle"><i>02</i><div><b>一个发现页，三个频道</b><small>AI 科技 / 时事 / 行情，左右切换，不新增底部 Tab。</small></div></div>
+    <div class="principle"><i>03</i><div><b>点卡片直接进详情</b><small>新闻跳原文，股票进 K 线；返回手势始终可用。</small></div></div>
+    <div class="principle"><i>04</i><div><b>真实口径常驻</b><small>来源、时间、延迟状态不省略；演示数据明确标注。</small></div></div>
+  </section>
+
+  <section class="phone-shell" aria-label="iPhone 交互原型">
+    <div class="phone">
+      <div class="dynamic-island"></div>
+      <div class="statusbar"><span>9:41</span><span class="status-icons"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><span class="battery"></span></span></div>
+
+      <section class="screen home active" id="screen-home">
+        <div class="home-body">
+          <div class="top-row">
+            <div class="brand-mark">
+              <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 23.2c3 6.6 10.8 9.5 17.5 5.9 5-2.7 7.2-8 6.2-12.9l5 4 1.5-7.8-5.4 2.7C27.5 8.4 18.8 6.6 12 11.5 8 14.3 5.8 18.3 5 23.2Z" fill="url(#whaleGrad)"/><circle cx="15.2" cy="17.2" r="1.7" fill="#04211e"/><path d="M12 10c-2-2-2-4.8-.2-6M18 8.3c-1.4-2-1-4.6.9-5.7" fill="none" stroke="#62ead6" stroke-width="2" stroke-linecap="round"/></svg>
+            </div>
+            <div class="brand"><div class="brand-name"><b>鲸鱼</b><span class="beta">BETA</span></div><div class="status-line"><i></i>在线 · 本机直连</div></div>
+            <button class="icon-btn" aria-label="搜索"><svg><use href="#i-search"/></svg></button>
+            <button class="icon-btn" aria-label="设置"><svg><use href="#i-settings"/></svg></button>
+          </div>
+
+          <div class="greeting"><h2>下午好，<span>今天想先看点什么？</span></h2><p>可以不输入，直接说「今天有什么 AI 新闻」。</p></div>
+
+          <button class="feature-card ai-card" data-action="ai">
+            <div class="card-kicker"><span class="label"><svg><use href="#i-spark"/></svg>今日 AI</span><span class="demo-tag">演示数据</span></div>
+            <div class="ai-title">DeepSeek 新一代推理模型开放测试，代码与数学能力再提升</div>
+            <div class="ai-meta"><span>机器之心</span><i></i><span>12 分钟前</span><i></i><span>大模型</span></div>
+            <div class="card-foot"><span>今天已收录 8 条</span><span class="go">进入发现 <svg><use href="#i-arrow"/></svg></span></div>
+          </button>
+
+          <button class="feature-card market-card" data-action="market">
+            <div class="card-kicker"><span class="label" style="color:var(--moon)"><svg><use href="#i-list"/></svg>A 股自选</span><span class="demo-tag">延迟 15 分钟</span></div>
+            <div class="mini-row"><div class="mini-name"><b>贵州茅台</b><small>600519 · SH</small></div><div class="mini-quote"><b>1,682.40</b><span class="up">+1.24%</span></div></div>
+            <div class="mini-row"><div class="mini-name"><b>宁德时代</b><small>300750 · SZ</small></div><div class="mini-quote"><b>268.15</b><span class="down">-0.38%</span></div></div>
+            <div class="card-foot"><span>上证 3,412.56 <span class="up">+0.62%</span></span><span class="go">查看行情 <svg><use href="#i-arrow"/></svg></span></div>
+          </button>
+
+          <div class="quick-row"><div class="quick"><svg><use href="#i-list"/></svg>待办</div><div class="quick"><svg><use href="#i-clock"/></svg>记录</div><div class="quick"><svg><use href="#i-settings"/></svg>设置</div></div>
+        </div>
+
+        <div class="composer"><span class="hint">跟鲸鱼说：今天有什么 AI 新闻？</span><button class="mic" aria-label="语音输入"><svg><use href="#i-mic"/></svg></button><button class="send" aria-label="发送"><svg><use href="#i-send"/></svg></button></div>
+        <nav class="tabbar" aria-label="主导航"><button class="tab active"><svg><use href="#i-chat"/></svg>对话</button><button class="tab"><svg><use href="#i-list"/></svg>待办</button><button class="tab"><svg><use href="#i-settings"/></svg>设置</button></nav>
+      </section>
+
+      <section class="screen discover" id="screen-discover">
+        <div class="disc-header">
+          <button class="icon-btn" data-action="back-home" aria-label="返回首页"><svg><use href="#i-back"/></svg></button>
+          <div class="disc-title">发现<span class="disc-sub">交互原型 · 示例数据，未接真实行情</span></div>
+          <button class="icon-btn" aria-label="搜索"><svg><use href="#i-search"/></svg></button>
+        </div>
+        <div class="segment" role="tablist"><button class="active" data-segment="ai" role="tab">AI 科技</button><button data-segment="headline" role="tab">时事</button><button data-segment="market" role="tab">行情</button></div>
+
+        <div class="pane active" id="pane-news" data-pane="news">
+          <div class="chips" id="news-chips"></div>
+          <div id="news-lead-slot"></div>
+          <div id="news-list"></div>
+          <div class="market-foot">内容来自公开 RSS / 授权接口，鲸鱼只保存标题、摘要、来源与原文链接。<br><b>演示数据仅用于 UI 评审，不代表真实新闻。</b></div>
+        </div>
+
+        <div class="pane" id="pane-market" data-pane="market">
+          <div class="index-strip" id="index-strip"></div>
+          <div class="search-box"><svg><use href="#i-search"/></svg>搜索股票名称或代码</div>
+          <div class="watch-head"><h3>我的自选</h3><button aria-label="添加自选"><svg><use href="#i-plus"/></svg></button></div>
+          <div id="watch-list"></div>
+          <div class="market-foot">行情延迟 15 分钟 · 数据来源：东方财富公开接口（演示）<br><b>不构成投资建议，不提供交易功能。</b></div>
+        </div>
+      </section>
+
+      <section class="screen detail" id="screen-stock">
+        <div class="detail-header"><button class="icon-btn" data-action="back-discover" aria-label="返回行情"><svg><use href="#i-back"/></svg></button><div class="title">个股详情</div><button class="icon-btn" id="star-btn" aria-label="加自选"><svg><use href="#i-star"/></svg></button></div>
+        <div class="stock-hero">
+          <div class="stock-name-row"><div><h1 id="stock-name">贵州茅台</h1><span class="stock-code" id="stock-code">600519 · SH</span></div></div>
+          <div class="stock-price"><b id="stock-price">1,682.40</b><span class="chg up" id="stock-chg">+20.60 · +1.24%</span></div>
+          <div class="delay-line"><i></i>延迟 15 分钟 · 最近成交 14:56:32</div>
+        </div>
+        <div class="chart-card"><div class="chart-tabs"><span class="active">分时</span><span>日 K</span><span>周 K</span><span class="chart-legend">前复权</span></div><div class="chart" id="stock-chart"></div><div class="chart-axis"><span>9:30</span><span>11:30</span><span>13:00</span><span>15:00</span></div></div>
+        <div class="stats" id="stock-stats"></div>
+        <div class="related"><h3>相关资讯</h3><div class="related-row"><span>白酒板块午后回暖，龙头成交额放大</span><small>第一财经</small></div><div class="related-row"><span>机构：消费复苏仍是明年主线之一</span><small>36 氪</small></div></div>
+        <div class="detail-actions"><button class="btn-primary"><svg><use href="#i-star"/></svg>已在自选</button><button class="btn-secondary"><svg><use href="#i-clock"/></svg>价格提醒</button></div>
+        <div class="disclaimer">行情数据仅供参考，可能存在延迟或缺失，不构成任何投资建议。价格提醒为下一版能力。</div>
+      </section>
+
+      <section class="screen article" id="screen-news">
+        <div class="article-head"><button class="icon-btn" data-action="back-discover" aria-label="返回发现"><svg><use href="#i-back"/></svg></button><div class="title">原文摘要</div><button class="icon-btn" aria-label="分享"><svg><use href="#i-share"/></svg></button></div>
+        <div class="article-body">
+          <h1 id="article-title">DeepSeek 新一代推理模型开放测试，代码与数学能力再提升</h1>
+          <div class="article-meta"><span id="article-source">机器之心</span><i></i><span id="article-time">12 分钟前</span><i></i><span id="article-tag">大模型</span></div>
+          <div class="article-hero" id="article-hero"></div>
+          <div class="ai-summary"><div class="label"><svg><use href="#i-spark"/></svg>鲸鱼摘要 · 基于原文</div><p id="article-summary">模型在代码生成、数学推理和长上下文任务上展示了更强的稳定性；具体开放范围和调用价格以官方公告为准。</p></div>
+          <p id="article-p1">这是一条用于 UI 评审的示例新闻。真实版本中，这里只展示抓取到的原文摘要，并保留来源、发布时间和原文链接，不转载全文。</p>
+          <p id="article-p2">新闻详情页的目标不是替代浏览器，而是让你快速判断「值不值得读」。因此首屏只保留标题、来源、摘要和关键信息，阅读原文始终是主操作。</p>
+          <div class="topic-row"><span class="topic">AI 模型</span><span class="topic">开源</span><span class="topic">推理</span></div>
+          <div class="article-actions"><button class="btn-primary"><svg><use href="#i-globe"/></svg>阅读原文</button><button class="btn-secondary"><svg><use href="#i-star"/></svg>收藏</button></div>
+          <div class="disclaimer">演示内容，不代表真实报道。正式版本会显示真实来源与发布时间。</div>
+        </div>
+      </section>
+
+      <div class="home-indicator"></div>
+    </div>
+  </section>
+
+  <aside class="notes">
+    <h2>怎么用这一版</h2>
+    <p>点击右侧场景，或直接点手机里的卡片。每个返回按钮都对应真实手势路径。</p>
+    <div class="note-block">
+      <h3>DEMO PATH</h3>
+      <button class="scenario active" data-action="home"><span class="no">01</span><span class="txt"><b>首页</b><small>两张新卡片，不改三入口</small></span><svg><use href="#i-arrow"/></svg></button>
+      <button class="scenario" data-action="ai"><span class="no">02</span><span class="txt"><b>AI 科技</b><small>焦点 + 信息流</small></span><svg><use href="#i-arrow"/></svg></button>
+      <button class="scenario" data-action="headline"><span class="no">03</span><span class="txt"><b>时事</b><small>同一套列表，不同频道</small></span><svg><use href="#i-arrow"/></svg></button>
+      <button class="scenario" data-action="market"><span class="no">04</span><span class="txt"><b>A 股行情</b><small>指数 + 自选 + 延迟标识</small></span><svg><use href="#i-arrow"/></svg></button>
+      <button class="scenario" data-action="stock"><span class="no">05</span><span class="txt"><b>个股详情</b><small>分时、统计、相关资讯</small></span><svg><use href="#i-arrow"/></svg></button>
+      <button class="scenario" data-action="article"><span class="no">06</span><span class="txt"><b>新闻详情</b><small>摘要、来源、阅读原文</small></span><svg><use href="#i-arrow"/></svg></button>
+    </div>
+    <div class="note-block">
+      <h3>KEY DECISIONS</h3>
+      <div class="decision"><i></i><span>首页保持「对话 / 待办 / 设置」三入口，资讯与行情用全屏页承载。</span></div>
+      <div class="decision"><i></i><span>A 股沿用国内习惯：红涨绿跌，涨跌幅永远带符号。</span></div>
+      <div class="decision"><i></i><span>行情延迟、来源、更新时间三件事常驻，不做「看起来实时」的假象。</span></div>
+      <div class="decision"><i></i><span>新闻只做标题、摘要、跳原文；全文转载需要单独授权。</span></div>
+    </div>
+    <div class="note-block">
+      <h3>SWIFTUI MAPPING</h3>
+      <div class="map-row"><span>首页入口</span><b>WhaleHomeCanvas 两张卡</b></div>
+      <div class="map-row"><span>发现容器</span><b>fullScreenCover + NavigationStack</b></div>
+      <div class="map-row"><span>资讯流</span><b>DiscoverView / NewsCard</b></div>
+      <div class="map-row"><span>行情流</span><b>MarketView / QuoteRow</b></div>
+      <div class="map-row"><span>个股详情</span><b>StockDetailView + Swift Charts</b></div>
+      <div class="map-row"><span>新闻详情</span><b>NewsDetailView + Safari</b></div>
+    </div>
+    <div class="note-foot"><b>下一步：</b>你确认这套层级后，我按此直接落 SwiftUI，并把真实 RSS 与 A 股行情接到后端，不再做第二套视觉。</div>
+  </aside>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

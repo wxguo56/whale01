@@ -1,0 +1,75 @@
+workflows:
+  ios-sideload-ipa:
+    name: WhaleAgent Sideload IPA (unsigned)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      groups:
+        - whale_secrets
+      vars:
+        MARKETING_VERSION: "0.5.1"
+        BUILD_NUMBER_OFFSET: "67"
+      xcode: latest
+    cache:
+      cache_paths:
+        - $HOME/Library/Caches/Homebrew
+    scripts:
+      - name: Install XcodeGen
+        script: |
+          set -e
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+      - name: Generate Xcode project
+        script: |
+          set -e
+          cd ios
+          xcodegen generate
+      - name: Archive without signing
+        script: |
+          set -e
+          cd ios
+          set -o pipefail
+          xcodebuild \
+            -project WhaleAgent.xcodeproj \
+            -scheme WhaleAgentSideload \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -archivePath build/WhaleAgent.xcarchive \
+            MARKETING_VERSION="$MARKETING_VERSION" \
+            CURRENT_PROJECT_VERSION="$((BUILD_NUMBER + BUILD_NUMBER_OFFSET))" \
+            WHALE_API_TOKEN="$WHALE_API_TOKEN" \
+            DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive | tee archive.log
+      - name: Package unsigned IPA
+        script: |
+          set -e
+          cd ios
+          APP_PATH="$(ls -d build/WhaleAgent.xcarchive/Products/Applications/*.app | head -1)"
+          test -n "$APP_PATH"
+          rm -rf build/Payload
+          mkdir -p build/Payload
+          cp -R "$APP_PATH" build/Payload/
+          cd build
+          zip -qry WhaleAgent-Sideload.ipa Payload
+          unzip -l WhaleAgent-Sideload.ipa | head -20
+      - name: Verify binary architectures
+        script: |
+          set -e
+          cd ios
+          lipo -info build/Payload/WhaleAgent.app/WhaleAgent
+      - name: Show build identity
+        script: |
+          set -e
+          cd ios
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" build/Payload/WhaleAgent.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" build/Payload/WhaleAgent.app/Info.plist
+    artifacts:
+      - ios/build/WhaleAgent-Sideload.ipa
+      - ios/archive.log
+

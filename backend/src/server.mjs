@@ -57,6 +57,53 @@ export function createHttpServer(runtime) {
         return;
       }
 
+      if (request.method === "GET" && url.pathname === "/v1/news") {
+        const channel = url.searchParams.get("channel") ?? "ai";
+        const limit = Number(url.searchParams.get("limit") ?? 20);
+        const result = await runtime.news.list({ channel, limit });
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/v1/market/quote") {
+        const symbols = (url.searchParams.get("symbols") ?? "")
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean);
+        const result = await runtime.market.quotes(symbols);
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/v1/market/indexes") {
+        const result = await runtime.market.quotes(["sh000001", "sz399001", "sz399006", "sh000688"]);
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/v1/market/search") {
+        const query = url.searchParams.get("q") ?? "";
+        const limit = Number(url.searchParams.get("limit") ?? 8);
+        const result = await runtime.market.search(query, { limit });
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/v1/market/kline") {
+        const symbol = url.searchParams.get("symbol") ?? "";
+        const days = Number(url.searchParams.get("days") ?? 120);
+        const result = await runtime.market.kline(symbol, { days });
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/v1/market/intraday") {
+        const symbol = url.searchParams.get("symbol") ?? "";
+        const result = await runtime.market.intraday(symbol);
+        sendJson(response, 200, result);
+        return;
+      }
+
       if (request.method === "POST" && url.pathname === "/v1/turns") {
         const body = await readJson(request);
         const text = body.text;
@@ -169,7 +216,9 @@ export function createHttpServer(runtime) {
         response.end();
         return;
       }
-      const status = String(error.code ?? "").startsWith("forbidden")
+      const status = Number.isInteger(error.status)
+        ? error.status
+        : String(error.code ?? "").startsWith("forbidden")
         ? 403
         : error instanceof AgentError || error instanceof ConversationError
           ? 400

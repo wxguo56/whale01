@@ -36,7 +36,10 @@ const TOOL_PERMISSIONS = {
   delete_memory: [],
   search_web: [],
   fetch_web_content: [],
-  search_merchant_prices: []
+  search_merchant_prices: [],
+  add_to_watchlist: [],
+  remove_from_watchlist: [],
+  list_watchlist: []
 };
 
 export const DEVICE_TOOLS = new Set([
@@ -66,7 +69,10 @@ export const DEVICE_TOOLS = new Set([
   "delete_memory",
   "search_web",
   "fetch_web_content",
-  "search_merchant_prices"
+  "search_merchant_prices",
+  "add_to_watchlist",
+  "remove_from_watchlist",
+  "list_watchlist"
 ]);
 
 export const SIMULATED_SERVER_TOOLS = new Set(["summarize_shared_content"]);

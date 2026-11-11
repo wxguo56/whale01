@@ -9,6 +9,7 @@ struct WhaleHomeCanvas: View {
     let onOpenRecords: () -> Void
     let onOpenMusic: () -> Void
     let onOpenTodo: () -> Void
+    let onOpenDiscover: (DiscoverChannel) -> Void
     @State private var weatherDays: [WeatherDaySummary] = []
     @State private var weatherLocation = ""
     @State private var weatherLoading = false
@@ -18,6 +19,7 @@ struct WhaleHomeCanvas: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 dailyQuote
+                discoverCards
                 suggestions
                 weatherCard
                 todayCard
@@ -143,6 +145,81 @@ struct WhaleHomeCanvas: View {
     }
 
     // MARK: - Prompts
+
+    private var discoverCards: some View {
+        HStack(spacing: 10) {
+            discoverCard(
+                title: "今日 AI",
+                subtitle: "AI 科技 · 时事要闻",
+                badge: "真实来源",
+                icon: "sparkles",
+                gradient: WhaleTheme.heroGradient
+            ) {
+                onOpenDiscover(.ai)
+            }
+
+            discoverCard(
+                title: "A 股自选",
+                subtitle: "指数 · 个股 · 日 K",
+                badge: "延迟 15 分钟",
+                icon: "chart.line.uptrend.xyaxis",
+                gradient: LinearGradient(
+                    colors: [WhaleTheme.moon, WhaleTheme.accentDeep],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            ) {
+                onOpenDiscover(.market)
+            }
+        }
+    }
+
+    private func discoverCard(
+        title: String,
+        subtitle: String,
+        badge: String,
+        icon: String,
+        gradient: LinearGradient,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .top) {
+                    Image(systemName: icon)
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 38, height: 38)
+                        .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    Spacer(minLength: 4)
+                    Text(badge)
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.88))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(.white.opacity(0.14), in: Capsule())
+                }
+                Spacer(minLength: 2)
+                Text(title)
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                Text(subtitle)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .padding(13)
+            .frame(maxWidth: .infinity, minHeight: 122, alignment: .leading)
+            .background(gradient, in: RoundedRectangle(cornerRadius: 19, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 19, style: .continuous)
+                    .strokeBorder(.white.opacity(0.14), lineWidth: 0.8)
+            }
+            .shadow(color: .black.opacity(0.08), radius: 12, y: 5)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title)，\(subtitle)")
+    }
 
     private var suggestions: some View {
         LazyVGrid(

@@ -3,6 +3,9 @@ import { ToolRegistry } from "./registry.mjs";
 import { OperationLog } from "./operationLog.mjs";
 import { TurnStore } from "./turnStore.mjs";
 import { MockDeviceExecutor } from "./mockDevice.mjs";
+import { NewsService } from "./news.mjs";
+import { MarketService } from "./market.mjs";
+import { ServerToolExecutor } from "./serverTools.mjs";
 import { DeepSeekAdapter, MockModelAdapter } from "./adapters.mjs";
 import { Agent } from "./agent.mjs";
 import { ConversationStore } from "./conversation.mjs";
@@ -12,6 +15,9 @@ export async function createRuntime(env = process.env, overrides = {}) {
   const config = loadConfig(env);
   const registry = overrides.registry ?? ToolRegistry.fromFile(config.paths.tools, config.paths.toolDefinition);
   const operationLog = overrides.operationLog ?? (await OperationLog.open(config.paths.operationLog));
+  const news = overrides.news ?? new NewsService({ fetchImpl: overrides.fetchImpl });
+  const market = overrides.market ?? new MarketService({ fetchImpl: overrides.fetchImpl });
+  const serverExecutor = overrides.serverExecutor ?? new ServerToolExecutor({ news, market });
   const executor =
     overrides.executor ??
     (config.executionMode === "mock"
@@ -41,6 +47,7 @@ export async function createRuntime(env = process.env, overrides = {}) {
     adapter,
     registry,
     executor,
+    serverExecutor,
     operationLog,
     caps: config.caps,
     contractVersion: config.contractVersion,
@@ -50,5 +57,5 @@ export async function createRuntime(env = process.env, overrides = {}) {
     modelMode: config.modelMode,
     executionMode: config.executionMode
   });
-  return { config, registry, operationLog, executor, adapter, conversations, turnStore, agent };
+  return { config, registry, operationLog, executor, serverExecutor, news, market, adapter, conversations, turnStore, agent };
 }

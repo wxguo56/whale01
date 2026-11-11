@@ -10,6 +10,7 @@ struct ConversationTabView: View {
     let onOpenSettings: () -> Void
     let onOpenMusic: () -> Void
     let onOpenTodo: () -> Void
+    let onOpenDiscover: (DiscoverChannel) -> Void
 
     @State private var browsingStarter = false
 
@@ -28,7 +29,8 @@ struct ConversationTabView: View {
                         bottomInset: bottomInset,
                         onOpenRecords: onOpenRecords,
                         onOpenMusic: onOpenMusic,
-                        onOpenTodo: onOpenTodo
+                        onOpenTodo: onOpenTodo,
+                        onOpenDiscover: onOpenDiscover
                     )
                     .transition(.opacity)
                 } else {
@@ -37,7 +39,8 @@ struct ConversationTabView: View {
                         bottomInset: bottomInset,
                         onOpenRecords: onOpenRecords,
                         onOpenMusic: onOpenMusic,
-                        onOpenTodo: onOpenTodo
+                        onOpenTodo: onOpenTodo,
+                        onOpenDiscover: onOpenDiscover
                     )
                     .transition(.opacity)
                     .overlay(alignment: .leading) {
