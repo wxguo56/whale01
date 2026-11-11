@@ -53,12 +53,9 @@ jobs:
         run: |
           LOG="$RUNNER_TEMP/build.log"
           [ -f "$LOG" ] || exit 0
-          {
-            echo '### Compile errors'
-            echo '```'
-            grep -E "error:" "$LOG" | head -40 | sed -E 's/sk-[0-9a-fA-F]{16,}/[redacted]/g; s/whale-[a-z0-9]{8,}/[redacted]/g' | cut -c1-400
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          grep -E "(error|note):" "$LOG" | head -12 | sed -E 's/sk-[0-9a-fA-F]{16,}/[redacted]/g; s/whale-[a-z0-9]{8,}/[redacted]/g' | cut -c1-350 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
       - name: Package unsigned IPA
         working-directory: ios
         run: |
