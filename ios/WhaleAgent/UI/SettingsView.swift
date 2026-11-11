@@ -225,7 +225,7 @@ struct SettingsView: View {
                     subtitle: "响应耗时、开发设置与版本",
                     icon: "speedometer",
                     tone: .rose
-                ) { AdvancedSettingsView(model: model) }
+                ) { AdvancedSettingsView(model: model, isDetailOpen: $isDetailOpen) }
             }
         }
     }
@@ -753,6 +753,7 @@ private struct ServiceSettingsView: View {
 
 private struct AdvancedSettingsView: View {
     @ObservedObject var model: AppModel
+    @Binding var isDetailOpen: Bool
 
     var body: some View {
         ScrollView {
@@ -775,6 +776,7 @@ private struct AdvancedSettingsView: View {
                 SettingsChrome.card {
                     NavigationLink {
                         DeveloperSettingsView(model: model)
+                            .onAppear { isDetailOpen = true }
                     } label: {
                         HStack(spacing: 12) {
                             SettingsChrome.label(
