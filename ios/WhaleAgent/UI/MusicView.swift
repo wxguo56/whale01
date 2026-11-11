@@ -441,9 +441,7 @@ struct MusicView: View {
     private var librarySection: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
-                withAnimation(.easeInOut(duration: 0.22)) {
-                    libraryExpanded.toggle()
-                }
+                libraryExpanded.toggle()
             } label: {
                 HStack(spacing: 11) {
                     Image(systemName: "music.note.list")
@@ -467,6 +465,7 @@ struct MusicView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(WhaleTheme.muted)
                         .rotationEffect(.degrees(libraryExpanded ? 180 : 0))
+                        .animation(.easeInOut(duration: 0.2), value: libraryExpanded)
                 }
                 .frame(minHeight: 56)
                 .contentShape(Rectangle())
@@ -481,7 +480,6 @@ struct MusicView: View {
                     libraryContent
                 }
                 .padding(.top, 14)
-                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(.horizontal, 14)
