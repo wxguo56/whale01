@@ -3,6 +3,8 @@ import SwiftUI
 struct RecordsView: View {
     @ObservedObject var model: AppModel
     var onBackToChat: () -> Void = {}
+    var showsClose: Bool = false
+    var onClose: () -> Void = {}
     @State private var filter = "all"
 
     private struct DayGroup: Identifiable {
@@ -53,14 +55,14 @@ struct RecordsView: View {
                                 .padding(.top, 18)
                                 .padding(.bottom, 10)
                             ForEach(group.items) { action in
-                                recordCard(action)
+                                OperationRecordCard(action: action)
                                     .padding(.bottom, 11)
                             }
                         }
                     }
                 }
                 .padding(.horizontal, WhaleTheme.pagePadding)
-                .padding(.bottom, WhaleTabBar.height + 34)
+                .padding(.bottom, showsClose ? 26 : WhaleTabBar.height + 34)
             }
             .scrollIndicators(.hidden)
         }
@@ -180,14 +182,25 @@ struct RecordsView: View {
                     .foregroundStyle(WhaleTheme.muted)
             }
             Spacer()
-            Button(action: onBackToChat) {
-                Image(systemName: "bubble.left.and.bubble.right")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(WhaleTheme.ink)
-                    .whaleGlassCircle()
+            if showsClose {
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .whaleGlassCircle()
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("关闭记录")
+            } else {
+                Button(action: onBackToChat) {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .whaleGlassCircle()
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("回到对话")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("回到对话")
         }
         .padding(.horizontal, WhaleTheme.pagePadding)
         .padding(.top, 8)
@@ -211,37 +224,59 @@ struct RecordsView: View {
         .padding(.horizontal, 24)
     }
 
-    private func recordCard(_ action: OperationRecord) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: action.icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.muted)
-                Text(action.createdAt.formatted(date: .omitted, time: .shortened))
-                    .font(.system(size: 12))
-                    .foregroundStyle(WhaleTheme.muted)
-                Spacer()
-
-            }
-            Text(action.title)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(WhaleTheme.ink)
-            if !action.detail.isEmpty {
-                Text(action.detail)
-                    .font(.system(size: 14))
-                    .foregroundStyle(WhaleTheme.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .whaleCard(padding: 17)
-    }
-
-
     private func label(for day: Date) -> String {
         let calendar = Calendar.current
         if calendar.isDateInToday(day) { return "今天" }
         if calendar.isDateInYesterday(day) { return "昨天" }
         return day.formatted(.dateTime.month().day())
+    }
+}
+
+struct OperationRecordCard: View {
+    let action: OperationRecord
+
+    private var tint: Color { action.isSuccess ? WhaleTheme.accent : WhaleTheme.coral }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill((action.isSuccess ? WhaleTheme.accentSoft : WhaleTheme.amberSoft))
+                    .frame(width: 34, height: 34)
+                    .overlay {
+                        Image(systemName: action.icon)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(tint)
+                    }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(action.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.ink)
+                        .lineLimit(3)
+                    Text(action.createdAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(.system(size: 11))
+                        .foregroundStyle(WhaleTheme.muted)
+                }
+
+                Spacer(minLength: 6)
+
+                Text(action.isSuccess ? "已完成" : "待核对")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(tint)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(tint.opacity(0.12), in: Capsule())
+            }
+
+            if !action.detail.isEmpty {
+                Text(action.detail)
+                    .font(.system(size: 13))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .whaleCard(padding: 15)
     }
 }

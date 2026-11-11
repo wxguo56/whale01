@@ -8,7 +8,7 @@ struct WhaleTabBar: View {
     var body: some View {
         HStack(spacing: 4) {
             item(.conversation, title: "对话", icon: "bubble.left.and.bubble.right")
-            item(.records, title: "记录", icon: "list.bullet")
+            item(.records, title: "待办", icon: "checklist")
             item(.settings, title: "设置", icon: "slider.horizontal.3")
         }
         .padding(.horizontal, 6)

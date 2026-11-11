@@ -28,8 +28,7 @@ struct ConversationTabView: View {
                         bottomInset: bottomInset,
                         onOpenRecords: onOpenRecords,
                         onOpenMusic: onOpenMusic,
-                        onOpenTodo: onOpenTodo,
-                        onResumeConversation: model.messages.isEmpty ? nil : { goToConversation() }
+                        onOpenTodo: onOpenTodo
                     )
                     .transition(.opacity)
                 } else {
@@ -62,12 +61,6 @@ struct ConversationTabView: View {
         guard !model.messages.isEmpty else { return }
         withAnimation(.easeInOut(duration: 0.2)) {
             browsingStarter = true
-        }
-    }
-
-    private func goToConversation() {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            browsingStarter = false
         }
     }
 

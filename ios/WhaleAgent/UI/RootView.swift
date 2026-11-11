@@ -8,7 +8,7 @@ struct RootView: View {
     @StateObject private var keyboard = KeyboardObserver()
     @State private var page: AppTab? = .conversation
     @State private var showMusic = false
-    @State private var showTodo = false
+    @State private var showRecords = false
     @State private var settingsDetailOpen = false
     @State private var contentBottom: CGFloat = 0
     @AppStorage("whale.appearance") private var appearance = "system"
@@ -23,15 +23,15 @@ struct RootView: View {
                         ConversationTabView(
                             model: model,
                             bottomInset: ConversationComposerBar.reservedHeight + WhaleTabBar.height + keyboardOverlap,
-                            onOpenRecords: { go(.records) },
+                            onOpenRecords: { showRecords = true },
                             onOpenSettings: { go(.settings) },
                             onOpenMusic: { showMusic = true },
-                            onOpenTodo: { showTodo = true }
+                            onOpenTodo: { go(.records) }
                         )
                         .frame(width: proxy.size.width, height: proxy.size.height)
                         .id(AppTab.conversation)
 
-                        RecordsView(model: model, onBackToChat: { go(.conversation) })
+                        TodoView(model: model, embedded: true, onBackToChat: { go(.conversation) })
                             .frame(width: proxy.size.width, height: proxy.size.height)
                             .id(AppTab.records)
 
@@ -49,7 +49,7 @@ struct RootView: View {
                 .scrollPosition(id: $page)
                 .scrollIndicators(.hidden)
                 .scrollDisabled(
-                    settingsDetailOpen || showMusic || showTodo || model.presentedConfirmation != nil || keyboard.isVisible
+                    settingsDetailOpen || showMusic || showRecords || model.presentedConfirmation != nil || keyboard.isVisible
                 )
                 .background(WhaleBackdrop())
 
@@ -84,8 +84,8 @@ struct RootView: View {
         .sheet(isPresented: $showMusic) {
             MusicView(model: model, showsClose: true)
         }
-        .sheet(isPresented: $showTodo) {
-            TodoView(model: model)
+        .sheet(isPresented: $showRecords) {
+            RecordsView(model: model, showsClose: true, onClose: { showRecords = false })
         }
         .animation(.easeInOut(duration: 0.2), value: model.playback.track?.trackId)
         .preferredColorScheme(colorScheme)

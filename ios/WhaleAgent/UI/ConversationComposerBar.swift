@@ -95,7 +95,7 @@ struct ConversationComposerBar: View {
             .opacity(model.isBusy || model.isExtractingDocument ? 0.4 : 1)
             .accessibilityLabel("导入照片或文件识别文字")
 
-            TextField("发消息，或按住说话", text: $draft)
+            TextField(model.messages.isEmpty ? "发消息，或按住说话" : "继续上次对话", text: $draft)
                 .font(.system(size: 15))
                 .foregroundStyle(WhaleTheme.ink)
                 .lineLimit(1)

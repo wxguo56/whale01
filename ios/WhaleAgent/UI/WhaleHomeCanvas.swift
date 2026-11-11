@@ -9,14 +9,10 @@ struct WhaleHomeCanvas: View {
     let onOpenRecords: () -> Void
     let onOpenMusic: () -> Void
     let onOpenTodo: () -> Void
-    var onResumeConversation: (() -> Void)? = nil
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                if let onResumeConversation {
-                    resumeCard(onResumeConversation)
-                }
                 greeting
                 musicEntry
                 suggestions
@@ -32,40 +28,6 @@ struct WhaleHomeCanvas: View {
         }
         .scrollIndicators(.hidden)
         .onTapGesture { dismissKeyboard() }
-    }
-
-    // MARK: - Resume
-
-    private func resumeCard(_ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                WhaleIconTile(
-                    systemName: model.recentActions.first?.icon ?? "arrow.uturn.backward",
-                    size: 42,
-                    tint: model.recentActions.first?.isSuccess == false ? WhaleTheme.coral : WhaleTheme.accent
-                )
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("继续上次对话")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.ink)
-                    Text(lastUserLine)
-                        .font(.system(size: 12))
-                        .foregroundStyle(WhaleTheme.muted)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 6)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.muted)
-            }
-            .whaleCard(padding: 14)
-        }
-        .buttonStyle(.plain)
-        .accessibilityHint("回到正在进行的对话")
-    }
-
-    private var lastUserLine: String {
-        model.messages.last(where: { $0.role == .user })?.text ?? "回到正在进行的对话"
     }
 
     // MARK: - Greeting

@@ -229,6 +229,8 @@ private enum TodoQuickParser {
 
 struct TodoView: View {
     @ObservedObject var model: AppModel
+    var embedded: Bool = false
+    var onBackToChat: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var voice = VoiceInputController()
@@ -241,6 +243,7 @@ struct TodoView: View {
     @State private var busyIds: Set<String> = []
     @State private var errorText: String?
     @State private var toast: String?
+    @State private var showAllRecords = false
     @FocusState private var composerFocused: Bool
 
     private var reminderStatus: String { model.permissionsSnapshot["reminder"] ?? "unknown" }
@@ -249,8 +252,17 @@ struct TodoView: View {
     private var visibleItems: [TodoReminder] { filter == .pending ? pendingItems : completedItems }
 
     var body: some View {
-        NavigationStack {
-            ZStack(alignment: .top) {
+        if embedded {
+            page
+        } else {
+            NavigationStack {
+                page
+            }
+        }
+    }
+
+    private var page: some View {
+        ZStack(alignment: .top) {
                 WhaleBackdrop().ignoresSafeArea()
 
                 ScrollView {
@@ -261,6 +273,7 @@ struct TodoView: View {
                         content
                         if let errorText { errorBanner(errorText) }
                         hint
+                        recentRecordsSection
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 10)
@@ -283,7 +296,9 @@ struct TodoView: View {
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
-            .safeAreaInset(edge: .bottom) { composer }
+            .safeAreaInset(edge: .bottom) {
+                composer.padding(.bottom, embedded ? WhaleTabBar.height : 0)
+            }
             .navigationBarHidden(true)
             .task { await reload() }
             .onChange(of: scenePhase) { _, phase in
@@ -305,8 +320,10 @@ struct TodoView: View {
                 }
             }
             .onDisappear { voice.stop() }
+            .sheet(isPresented: $showAllRecords) {
+                RecordsView(model: model, showsClose: true, onClose: { showAllRecords = false })
+            }
         }
-    }
 
     private var header: some View {
         HStack(spacing: 12) {
@@ -323,14 +340,20 @@ struct TodoView: View {
 
             Spacer(minLength: 8)
 
-            Button { dismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .semibold))
+            Button {
+                if embedded {
+                    onBackToChat?()
+                } else {
+                    dismiss()
+                }
+            } label: {
+                Image(systemName: embedded ? "bubble.left.and.bubble.right" : "xmark")
+                    .font(.system(size: embedded ? 15 : 14, weight: .semibold))
                     .foregroundStyle(WhaleTheme.ink)
                     .whaleGlassCircle(size: 36)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("关闭待办")
+            .accessibilityLabel(embedded ? "回到对话" : "关闭待办")
         }
     }
 
@@ -538,6 +561,35 @@ struct TodoView: View {
             .foregroundStyle(WhaleTheme.muted.opacity(0.85))
             .fixedSize(horizontal: false, vertical: true)
             .padding(.top, 2)
+    }
+
+    @ViewBuilder
+    private var recentRecordsSection: some View {
+        if !model.recentActions.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("最近记录")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(WhaleTheme.muted)
+                    Spacer()
+                    Button { showAllRecords = true } label: {
+                        HStack(spacing: 3) {
+                            Text("全部")
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 9, weight: .bold))
+                        }
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.accent)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.top, 10)
+
+                ForEach(Array(model.recentActions.prefix(3))) { action in
+                    OperationRecordCard(action: action)
+                }
+            }
+        }
     }
 
     private func errorBanner(_ message: String) -> some View {
