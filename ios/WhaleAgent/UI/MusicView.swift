@@ -267,7 +267,7 @@ struct MusicView: View {
             }
 
             ScrollView(.horizontal) {
-                LazyHStack(alignment: .top, spacing: 13) {
+                LazyHStack(alignment: .top, spacing: 16) {
                     ForEach(model.musicAlbums) { album in
                         albumCard(album)
                     }
@@ -286,34 +286,34 @@ struct MusicView: View {
         } label: {
             VStack(alignment: .leading, spacing: 7) {
                 albumCover(album)
-                    .frame(width: 148, height: 148)
-                    .clipShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
+                    .frame(width: 196, height: 196)
+                    .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
                     .overlay(alignment: .bottomTrailing) {
                         Circle()
                             .fill(Color.black.opacity(0.52))
-                            .frame(width: 34, height: 34)
+                            .frame(width: 42, height: 42)
                             .overlay {
                                 Image(systemName: isCurrent(album) && model.playback.isPlaying ? "waveform" : "play.fill")
-                                    .font(.system(size: 12, weight: .bold))
+                                    .font(.system(size: 15, weight: .bold))
                                     .foregroundStyle(.white)
                             }
-                            .padding(8)
+                            .padding(10)
                     }
                     .overlay {
-                        RoundedRectangle(cornerRadius: 19, style: .continuous)
+                        RoundedRectangle(cornerRadius: 26, style: .continuous)
                             .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
                     }
 
                 Text(album.title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(1)
                 Text("\(album.artist) · \(album.trackCount) 首")
-                    .font(.system(size: 11))
+                    .font(.system(size: 12))
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(1)
             }
-            .frame(width: 148, alignment: .leading)
+            .frame(width: 196, alignment: .leading)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("播放专辑 \(album.title)")
@@ -333,7 +333,7 @@ struct MusicView: View {
                     endPoint: .bottomTrailing
                 )
                 Text(String(album.title.prefix(1)))
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .font(.system(size: 62, weight: .bold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.88))
             }
         }
