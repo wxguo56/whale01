@@ -231,6 +231,7 @@ struct TodoView: View {
     @ObservedObject var model: AppModel
     var embedded: Bool = false
     var onBackToChat: (() -> Void)? = nil
+    var bottomBarInset: CGFloat = 0
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var voice = VoiceInputController()
@@ -297,7 +298,7 @@ struct TodoView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                composer.padding(.bottom, embedded ? WhaleTabBar.height : 0)
+                composer.padding(.bottom, embedded ? bottomBarInset : 0)
             }
             .navigationBarHidden(true)
             .task { await reload() }

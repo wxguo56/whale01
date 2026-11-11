@@ -31,7 +31,12 @@ struct RootView: View {
                         .frame(width: proxy.size.width, height: proxy.size.height)
                         .id(AppTab.conversation)
 
-                        TodoView(model: model, embedded: true, onBackToChat: { go(.conversation) })
+                        TodoView(
+                            model: model,
+                            embedded: true,
+                            onBackToChat: { go(.conversation) },
+                            bottomBarInset: keyboard.isVisible ? 0 : WhaleTabBar.height
+                        )
                             .frame(width: proxy.size.width, height: proxy.size.height)
                             .id(AppTab.records)
 
