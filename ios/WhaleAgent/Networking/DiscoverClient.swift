@@ -32,6 +32,10 @@ enum DiscoverClientError: Error, LocalizedError {
 final class DiscoverClient {
     private let session: URLSession
 
+    private var hasBackend: Bool {
+        !BackendConfig.currentBaseURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     init() {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = 25
@@ -42,43 +46,85 @@ final class DiscoverClient {
 
     func news(channel: DiscoverChannel, limit: Int = 20) async throws -> NewsFeedResponse {
         guard channel != .market else { throw DiscoverClientError.invalidURL }
-        return try await get("/v1/news", query: [
-            URLQueryItem(name: "channel", value: channel.rawValue),
-            URLQueryItem(name: "limit", value: String(limit))
-        ])
+        if !hasBackend {
+            return try await DirectContentClient.shared.news(channel: channel, limit: limit)
+        }
+        do {
+            return try await get("/v1/news", query: [
+                URLQueryItem(name: "channel", value: channel.rawValue),
+                URLQueryItem(name: "limit", value: String(limit))
+            ])
+        } catch {
+            return try await DirectContentClient.shared.news(channel: channel, limit: limit)
+        }
     }
 
     func quotes(symbols: [String]) async throws -> MarketQuoteResponse {
         guard !symbols.isEmpty else {
             return MarketQuoteResponse(updatedAt: "", delayedMinutes: 15, source: "", quotes: [], errors: [])
         }
-        return try await get("/v1/market/quote", query: [
-            URLQueryItem(name: "symbols", value: symbols.joined(separator: ","))
-        ])
+        if !hasBackend {
+            return try await DirectContentClient.shared.quotes(symbols: symbols)
+        }
+        do {
+            return try await get("/v1/market/quote", query: [
+                URLQueryItem(name: "symbols", value: symbols.joined(separator: ","))
+            ])
+        } catch {
+            return try await DirectContentClient.shared.quotes(symbols: symbols)
+        }
     }
 
     func indexes() async throws -> MarketQuoteResponse {
-        try await get("/v1/market/indexes", query: [])
+        if !hasBackend {
+            return try await DirectContentClient.shared.indexes()
+        }
+        do {
+            return try await get("/v1/market/indexes", query: [])
+        } catch {
+            return try await DirectContentClient.shared.indexes()
+        }
     }
 
     func search(_ query: String) async throws -> MarketSearchResponse {
-        try await get("/v1/market/search", query: [
-            URLQueryItem(name: "q", value: query),
-            URLQueryItem(name: "limit", value: "12")
-        ])
+        if !hasBackend {
+            return try await DirectContentClient.shared.search(query)
+        }
+        do {
+            return try await get("/v1/market/search", query: [
+                URLQueryItem(name: "q", value: query),
+                URLQueryItem(name: "limit", value: "12")
+            ])
+        } catch {
+            return try await DirectContentClient.shared.search(query)
+        }
     }
 
     func kline(symbol: String, days: Int = 160) async throws -> KlineResponse {
-        try await get("/v1/market/kline", query: [
-            URLQueryItem(name: "symbol", value: symbol),
-            URLQueryItem(name: "days", value: String(days))
-        ])
+        if !hasBackend {
+            return try await DirectContentClient.shared.kline(symbol: symbol, days: days)
+        }
+        do {
+            return try await get("/v1/market/kline", query: [
+                URLQueryItem(name: "symbol", value: symbol),
+                URLQueryItem(name: "days", value: String(days))
+            ])
+        } catch {
+            return try await DirectContentClient.shared.kline(symbol: symbol, days: days)
+        }
     }
 
     func intraday(symbol: String) async throws -> IntradayResponse {
-        try await get("/v1/market/intraday", query: [
-            URLQueryItem(name: "symbol", value: symbol)
-        ])
+        if !hasBackend {
+            return try await DirectContentClient.shared.intraday(symbol: symbol)
+        }
+        do {
+            return try await get("/v1/market/intraday", query: [
+                URLQueryItem(name: "symbol", value: symbol)
+            ])
+        } catch {
+            return try await DirectContentClient.shared.intraday(symbol: symbol)
+        }
     }
 
     private func get<T: Decodable>(_ path: String, query: [URLQueryItem]) async throws -> T {

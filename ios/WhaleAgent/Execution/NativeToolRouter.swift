@@ -676,6 +676,157 @@ final class NativeToolRouter {
         ])
     }
 
+    // MARK: - Public research tools
+
+    private func techNews(_ arguments: [String: JSONValue]) async throws -> JSONValue {
+        let rawChannel = arguments.optionalString("channel") ?? "ai"
+        guard let channel = DiscoverChannel(rawValue: rawChannel), channel != .market else {
+            throw ToolExecutionError(code: "invalid_arguments", message: "channel 只能是 ai 或 headline")
+        }
+        let limit = min(max(arguments.optionalInt("limit") ?? 8, 1), 12)
+        let response = try await discover.news(channel: channel, limit: limit)
+        return .object([
+            "channel": .string(response.channel),
+            "updatedAt": .string(response.updatedAt),
+            "sources": .array((response.sources ?? []).map { .string($0) }),
+            "unavailableSources": .array((response.unavailableSources ?? []).map { .string($0) }),
+            "items": .array(response.items.map(newsJSON))
+        ])
+    }
+
+    private func stockQuote(_ arguments: [String: JSONValue]) async throws -> JSONValue {
+        let query = try arguments.requiredString("query")
+        let stock = try await resolveStock(query)
+        let response = try await discover.quotes(symbols: [stock.symbol])
+        return .object([
+            "query": .string(query),
+            "updatedAt": .string(response.updatedAt),
+            "delayedMinutes": .number(Double(response.delayedMinutes)),
+            "source": .string(response.source),
+            "quotes": .array(response.quotes.map(quoteJSON))
+        ])
+    }
+
+    private func searchStock(_ arguments: [String: JSONValue]) async throws -> JSONValue {
+        let query = try arguments.requiredString("query")
+        let response = try await discover.search(query)
+        return .object([
+            "query": .string(response.query),
+            "source": .string(response.source),
+            "results": .array(response.results.map(searchJSON))
+        ])
+    }
+
+    private func stockKline(_ arguments: [String: JSONValue]) async throws -> JSONValue {
+        let query = try arguments.requiredString("query")
+        let stock = try await resolveStock(query)
+        let days = min(max(arguments.optionalInt("days") ?? 120, 5), 500)
+        let response = try await discover.kline(symbol: stock.symbol, days: days)
+        return .object([
+            "symbol": .string(response.symbol),
+            "code": .string(response.code),
+            "name": .string(response.name),
+            "days": .number(Double(response.days)),
+            "source": .string(response.source),
+            "delayedMinutes": .number(Double(response.delayedMinutes)),
+            "points": .array(response.points.map(klineJSON))
+        ])
+    }
+
+    private func stockIntraday(_ arguments: [String: JSONValue]) async throws -> JSONValue {
+        let query = try arguments.requiredString("query")
+        let stock = try await resolveStock(query)
+        let response = try await discover.intraday(symbol: stock.symbol)
+        return .object([
+            "symbol": .string(response.symbol),
+            "code": .string(response.code),
+            "name": .string(response.name),
+            "date": .string(response.date),
+            "source": .string(response.source),
+            "delayedMinutes": .number(Double(response.delayedMinutes)),
+            "points": .array(response.points.map(intradayJSON))
+        ])
+    }
+
+    private func newsJSON(_ item: NewsItem) -> JSONValue {
+        .object([
+            "id": .string(item.id),
+            "title": .string(item.title),
+            "summary": .string(item.summary),
+            "source": .string(item.source),
+            "link": .string(item.link),
+            "publishedAt": .string(item.publishedAt),
+            "channel": .string(item.channel),
+            "rank": jsonNumber(item.rank.map { Double($0) })
+        ])
+    }
+
+    private func quoteJSON(_ quote: StockQuote) -> JSONValue {
+        .object([
+            "symbol": .string(quote.symbol),
+            "code": .string(quote.code),
+            "market": .string(quote.market),
+            "name": .string(quote.name),
+            "price": jsonNumber(quote.price),
+            "previousClose": jsonNumber(quote.previousClose),
+            "open": jsonNumber(quote.open),
+            "high": jsonNumber(quote.high),
+            "low": jsonNumber(quote.low),
+            "change": jsonNumber(quote.change),
+            "changePercent": jsonNumber(quote.changePercent),
+            "volumeLots": jsonNumber(quote.volumeLots),
+            "volume": jsonNumber(quote.volume),
+            "amount": jsonNumber(quote.amount),
+            "turnoverPercent": jsonNumber(quote.turnoverPercent),
+            "pe": jsonNumber(quote.pe),
+            "marketCap": jsonNumber(quote.marketCap),
+            "floatMarketCap": jsonNumber(quote.floatMarketCap),
+            "timestamp": jsonText(quote.timestamp),
+            "source": .string(quote.source ?? "腾讯财经公开行情"),
+            "delayedMinutes": .number(Double(quote.delayedMinutes ?? 15))
+        ])
+    }
+
+    private func searchJSON(_ result: StockSearchResult) -> JSONValue {
+        .object([
+            "symbol": .string(result.symbol),
+            "code": .string(result.code),
+            "name": .string(result.name),
+            "market": .string(result.market),
+            "type": .string(result.type)
+        ])
+    }
+
+    private func klineJSON(_ point: KlinePoint) -> JSONValue {
+        .object([
+            "date": .string(point.date),
+            "open": jsonNumber(point.open),
+            "close": jsonNumber(point.close),
+            "high": jsonNumber(point.high),
+            "low": jsonNumber(point.low),
+            "volume": jsonNumber(point.volume),
+            "volumeLots": jsonNumber(point.volumeLots),
+            "amount": jsonNumber(point.amount)
+        ])
+    }
+
+    private func intradayJSON(_ point: IntradayPoint) -> JSONValue {
+        .object([
+            "time": .string(point.time),
+            "price": jsonNumber(point.price),
+            "volumeLots": jsonNumber(point.volumeLots),
+            "amount": jsonNumber(point.amount)
+        ])
+    }
+
+    private func jsonNumber(_ value: Double?) -> JSONValue {
+        value.map { .number($0) } ?? .null
+    }
+
+    private func jsonText(_ value: String?) -> JSONValue {
+        value.map { .string($0) } ?? .null
+    }
+
     private func route(_ pending: PendingTool) async throws -> JSONValue {
         switch pending.tool {
         case "create_reminder":
@@ -748,6 +899,16 @@ final class NativeToolRouter {
             return try await removeWatchlist(pending.arguments)
         case "list_watchlist":
             return try await listWatchlist()
+        case "get_tech_news":
+            return try await techNews(pending.arguments)
+        case "get_stock_quote":
+            return try await stockQuote(pending.arguments)
+        case "search_stock":
+            return try await searchStock(pending.arguments)
+        case "get_stock_kline":
+            return try await stockKline(pending.arguments)
+        case "get_stock_intraday":
+            return try await stockIntraday(pending.arguments)
         case "summarize_shared_content":
             throw ToolExecutionError(
                 code: "use_share_entry",
