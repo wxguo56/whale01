@@ -587,7 +587,7 @@ struct TodoView: View {
                 .padding(.top, 10)
 
                 ForEach(Array(model.recentActions.prefix(3))) { action in
-                    OperationRecordCard(action: action)
+                    OperationRecordCard(action: action, compact: true)
                 }
             }
         }

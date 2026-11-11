@@ -234,10 +234,55 @@ struct RecordsView: View {
 
 struct OperationRecordCard: View {
     let action: OperationRecord
+    var compact: Bool = false
 
     private var tint: Color { action.isSuccess ? WhaleTheme.accent : WhaleTheme.coral }
 
     var body: some View {
+        if compact {
+            compactBody
+        } else {
+            fullBody
+        }
+    }
+
+    private var compactBody: some View {
+        HStack(spacing: 9) {
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill((action.isSuccess ? WhaleTheme.accentSoft : WhaleTheme.amberSoft))
+                .frame(width: 28, height: 28)
+                .overlay {
+                    Image(systemName: action.icon)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(tint)
+                }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(action.title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .lineLimit(1)
+                Text(action.createdAt.formatted(date: .omitted, time: .shortened))
+                    .font(.system(size: 10))
+                    .foregroundStyle(WhaleTheme.muted)
+            }
+
+            Spacer(minLength: 6)
+
+            Circle()
+                .fill(tint)
+                .frame(width: 5, height: 5)
+        }
+        .padding(.horizontal, 11)
+        .padding(.vertical, 8)
+        .background(WhaleTheme.card.opacity(0.82), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7)
+        }
+    }
+
+    private var fullBody: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 10) {
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
