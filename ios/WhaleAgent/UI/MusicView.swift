@@ -11,6 +11,9 @@ struct MusicView: View {
     @State private var showSourceInfo = false
     @State private var libraryExpanded = false
     @State private var browsedAlbumId: String?
+    @State private var dragOffset: CGFloat = 0
+    @State private var cardInset: CGFloat = 0
+    @State private var isSwitchingAlbum = false
 
     var body: some View {
         NavigationStack {
@@ -98,15 +101,7 @@ struct MusicView: View {
 
     private var playerCard: some View {
         VStack(spacing: 16) {
-            VinylDisc(
-                artwork: displayArtwork,
-                title: displayTitle,
-                isPlaying: model.playback.isPlaying,
-                palette: albumColors(for: displayTitle)
-            )
-            .frame(width: 246, height: 246)
-            .contentShape(Circle())
-            .gesture(albumSwipe)
+            albumDeck
 
             VStack(spacing: 5) {
                 Text(displayTitle)
@@ -178,11 +173,99 @@ struct MusicView: View {
                 .accessibilityLabel(model.musicPlayMode.title)
             }
 
-            Text("左右滑动唱片切换专辑")
+            Text("左右滑动黑胶切换专辑")
                 .font(.system(size: 10))
                 .foregroundStyle(WhaleTheme.muted.opacity(0.85))
         }
         .padding(.top, 2)
+    }
+
+    private var albumDeck: some View {
+        let neighbors = deckNeighbors()
+        return ZStack {
+            if neighbors.prev.count > 1 {
+                deckPeek(neighbors.prev[1], scale: 0.82, x: -50, y: 26, rotation: -9, opacity: 0.3)
+            }
+            if neighbors.next.count > 1 {
+                deckPeek(neighbors.next[1], scale: 0.82, x: 50, y: 26, rotation: 9, opacity: 0.3)
+            }
+            if let prev = neighbors.prev.first {
+                deckPeek(prev, scale: 0.9, x: -28, y: 14, rotation: -5, opacity: 0.62)
+            }
+            if let next = neighbors.next.first {
+                deckPeek(next, scale: 0.9, x: 28, y: 14, rotation: 5, opacity: 0.62)
+            }
+
+            VinylDisc(
+                artwork: displayArtwork,
+                title: displayTitle,
+                isPlaying: model.playback.isPlaying,
+                palette: albumColors(for: displayTitle)
+            )
+            .frame(width: 246, height: 246)
+            .scaleEffect(1 - min(abs(dragOffset), 220) / 220 * 0.07)
+            .rotationEffect(.degrees(Double(dragOffset) / 26))
+            .offset(x: dragOffset + cardInset)
+            .shadow(color: Color.black.opacity(0.3), radius: 20, y: 12)
+            .contentShape(Circle())
+            .gesture(albumSwipe)
+            .zIndex(2)
+        }
+        .frame(width: 300, height: 268)
+    }
+
+    private func deckPeek(_ album: MusicAlbumItem, scale: CGFloat, x: CGFloat, y: CGFloat, rotation: Double, opacity: Double) -> some View {
+        ZStack {
+            if let image = album.artwork {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                LinearGradient(
+                    colors: albumColors(for: album.title),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+            Circle()
+                .fill(Color.black.opacity(0.42))
+                .frame(width: 34, height: 34)
+        }
+        .frame(width: 246, height: 246)
+        .clipShape(Circle())
+        .overlay {
+            Circle().strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+        }
+        .scaleEffect(scale)
+        .rotationEffect(.degrees(rotation))
+        .offset(x: x + dragOffset * 0.12, y: y)
+        .opacity(opacity)
+    }
+
+    private func deckNeighbors() -> (prev: [MusicAlbumItem], next: [MusicAlbumItem]) {
+        let albums = model.musicAlbums
+        guard albums.count > 1,
+              let currentId = displayedAlbum?.albumId,
+              let index = albums.firstIndex(where: { $0.albumId == currentId }) else {
+            return ([], [])
+        }
+        var prev: [MusicAlbumItem] = []
+        var next: [MusicAlbumItem] = []
+        var used: Set<String> = [currentId]
+        let depth = min(2, albums.count - 1)
+        for step in 1...depth {
+            let prevAlbum = albums[(index - step + albums.count * 2) % albums.count]
+            if !used.contains(prevAlbum.albumId) {
+                prev.append(prevAlbum)
+                used.insert(prevAlbum.albumId)
+            }
+            let nextAlbum = albums[(index + step) % albums.count]
+            if !used.contains(nextAlbum.albumId) {
+                next.append(nextAlbum)
+                used.insert(nextAlbum.albumId)
+            }
+        }
+        return (prev, next)
     }
 
     private var displayedAlbum: MusicAlbumItem? {
@@ -213,12 +296,43 @@ struct MusicView: View {
     }
 
     private var albumSwipe: some Gesture {
-        DragGesture(minimumDistance: 18)
-            .onEnded { value in
-                let dx = value.translation.width
-                guard abs(dx) > 42, abs(dx) > abs(value.translation.height) else { return }
-                shiftAlbum(dx < 0 ? 1 : -1)
+        DragGesture(minimumDistance: 8)
+            .onChanged { value in
+                guard !isSwitchingAlbum, !model.isMusicBusy else { return }
+                dragOffset = value.translation.width
             }
+            .onEnded { value in
+                guard !isSwitchingAlbum, !model.isMusicBusy else {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) { dragOffset = 0 }
+                    return
+                }
+                let dx = value.translation.width
+                let projected = dx + value.predictedEndTranslation.width
+                guard abs(dx) > abs(value.translation.height), abs(projected) > 90 else {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) { dragOffset = 0 }
+                    return
+                }
+                completeSwipe(dx < 0 ? 1 : -1)
+            }
+    }
+
+    private func completeSwipe(_ step: Int) {
+        guard !isSwitchingAlbum else { return }
+        isSwitchingAlbum = true
+        withAnimation(.easeIn(duration: 0.18)) {
+            dragOffset = step > 0 ? -340 : 340
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+            shiftAlbum(step)
+            dragOffset = 0
+            cardInset = step > 0 ? 80 : -80
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+                cardInset = 0
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) {
+                isSwitchingAlbum = false
+            }
+        }
     }
 
     private func shiftAlbum(_ step: Int) {
@@ -227,9 +341,7 @@ struct MusicView: View {
             let albums = model.musicAlbums
             let currentIndex = albums.firstIndex(where: { $0.albumId == displayedAlbum?.albumId }) ?? 0
             let next = (currentIndex + step + albums.count) % albums.count
-            withAnimation(.easeInOut(duration: 0.2)) {
-                browsedAlbumId = albums[next].albumId
-            }
+            browsedAlbumId = albums[next].albumId
             Task { await model.play(albums[next]) }
         } else if model.musicTracks.count > 1 {
             let tracks = model.musicTracks
