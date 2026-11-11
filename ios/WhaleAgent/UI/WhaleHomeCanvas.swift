@@ -82,8 +82,8 @@ struct WhaleHomeCanvas: View {
     private var dailyQuote: some View {
         TimelineView(.periodic(from: Date(), by: 60)) { context in
             let quote = Self.quote(at: context.date)
-            HStack(alignment: .top, spacing: 11) {
-                WhaleMarkView(size: 34)
+            HStack(alignment: .top, spacing: 10) {
+                WhaleMarkView(size: 30)
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -97,21 +97,21 @@ struct WhaleHomeCanvas: View {
                             .foregroundStyle(WhaleTheme.muted.opacity(0.85))
                     }
                     Text(quote)
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.system(size: 15, weight: .regular))
                         .foregroundStyle(WhaleTheme.ink)
-                        .lineSpacing(5)
+                        .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 14)
+            .padding(.vertical, 12)
             .background {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [WhaleTheme.accent.opacity(0.15), WhaleTheme.card.opacity(0.94)],
+                            colors: [WhaleTheme.accent.opacity(0.10), WhaleTheme.card.opacity(0.90)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
