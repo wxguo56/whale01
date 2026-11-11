@@ -12,7 +12,6 @@ struct MusicView: View {
     @State private var libraryExpanded = false
     @State private var browsedAlbumId: String?
     @State private var dragOffset: CGFloat = 0
-    @State private var cardInset: CGFloat = 0
     @State private var isSwitchingAlbum = false
 
     var body: some View {
@@ -180,20 +179,21 @@ struct MusicView: View {
         .padding(.top, 2)
     }
 
+    private var deckSpacing: CGFloat { 64 }
+
     private var albumDeck: some View {
-        let neighbors = deckNeighbors()
+        let slots = deckSlots()
         return ZStack {
-            if neighbors.prev.count > 1 {
-                deckPeek(neighbors.prev[1], scale: 0.82, x: -50, y: 26, rotation: -9, opacity: 0.3)
-            }
-            if neighbors.next.count > 1 {
-                deckPeek(neighbors.next[1], scale: 0.82, x: 50, y: 26, rotation: 9, opacity: 0.3)
-            }
-            if let prev = neighbors.prev.first {
-                deckPeek(prev, scale: 0.9, x: -28, y: 14, rotation: -5, opacity: 0.62)
-            }
-            if let next = neighbors.next.first {
-                deckPeek(next, scale: 0.9, x: 28, y: 14, rotation: 5, opacity: 0.62)
+            ForEach(slots) { slot in
+                deckDisc(slot.album)
+                    .scaleEffect(deckScale(delta: slot.delta))
+                    .opacity(deckOpacity(delta: slot.delta))
+                    .offset(
+                        x: CGFloat(slot.delta) * deckSpacing + dragOffset,
+                        y: deckLift(delta: slot.delta)
+                    )
+                    .allowsHitTesting(false)
+                    .zIndex(1)
             }
 
             VinylDisc(
@@ -203,69 +203,66 @@ struct MusicView: View {
                 palette: albumColors(for: displayTitle)
             )
             .frame(width: 246, height: 246)
-            .scaleEffect(1 - min(abs(dragOffset), 220) / 220 * 0.07)
-            .rotationEffect(.degrees(Double(dragOffset) / 26))
-            .offset(x: dragOffset + cardInset)
+            .scaleEffect(deckScale(delta: 0))
+            .opacity(deckOpacity(delta: 0))
+            .offset(x: dragOffset, y: deckLift(delta: 0))
             .shadow(color: Color.black.opacity(0.3), radius: 20, y: 12)
             .contentShape(Circle())
             .gesture(albumSwipe)
-            .zIndex(2)
+            .zIndex(3)
+
+            Tonearm(isPlaying: model.playback.isPlaying)
+                .offset(x: 84, y: -92)
+                .allowsHitTesting(false)
+                .zIndex(4)
         }
         .frame(width: 300, height: 268)
     }
 
-    private func deckPeek(_ album: MusicAlbumItem, scale: CGFloat, x: CGFloat, y: CGFloat, rotation: Double, opacity: Double) -> some View {
-        ZStack {
-            if let image = album.artwork {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                LinearGradient(
-                    colors: albumColors(for: album.title),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            }
-            Circle()
-                .fill(Color.black.opacity(0.42))
-                .frame(width: 34, height: 34)
-        }
+    private func deckDisc(_ album: MusicAlbumItem?) -> some View {
+        VinylBody(
+            artwork: album?.artwork,
+            title: album?.title ?? "",
+            palette: albumColors(for: album?.title ?? "")
+        )
         .frame(width: 246, height: 246)
-        .clipShape(Circle())
-        .overlay {
-            Circle().strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-        }
-        .scaleEffect(scale)
-        .rotationEffect(.degrees(rotation))
-        .offset(x: x + dragOffset * 0.12, y: y)
-        .opacity(opacity)
+        .shadow(color: Color.black.opacity(0.28), radius: 16, y: 10)
     }
 
-    private func deckNeighbors() -> (prev: [MusicAlbumItem], next: [MusicAlbumItem]) {
+    private func deckEffectiveDelta(_ delta: Int) -> CGFloat {
+        CGFloat(delta) + dragOffset / deckSpacing
+    }
+
+    private func deckScale(delta: Int) -> CGFloat {
+        let eff = min(abs(deckEffectiveDelta(delta)), 2.4)
+        return 1 - eff * 0.16
+    }
+
+    private func deckOpacity(delta: Int) -> Double {
+        let eff = min(abs(deckEffectiveDelta(delta)), 2.4)
+        return max(0.06, 1 - Double(eff) * 0.46)
+    }
+
+    private func deckLift(delta: Int) -> CGFloat {
+        let eff = min(abs(deckEffectiveDelta(delta)), 2.4)
+        return eff * 10
+    }
+
+    private func deckSlots() -> [DeckSlot] {
         let albums = model.musicAlbums
         guard albums.count > 1,
               let currentId = displayedAlbum?.albumId,
               let index = albums.firstIndex(where: { $0.albumId == currentId }) else {
-            return ([], [])
+            return []
         }
-        var prev: [MusicAlbumItem] = []
-        var next: [MusicAlbumItem] = []
-        var used: Set<String> = [currentId]
-        let depth = min(2, albums.count - 1)
-        for step in 1...depth {
-            let prevAlbum = albums[(index - step + albums.count * 2) % albums.count]
-            if !used.contains(prevAlbum.albumId) {
-                prev.append(prevAlbum)
-                used.insert(prevAlbum.albumId)
-            }
-            let nextAlbum = albums[(index + step) % albums.count]
-            if !used.contains(nextAlbum.albumId) {
-                next.append(nextAlbum)
-                used.insert(nextAlbum.albumId)
+        var slots: [DeckSlot] = []
+        for magnitude in 1...2 {
+            for sign in [-1, 1] {
+                let candidate = albums[(index + sign * magnitude + albums.count * 2) % albums.count]
+                slots.append(DeckSlot(id: sign * magnitude, delta: sign * magnitude, album: candidate))
             }
         }
-        return (prev, next)
+        return slots
     }
 
     private var displayedAlbum: MusicAlbumItem? {
@@ -319,19 +316,13 @@ struct MusicView: View {
     private func completeSwipe(_ step: Int) {
         guard !isSwitchingAlbum else { return }
         isSwitchingAlbum = true
-        withAnimation(.easeIn(duration: 0.18)) {
-            dragOffset = step > 0 ? -340 : 340
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+            dragOffset = -CGFloat(step) * deckSpacing
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.34) {
             shiftAlbum(step)
             dragOffset = 0
-            cardInset = step > 0 ? 80 : -80
-            withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
-                cardInset = 0
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) {
-                isSwitchingAlbum = false
-            }
+            isSwitchingAlbum = false
         }
     }
 
@@ -793,14 +784,16 @@ struct MusicView: View {
     }
 }
 
-private struct VinylDisc: View {
+private struct DeckSlot: Identifiable {
+    let id: Int
+    let delta: Int
+    let album: MusicAlbumItem
+}
+
+private struct VinylBody: View {
     let artwork: UIImage?
     let title: String
-    let isPlaying: Bool
     let palette: [Color]
-
-    @State private var angle: Double = 0
-    @State private var ticker = Timer.publish(every: 1.0 / 24.0, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ZStack {
@@ -838,12 +831,6 @@ private struct VinylDisc: View {
             Circle()
                 .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
         }
-        .rotationEffect(.degrees(angle))
-        .shadow(color: Color.black.opacity(0.32), radius: 22, y: 12)
-        .onReceive(ticker) { _ in
-            guard isPlaying else { return }
-            angle = (angle + 1.2).truncatingRemainder(dividingBy: 360)
-        }
     }
 
     @ViewBuilder
@@ -860,5 +847,78 @@ private struct VinylDisc: View {
                     .foregroundStyle(.white.opacity(0.9))
             }
         }
+    }
+}
+
+private struct VinylDisc: View {
+    let artwork: UIImage?
+    let title: String
+    let isPlaying: Bool
+    let palette: [Color]
+
+    @State private var angle: Double = 0
+    @State private var ticker = Timer.publish(every: 1.0 / 24.0, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        VinylBody(artwork: artwork, title: title, palette: palette)
+            .rotationEffect(.degrees(angle))
+            .shadow(color: Color.black.opacity(0.32), radius: 22, y: 12)
+            .onReceive(ticker) { _ in
+                guard isPlaying else { return }
+                angle = (angle + 1.2).truncatingRemainder(dividingBy: 360)
+            }
+    }
+}
+
+private struct Tonearm: View {
+    let isPlaying: Bool
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            arm
+                .rotationEffect(.degrees(isPlaying ? 24 : -14), anchor: .top)
+                .animation(.spring(response: 0.55, dampingFraction: 0.72), value: isPlaying)
+
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color(white: 0.94), Color(white: 0.58), Color(white: 0.34)],
+                        center: UnitPoint(x: 0.35, y: 0.3),
+                        startRadius: 1,
+                        endRadius: 16
+                    )
+                )
+                .frame(width: 26, height: 26)
+                .overlay {
+                    Circle().strokeBorder(Color.white.opacity(0.35), lineWidth: 0.8)
+                }
+                .shadow(color: Color.black.opacity(0.35), radius: 4, y: 2)
+        }
+        .frame(width: 26, height: 26, alignment: .top)
+    }
+
+    private var arm: some View {
+        VStack(spacing: -2) {
+            Capsule()
+                .fill(
+                    LinearGradient(
+                        colors: [Color(white: 0.9), Color(white: 0.55)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(width: 6, height: 104)
+                .shadow(color: Color.black.opacity(0.32), radius: 3, y: 1)
+
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(Color(white: 0.8))
+                .frame(width: 16, height: 20)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .strokeBorder(Color.black.opacity(0.28), lineWidth: 0.6)
+                }
+        }
+        .frame(width: 26)
+        .offset(y: 10)
     }
 }
