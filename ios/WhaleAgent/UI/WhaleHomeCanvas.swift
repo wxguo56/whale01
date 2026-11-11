@@ -124,14 +124,14 @@ struct WhaleHomeCanvas: View {
         let dayCount = calendar.ordinality(of: .day, in: .era, for: date) ?? 0
         let index = ((dayCount % dailyQuotes.count) + dailyQuotes.count) % dailyQuotes.count
         let slot = min(slotOpeners.count - 1, calendar.component(.hour, from: date) / 2)
-        return "\\(slotOpeners[slot])，\\(dailyQuotes[index])"
+        return "\(slotOpeners[slot])，\(dailyQuotes[index])"
     }
 
     // MARK: - Music
 
     private var musicQuickSubtitle: String {
         guard let track = model.playback.track else {
-            return "曲库 · \\(model.musicPlayMode.title)"
+            return "曲库 · \(model.musicPlayMode.title)"
         }
         return (model.playback.isPlaying ? "正在播放 · " : "") + track.title
     }
