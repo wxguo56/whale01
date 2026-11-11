@@ -46,8 +46,19 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            archive
+            archive 2>&1 | tee "$RUNNER_TEMP/build.log" | tail -200
 
+      - name: Show compile errors
+        if: failure()
+        run: |
+          LOG="$RUNNER_TEMP/build.log"
+          [ -f "$LOG" ] || exit 0
+          {
+            echo '### Compile errors'
+            echo '```'
+            grep -E "error:" "$LOG" | head -40 | sed -E 's/sk-[0-9a-fA-F]{16,}/[redacted]/g; s/whale-[a-z0-9]{8,}/[redacted]/g' | cut -c1-400
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Package unsigned IPA
         working-directory: ios
         run: |
