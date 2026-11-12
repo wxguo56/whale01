@@ -210,6 +210,10 @@ final class DirectContentClient: @unchecked Sendable {
             let summary = isAggregator ? "" : String(Self.cleanText(Self.firstTag(["description", "summary", "content:encoded", "content"], in: block)).prefix(220))
             let haystack = title + "\n" + summary
             if channel == .ai,
+               outlet.lowercased().contains("arxiv") || outlet.lowercased().contains("alphaxiv") {
+                continue
+            }
+            if channel == .ai,
                haystack.range(of: Self.paperPattern, options: [.regularExpression, .caseInsensitive]) != nil
                 || link.lowercased().contains("arxiv.org")
                 || link.lowercased().contains("alphaxiv.org") {
