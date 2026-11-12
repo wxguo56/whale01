@@ -29,13 +29,21 @@ struct DiscoverView: View {
             .toolbar(.hidden, for: .navigationBar)
             .task {
 #if DEBUG
-                guard ProcessInfo.processInfo.environment["WHALE_DEMO_GAME"] == "1",
-                      let gameModel = models[.game] else { return }
-                channel = .game
-                gameModel.gameSection = .grossing
-                await gameModel.selectGameSection(.grossing)
-                if let first = gameModel.rankItems.first {
-                    path.append(DiscoverRoute.game(first, .grossing))
+                let environment = ProcessInfo.processInfo.environment
+                if environment["WHALE_DEMO_GAME"] == "1", let gameModel = models[.game] {
+                    channel = .game
+                    gameModel.gameSection = .grossing
+                    await gameModel.selectGameSection(.grossing)
+                    if let first = gameModel.rankItems.first {
+                        path.append(DiscoverRoute.game(first, .grossing))
+                    }
+                }
+                if let raw = environment["WHALE_DEMO_GAME_SECTION"],
+                   let section = GameSection(rawValue: raw),
+                   let gameModel = models[.game] {
+                    channel = .game
+                    gameModel.gameSection = section
+                    await gameModel.selectGameSection(section)
                 }
 #endif
             }

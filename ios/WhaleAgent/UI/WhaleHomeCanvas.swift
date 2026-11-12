@@ -16,7 +16,7 @@ struct WhaleHomeCanvas: View {
     @State private var weatherLocation = ""
     @State private var weatherLoading = false
     @State private var weatherError: String?
-    @State private var weatherExpanded = false
+    @State private var weatherExpanded = ProcessInfo.processInfo.environment["WHALE_DEMO_WEATHER"] == "1"
 
     var body: some View {
         ScrollView {

@@ -34,7 +34,7 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
-            MARKETING_VERSION=0.6.0 \
+            MARKETING_VERSION=0.6.2 \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             WHALE_API_TOKEN="${{ secrets.WHALE_API_TOKEN }}" \
             DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
@@ -63,6 +63,22 @@ jobs:
           SIMCTL_CHILD_WHALE_DEMO_GAME=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
           sleep 14
           xcrun simctl io "$DEVICE_ID" screenshot snapshots/game-detail.png
+          xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+          SIMCTL_CHILD_WHALE_DEMO_CHANNEL=ai xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 14
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/ai-channel.png
+          xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+          SIMCTL_CHILD_WHALE_DEMO_CHANNEL=headline xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 14
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/headline-channel.png
+          xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+          SIMCTL_CHILD_WHALE_DEMO_CHANNEL=game SIMCTL_CHILD_WHALE_DEMO_GAME_SECTION=steamTop xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 16
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/steam-top.png
+          xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+          SIMCTL_CHILD_WHALE_DEMO_WEATHER=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 16
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/weather-detail.png
           xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
 
       - name: Upload screenshots

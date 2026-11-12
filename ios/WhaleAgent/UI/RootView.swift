@@ -106,6 +106,11 @@ struct RootView: View {
                 discoverChannel = .game
                 showDiscover = true
             }
+            if let raw = ProcessInfo.processInfo.environment["WHALE_DEMO_CHANNEL"],
+               let channel = DiscoverChannel(rawValue: raw) {
+                discoverChannel = channel
+                showDiscover = true
+            }
 #endif
             await model.health()
             await model.reconcileUnknownWrites()
