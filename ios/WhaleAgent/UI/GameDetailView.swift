@@ -6,6 +6,8 @@ struct GameDetailView: View {
     let board: GameRankBoard
     @StateObject private var model: GameDetailModel
     @State private var showFullDescription = false
+    @State private var safari: SafariTarget?
+    @State private var preview: ScreenshotPreview?
 
     init(item: GameRankItem, board: GameRankBoard) {
         self.item = item
@@ -48,6 +50,13 @@ struct GameDetailView: View {
         .toolbar(.hidden, for: .navigationBar)
         .background(SwipeBackEnabler().frame(width: 1, height: 1))
         .task { await model.load() }
+        .sheet(item: $safari) { target in
+            InAppSafari(url: target.url)
+                .ignoresSafeArea()
+        }
+        .fullScreenCover(item: $preview) { item in
+            ScreenshotViewer(urlString: item.id)
+        }
     }
 
     private var topBar: some View {
@@ -72,11 +81,12 @@ struct GameDetailView: View {
             }
             Spacer()
             if let url = (model.detail?.appStoreURL ?? item.url) {
-                Link(destination: url) {
+                Button { safari = SafariTarget(url: url) } label: {
                     Text("App Store")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(WhaleTheme.accent)
                 }
+                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 16)
@@ -292,20 +302,23 @@ struct GameDetailView: View {
                 ScrollView(.horizontal) {
                     HStack(spacing: 9) {
                         ForEach(Array(detail.screenshots.enumerated()), id: \.offset) { entry in
-                            AsyncImage(url: URL(string: entry.element)) { phase in
-                                if let image = phase.image {
-                                    image.resizable().scaledToFill()
-                                } else {
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(WhaleTheme.soft)
+                            Button { preview = ScreenshotPreview(id: entry.element) } label: {
+                                AsyncImage(url: URL(string: entry.element)) { phase in
+                                    if let image = phase.image {
+                                        image.resizable().scaledToFill()
+                                    } else {
+                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            .fill(WhaleTheme.soft)
+                                    }
+                                }
+                                .frame(width: 132, height: 236)
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7)
                                 }
                             }
-                            .frame(width: 132, height: 236)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7)
-                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.vertical, 1)
@@ -405,5 +418,80 @@ struct GameDetailView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
         .background(WhaleTheme.field.opacity(0.58), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+struct ScreenshotPreview: Identifiable {
+    let id: String
+}
+
+struct ScreenshotViewer: View {
+    let urlString: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var scale: CGFloat = 1
+    @State private var committedScale: CGFloat = 1
+    @State private var offset: CGSize = .zero
+    @State private var committedOffset: CGSize = .zero
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            AsyncImage(url: URL(string: urlString)) { phase in
+                if let image = phase.image {
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .scaleEffect(scale)
+                        .offset(offset)
+                        .gesture(
+                            MagnifyGesture()
+                                .onChanged { value in
+                                    scale = min(max(committedScale * value.magnification, 1), 4)
+                                }
+                                .onEnded { _ in
+                                    committedScale = scale
+                                    if scale <= 1 {
+                                        offset = .zero
+                                        committedOffset = .zero
+                                    }
+                                }
+                        )
+                        .simultaneousGesture(
+                            DragGesture()
+                                .onChanged { value in
+                                    guard scale > 1 else { return }
+                                    offset = CGSize(
+                                        width: committedOffset.width + value.translation.width,
+                                        height: committedOffset.height + value.translation.height
+                                    )
+                                }
+                                .onEnded { _ in
+                                    committedOffset = offset
+                                }
+                        )
+                } else if phase.error != nil {
+                    Text("截图加载失败，请稍后重试")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.white.opacity(0.72))
+                } else {
+                    ProgressView().tint(.white)
+                }
+            }
+            .padding(12)
+        }
+        .overlay(alignment: .topTrailing) {
+            Button { dismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 36, height: 36)
+                    .background(.white.opacity(0.18), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 16)
+            .padding(.top, 12)
+            .accessibilityLabel("关闭截图")
+        }
+        .statusBarHidden(true)
     }
 }

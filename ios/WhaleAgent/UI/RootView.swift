@@ -246,7 +246,7 @@ private struct ConfirmationSheet: View {
                     Button(role: .destructive) {
                         Task { await model.skip(item) }
                     } label: {
-                        Text("取消这次操作")
+                        Text("跳过本次，不执行")
                             .font(.system(size: 15))
                             .frame(maxWidth: .infinity)
                             .frame(minHeight: 44)
@@ -260,7 +260,7 @@ private struct ConfirmationSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("稍后") { model.dismissConfirmation() }
+                    Button("稍后处理") { model.dismissConfirmation() }
                 }
             }
         }

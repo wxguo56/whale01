@@ -43,6 +43,7 @@ struct MusicView: View {
         }
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
+        .background(ScrollOffsetMemory(key: embedded ? "music" : "music-sheet"))
         .background(WhaleTheme.pageGradient)
         .navigationTitle("音乐")
         .navigationBarTitleDisplayMode(.inline)

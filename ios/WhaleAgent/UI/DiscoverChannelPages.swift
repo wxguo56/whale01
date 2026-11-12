@@ -53,6 +53,7 @@ struct AIChannelPage: View {
                 .padding(.bottom, 30)
             }
             .scrollIndicators(.hidden)
+            .background(ScrollOffsetMemory(key: "ai"))
             .refreshable { await model.refresh() }
             .onChange(of: model.aiSection) { _, _ in
                 withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("ai-top", anchor: .top) }
@@ -180,6 +181,7 @@ struct MarketChannelPage: View {
                 .padding(.bottom, 30)
             }
             .scrollIndicators(.hidden)
+            .background(ScrollOffsetMemory(key: "market"))
             .scrollDismissesKeyboard(.interactively)
             .refreshable { await model.loadMarket(force: true) }
         }
@@ -366,6 +368,7 @@ struct WatchFundFlowCard: View {
 
 struct GameChannelPage: View {
     @ObservedObject var model: DiscoverModel
+    @State private var safari: SafariTarget?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -395,6 +398,10 @@ struct GameChannelPage: View {
             )
         }
         .task { await model.loadInitial() }
+        .sheet(item: $safari) { target in
+            InAppSafari(url: target.url)
+                .ignoresSafeArea()
+        }
     }
 
     private func swipePrevious() {
@@ -433,6 +440,7 @@ struct GameChannelPage: View {
                 .padding(.bottom, 30)
             }
             .scrollIndicators(.hidden)
+            .background(ScrollOffsetMemory(key: "game-news"))
             .refreshable { await model.refresh() }
             .onChange(of: model.gameNewsSection) { _, _ in
                 withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("game-news-top", anchor: .top) }
@@ -484,7 +492,7 @@ struct GameChannelPage: View {
                     SteamHeader(kind: kind, count: model.steamItems(kind: kind).count)
                     ForEach(Array(model.steamItems(kind: kind).enumerated()), id: \.element.id) { index, item in
                         if let url = item.storeURL {
-                            Link(destination: url) {
+                            Button { safari = SafariTarget(url: url) } label: {
                                 SteamRowCard(item: item, rank: index + 1)
                             }
                             .buttonStyle(.plain)
@@ -514,6 +522,7 @@ struct GameChannelPage: View {
             .padding(.bottom, 30)
         }
         .scrollIndicators(.hidden)
+        .background(ScrollOffsetMemory(key: "game-steam-\(kind.rawValue)"))
         .refreshable { await model.loadSteam(kind: kind, force: true) }
     }
 
@@ -559,6 +568,7 @@ struct GameChannelPage: View {
             .padding(.bottom, 30)
         }
         .scrollIndicators(.hidden)
+        .background(ScrollOffsetMemory(key: "game-rank-\(model.gameSection.rawValue)"))
         .refreshable {
             if let board = model.gameSection.board {
                 await model.loadRank(board, force: true)
@@ -637,6 +647,7 @@ struct HeadlineChannelPage: View {
                 .padding(.bottom, 30)
             }
             .scrollIndicators(.hidden)
+            .background(ScrollOffsetMemory(key: "headline"))
             .refreshable { await model.refresh() }
             .onChange(of: model.headlineSection) { _, _ in
                 withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("headline-top", anchor: .top) }
@@ -650,6 +661,7 @@ struct HeadlineChannelPage: View {
 
 struct WeiboChannelPage: View {
     @ObservedObject var model: DiscoverModel
+    @State private var safari: SafariTarget?
 
     var body: some View {
         ScrollView {
@@ -670,7 +682,7 @@ struct WeiboChannelPage: View {
                     )
                     ForEach(model.hotItems) { item in
                         if let url = item.url {
-                            Link(destination: url) {
+                            Button { safari = SafariTarget(url: url) } label: {
                                 WeiboHotRowCard(item: item)
                             }
                             .buttonStyle(.plain)
@@ -691,8 +703,13 @@ struct WeiboChannelPage: View {
             .padding(.bottom, 30)
         }
         .scrollIndicators(.hidden)
+        .background(ScrollOffsetMemory(key: "weibo"))
         .refreshable { await model.loadWeiboHot(force: true) }
         .task { await model.loadInitial() }
+        .sheet(item: $safari) { target in
+            InAppSafari(url: target.url)
+                .ignoresSafeArea()
+        }
     }
 }
 

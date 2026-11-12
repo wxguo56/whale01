@@ -4,7 +4,7 @@ struct NewsDetailView: View {
     let item: NewsItem
     let channel: DiscoverChannel
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
+    @State private var safari: SafariTarget?
 
     var body: some View {
         ZStack {
@@ -33,6 +33,10 @@ struct NewsDetailView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .background(SwipeBackEnabler().frame(width: 1, height: 1))
+        .sheet(item: $safari) { target in
+            InAppSafari(url: target.url)
+                .ignoresSafeArea()
+        }
     }
 
     private var topBar: some View {
@@ -138,7 +142,7 @@ struct NewsDetailView: View {
 
     private var sourceButton: some View {
         Button {
-            if let url = item.url { openURL(url) }
+            if let url = item.url { safari = SafariTarget(url: url) }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "safari.fill")
