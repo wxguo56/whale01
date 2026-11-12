@@ -2,86 +2,151 @@ import SwiftUI
 
 struct DiscoverView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var model: DiscoverModel
     @State private var path = NavigationPath()
+    @State private var channel: DiscoverChannel
+    @StateObject private var store: DiscoverChannelStore
 
     init(initialChannel: DiscoverChannel) {
-        _model = StateObject(wrappedValue: DiscoverModel(initialChannel: initialChannel))
+        _channel = State(initialValue: initialChannel)
+        _store = StateObject(wrappedValue: DiscoverChannelStore())
     }
+
+    private var models: [DiscoverChannel: DiscoverModel] { store.models }
+    private var activeModel: DiscoverModel? { store.models[channel] }
 
     var body: some View {
         NavigationStack(path: $path) {
-            ZStack {
-                WhaleBackdrop()
-                VStack(spacing: 0) {
-                    topChrome
-                    content
+            GeometryReader { proxy in
+                ZStack {
+                    WhaleBackdrop()
+                    VStack(spacing: 0) {
+                        topChrome
+                        pager(width: proxy.size.width)
+                    }
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: DiscoverRoute.self) { route in
-                switch route {
-                case .news(let item):
-                    NewsDetailView(item: item, channel: model.channel)
-                case .stock(let quote):
-                    StockDetailView(quote: quote, discover: model)
-                case .search(let result):
-                    StockSeedLoaderView(result: result, discover: model)
+                if let model = models[channel] {
+                    switch route {
+                    case .news(let item):
+                        NewsDetailView(item: item, channel: channel)
+                    case .stock(let quote):
+                        StockDetailView(quote: quote, discover: model)
+                    case .search(let result):
+                        StockSeedLoaderView(result: result, discover: model)
+                    }
                 }
             }
         }
-        .task { await model.loadInitial() }
+    }
+
+    private func pager(width: CGFloat) -> some View {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 0) {
+                ForEach(DiscoverChannel.allCases) { item in
+                    DiscoverChannelPage(model: models[item] ?? DiscoverModel(initialChannel: item))
+                        .frame(width: width)
+                        .id(item)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollTargetBehavior(.paging)
+        .scrollPosition(id: channelScroll)
+        .scrollIndicators(.hidden)
+    }
+
+    private var channelScroll: Binding<DiscoverChannel?> {
+        Binding(
+            get: { channel },
+            set: { next in
+                guard let next, next != channel else { return }
+                channel = next
+            }
+        )
+    }
+
+    private func select(_ next: DiscoverChannel) {
+        guard next != channel else { return }
+        withAnimation(.snappy(duration: 0.28)) { channel = next }
+    }
+
+    private var isRefreshing: Bool {
+        guard let model = activeModel else { return false }
+        switch channel {
+        case .market:
+            return model.marketState == .loading
+        case .game:
+            return model.gameSection.board == nil ? model.newsState == .loading : model.rankState == .loading
+        case .weibo:
+            return model.hotState == .loading
+        default:
+            return model.newsState == .loading
+        }
     }
 
     private var topChrome: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
             HStack(spacing: 10) {
                 Button { dismiss() } label: {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(WhaleTheme.ink)
-                        .whaleGlassCircle(size: 34)
+                        .whaleGlassCircle(size: 38)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("返回")
 
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("发现")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(WhaleTheme.ink)
                     Text("真实资讯 · 微博热搜 · 游戏榜单 · 行情")
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(WhaleTheme.muted)
                 }
                 Spacer()
                 Button {
-                    Task { await model.refresh() }
+                    Task { await activeModel?.refresh() }
                 } label: {
                     if isRefreshing {
                         ProgressView().controlSize(.small).tint(WhaleTheme.accent)
-                            .frame(width: 34, height: 34)
+                            .frame(width: 38, height: 38)
                     } else {
                         Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(WhaleTheme.ink)
-                            .whaleGlassCircle(size: 34)
+                            .whaleGlassCircle(size: 38)
                     }
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("刷新")
             }
 
-            DiscoverSegment(selection: $model.channel) { channel in
-                Task { await model.select(channel) }
+            DiscoverSegment(
+                selection: Binding(get: { channel }, set: { select($0) })
+            ) { next in
+                select(next)
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 6)
+        .padding(.top, 8)
         .padding(.bottom, 10)
         .background(WhaleChromeBackground())
         .overlay(alignment: .bottom) {
             Rectangle().fill(WhaleTheme.line.opacity(0.55)).frame(height: 0.6)
         }
+    }
+
+}
+
+struct DiscoverChannelPage: View {
+    @ObservedObject var model: DiscoverModel
+
+    var body: some View {
+        content
+            .task { await model.loadInitial() }
     }
 
     @ViewBuilder
@@ -400,5 +465,18 @@ struct DiscoverView: View {
         if model.channel == .game, model.gameSection.board != nil { return model.rankState == .loading }
         if model.channel == .weibo { return model.hotState == .loading }
         return model.newsState == .loading
+    }
+}
+
+@MainActor
+final class DiscoverChannelStore: ObservableObject {
+    let models: [DiscoverChannel: DiscoverModel]
+
+    init() {
+        var built: [DiscoverChannel: DiscoverModel] = [:]
+        for item in DiscoverChannel.allCases {
+            built[item] = DiscoverModel(initialChannel: item)
+        }
+        models = built
     }
 }

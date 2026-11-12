@@ -6,39 +6,41 @@ struct DiscoverSegment: View {
     @Namespace private var animation
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(DiscoverChannel.allCases) { channel in
-                Button {
-                    if let onSelect {
-                        onSelect(channel)
-                    } else {
-                        withAnimation(.snappy(duration: 0.24)) { selection = channel }
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: channel.icon)
-                            .font(.system(size: 10, weight: .semibold))
-                        Text(channel.title)
-                            .font(.system(size: 12, weight: .semibold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                    }
-                    .foregroundStyle(selection == channel ? WhaleTheme.ink : WhaleTheme.muted)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 34)
-                    .background {
-                        if selection == channel {
-                            Capsule()
-                                .fill(WhaleTheme.card.opacity(0.92))
-                                .matchedGeometryEffect(id: "discover.segment", in: animation)
-                                .overlay { Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8) }
+        ScrollView(.horizontal) {
+            HStack(spacing: 6) {
+                ForEach(DiscoverChannel.allCases) { channel in
+                    Button {
+                        if let onSelect {
+                            onSelect(channel)
+                        } else {
+                            withAnimation(.snappy(duration: 0.24)) { selection = channel }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: channel.icon)
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(channel.title)
+                                .font(.system(size: 14, weight: .semibold))
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(selection == channel ? WhaleTheme.ink : WhaleTheme.muted)
+                        .padding(.horizontal, 10)
+                        .frame(height: 38)
+                        .background {
+                            if selection == channel {
+                                Capsule()
+                                    .fill(WhaleTheme.card.opacity(0.92))
+                                    .matchedGeometryEffect(id: "discover.segment", in: animation)
+                                    .overlay { Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8) }
+                            }
                         }
                     }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
+            .padding(4)
         }
-        .padding(4)
+        .scrollIndicators(.hidden)
         .background(WhaleTheme.field.opacity(0.78), in: Capsule())
     }
 }
@@ -53,11 +55,11 @@ struct DiscoverSectionTitle: View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(WhaleTheme.ink)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 10))
+                        .font(.system(size: 11))
                         .foregroundStyle(WhaleTheme.muted)
                 }
             }
@@ -150,7 +152,7 @@ struct NewsRowCard: View {
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(item.displayTitle)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
@@ -159,7 +161,7 @@ struct NewsRowCard: View {
                     Circle().fill(WhaleTheme.muted.opacity(0.5)).frame(width: 3, height: 3)
                     Text(DiscoverFormat.relative(item.publishedAt))
                 }
-                .font(.system(size: 10))
+                .font(.system(size: 11))
                 .foregroundStyle(WhaleTheme.muted)
             }
             Spacer(minLength: 0)
@@ -468,10 +470,10 @@ struct GameRankHeader: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("App Store 中国区 · \(title)")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(WhaleTheme.ink)
                 Text("来源：\(source.isEmpty ? "Apple App Store 公开榜单" : source)")
-                    .font(.system(size: 9))
+                    .font(.system(size: 10))
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(1)
                 if let updatedAt {
@@ -529,7 +531,7 @@ struct GameRankRowCard: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -575,10 +577,10 @@ struct WeiboHotHeader: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("微博热搜")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(WhaleTheme.ink)
                 Text("来源：\(source.isEmpty ? "微博公开热搜接口" : source)")
-                    .font(.system(size: 9))
+                    .font(.system(size: 10))
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(1)
                 if let updatedAt {
@@ -618,7 +620,7 @@ struct WeiboHotRowCard: View {
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(item.word)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
