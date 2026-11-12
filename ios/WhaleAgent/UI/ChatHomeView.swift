@@ -128,6 +128,8 @@ struct ConversationTabView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("正在播放 \(track.title)，打开音乐")
+            } else {
+                Spacer(minLength: 0)
             }
 
         }
