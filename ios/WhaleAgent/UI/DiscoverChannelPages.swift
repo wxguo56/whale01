@@ -28,30 +28,40 @@ struct AIChannelPage: View {
     @ObservedObject var model: DiscoverModel
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 12) {
-                DiscoverChannelHeader(channel: .ai)
-                NewsSectionBar(channel: .ai, selection: model.aiSection) { section in
-                    Task { await model.selectNewsSection(section, for: .ai) }
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    DiscoverChannelHeader(channel: .ai)
+                        .id("ai-top")
+                    NewsSectionBar(channel: .ai, selection: model.aiSection) { section in
+                        Task { await model.selectNewsSection(section, for: .ai) }
+                    }
+                    VStack(alignment: .leading, spacing: 12) {
+                        newsHero
+                        moreNews
+                    }
+                    .horizontalTabSwipe(
+                        onPrevious: { model.stepNewsSection(.ai, by: -1) },
+                        onNext: { model.stepNewsSection(.ai, by: 1) }
+                    )
+                    AIPaperSection(model: model)
+                        .id("ai-papers")
+                    NewsSourceFooter(model: model)
                 }
-                VStack(alignment: .leading, spacing: 12) {
-                    newsHero
-                    moreNews
-                }
-                .horizontalTabSwipe(
-                    onPrevious: { model.stepNewsSection(.ai, by: -1) },
-                    onNext: { model.stepNewsSection(.ai, by: 1) }
-                )
-                AIPaperSection(model: model)
-                NewsSourceFooter(model: model)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 30)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 30)
+            .scrollIndicators(.hidden)
+            .refreshable { await model.refresh() }
+            .onChange(of: model.aiSection) { _, _ in
+                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("ai-top", anchor: .top) }
+            }
+            .onChange(of: model.paperCategory) { _, _ in
+                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("ai-papers", anchor: .top) }
+            }
+            .task { await model.loadInitial() }
         }
-        .scrollIndicators(.hidden)
-        .refreshable { await model.refresh() }
-        .task { await model.loadInitial() }
     }
 
     @ViewBuilder
@@ -170,6 +180,7 @@ struct MarketChannelPage: View {
                 .padding(.bottom, 30)
             }
             .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
             .refreshable { await model.loadMarket(force: true) }
         }
         .task { await model.loadInitial() }
@@ -377,6 +388,7 @@ struct GameChannelPage: View {
                     rankContent
                 }
             }
+            .id(model.gameSection.rawValue)
             .horizontalTabSwipe(
                 onPrevious: swipePrevious,
                 onNext: swipeNext
@@ -407,19 +419,25 @@ struct GameChannelPage: View {
     }
 
     private var newsContent: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 11) {
-                NewsSectionBar(channel: .game, selection: model.gameNewsSection) { section in
-                    Task { await model.selectNewsSection(section, for: .game) }
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 11) {
+                    NewsSectionBar(channel: .game, selection: model.gameNewsSection) { section in
+                        Task { await model.selectNewsSection(section, for: .game) }
+                    }
+                    .id("game-news-top")
+                    newsBody
+                    NewsSourceFooter(model: model, extra: "游戏频道来自游戏媒体公开 RSS，不是微信公众号。")
                 }
-                newsBody
-                NewsSourceFooter(model: model, extra: "游戏频道来自游戏媒体公开 RSS，不是微信公众号。")
+                .padding(.horizontal, 16)
+                .padding(.bottom, 30)
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 30)
+            .scrollIndicators(.hidden)
+            .refreshable { await model.refresh() }
+            .onChange(of: model.gameNewsSection) { _, _ in
+                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("game-news-top", anchor: .top) }
+            }
         }
-        .scrollIndicators(.hidden)
-        .refreshable { await model.refresh() }
     }
 
     @ViewBuilder
@@ -572,53 +590,59 @@ struct HeadlineChannelPage: View {
     @ObservedObject var model: DiscoverModel
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 11) {
-                DiscoverChannelHeader(channel: .headline)
-                NewsSectionBar(channel: .headline, selection: model.headlineSection) { section in
-                    Task { await model.selectNewsSection(section, for: .headline) }
-                }
-                VStack(alignment: .leading, spacing: 11) {
-                    if model.newsState == .loading && model.newsItems.isEmpty {
-                        NewsSkeleton()
-                    } else if case .failed(let message) = model.newsState, model.newsItems.isEmpty {
-                        DiscoverErrorState(message: message) {
-                            Task { await model.loadNews(channel: .headline, force: true) }
-                        }
-                    } else if model.headlineNews.isEmpty {
-                        Text("这个分类暂时没有新的资讯，换一个分类或下拉刷新。")
-                            .font(.system(size: 12))
-                            .foregroundStyle(WhaleTheme.muted)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 14)
-                    } else {
-                        if let feature = model.headlineNews.first {
-                            NavigationLink(value: DiscoverRoute.news(feature)) {
-                                NewsFeatureCard(item: feature)
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 11) {
+                    DiscoverChannelHeader(channel: .headline)
+                        .id("headline-top")
+                    NewsSectionBar(channel: .headline, selection: model.headlineSection) { section in
+                        Task { await model.selectNewsSection(section, for: .headline) }
+                    }
+                    VStack(alignment: .leading, spacing: 11) {
+                        if model.newsState == .loading && model.newsItems.isEmpty {
+                            NewsSkeleton()
+                        } else if case .failed(let message) = model.newsState, model.newsItems.isEmpty {
+                            DiscoverErrorState(message: message) {
+                                Task { await model.loadNews(channel: .headline, force: true) }
                             }
-                            .buttonStyle(.plain)
-                        }
-                        ForEach(Array(model.headlineNews.dropFirst())) { item in
-                            NavigationLink(value: DiscoverRoute.news(item)) {
-                                NewsRowCard(item: item)
+                        } else if model.headlineNews.isEmpty {
+                            Text("这个分类暂时没有新的资讯，换一个分类或下拉刷新。")
+                                .font(.system(size: 12))
+                                .foregroundStyle(WhaleTheme.muted)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 14)
+                        } else {
+                            if let feature = model.headlineNews.first {
+                                NavigationLink(value: DiscoverRoute.news(feature)) {
+                                    NewsFeatureCard(item: feature)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
+                            ForEach(Array(model.headlineNews.dropFirst())) { item in
+                                NavigationLink(value: DiscoverRoute.news(item)) {
+                                    NewsRowCard(item: item)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                     }
+                    .horizontalTabSwipe(
+                        onPrevious: { model.stepNewsSection(.headline, by: -1) },
+                        onNext: { model.stepNewsSection(.headline, by: 1) }
+                    )
+                    NewsSourceFooter(model: model)
                 }
-                .horizontalTabSwipe(
-                    onPrevious: { model.stepNewsSection(.headline, by: -1) },
-                    onNext: { model.stepNewsSection(.headline, by: 1) }
-                )
-                NewsSourceFooter(model: model)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 30)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 30)
+            .scrollIndicators(.hidden)
+            .refreshable { await model.refresh() }
+            .onChange(of: model.headlineSection) { _, _ in
+                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("headline-top", anchor: .top) }
+            }
+            .task { await model.loadInitial() }
         }
-        .scrollIndicators(.hidden)
-        .refreshable { await model.refresh() }
-        .task { await model.loadInitial() }
     }
 }
 

@@ -65,7 +65,19 @@ struct RecordsView: View {
                 .padding(.bottom, showsClose ? 26 : WhaleTabBar.height + 34)
             }
             .scrollIndicators(.hidden)
+            .horizontalTabSwipe(
+                onPrevious: { stepFilter(-1) },
+                onNext: { stepFilter(1) }
+            )
         }
+    }
+
+    private func stepFilter(_ delta: Int) {
+        let keys = ["all", "success", "review"]
+        guard let index = keys.firstIndex(of: filter) else { return }
+        let next = min(max(index + delta, 0), keys.count - 1)
+        guard next != index else { return }
+        withAnimation(.snappy(duration: 0.22)) { filter = keys[next] }
     }
 
     private var recentWeekActions: [OperationRecord] {

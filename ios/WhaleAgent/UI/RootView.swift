@@ -157,6 +157,8 @@ struct RootView: View {
             )
         }
         .onReceive(NotificationCenter.default.publisher(for: .whaleOpenChat)) { _ in
+            showDiscover = false
+            showRecords = false
             go(.conversation)
         }
     }

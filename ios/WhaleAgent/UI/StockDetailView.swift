@@ -67,12 +67,21 @@ struct StockDetailView: View {
                     .foregroundStyle(WhaleTheme.muted)
             }
             Spacer()
-            if discover.isWatched(quote.symbol) {
-                Image(systemName: "star.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.warm)
+            Button {
+                if discover.isWatched(quote.symbol) {
+                    discover.removeFromWatchlist(quote.symbol)
+                } else {
+                    discover.addToWatchlist(quote.symbol)
+                }
+            } label: {
+                Image(systemName: discover.isWatched(quote.symbol) ? "star.fill" : "star")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(discover.isWatched(quote.symbol) ? WhaleTheme.warm : WhaleTheme.muted)
                     .frame(width: 34, height: 34)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(discover.isWatched(quote.symbol) ? "从自选移除" : "加自选")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -171,6 +180,18 @@ struct StockDetailView: View {
         .padding(15)
         .background(WhaleTheme.card.opacity(0.78), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8) }
+        .horizontalTabSwipe(
+            onPrevious: { stepChartMode(-1) },
+            onNext: { stepChartMode(1) }
+        )
+    }
+
+    private func stepChartMode(_ delta: Int) {
+        let all = StockChartMode.allCases
+        guard let index = all.firstIndex(of: chartMode) else { return }
+        let next = min(max(index + delta, 0), all.count - 1)
+        guard next != index else { return }
+        withAnimation(.easeInOut(duration: 0.18)) { chartMode = all[next] }
     }
 
     private var statsCard: some View {

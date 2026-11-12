@@ -26,6 +26,20 @@ struct DiscoverView: View {
             .overlay(alignment: .leading) {
                 edgeBackZone
             }
+            .overlay(alignment: .topTrailing) {
+                if path.isEmpty {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(WhaleTheme.ink)
+                            .whaleGlassCircle(size: 34)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("返回首页")
+                    .padding(.trailing, 16)
+                    .padding(.top, 12)
+                }
+            }
             .toolbar(.hidden, for: .navigationBar)
             .task {
 #if DEBUG

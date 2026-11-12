@@ -280,24 +280,34 @@ struct TodoView: View {
         ZStack(alignment: .top) {
                 WhaleBackdrop().ignoresSafeArea()
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        header
-                        if reminderStatus != "granted" { permissionCard }
-                        statsCard
-                        filterBar
-                        content
-                        if let errorText { errorBanner(errorText) }
-                        hint
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            header
+                                .id("todo-top")
+                            if reminderStatus != "granted" { permissionCard }
+                            statsCard
+                            filterBar
+                            content
+                            if let errorText { errorBanner(errorText) }
+                            hint
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 10)
+                        .padding(.bottom, 22)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 10)
-                    .padding(.bottom, 22)
+                    .scrollIndicators(.hidden)
+                    .scrollDismissesKeyboard(.interactively)
+                    .refreshable { await reload() }
+                    .onTapGesture { composerFocused = false }
+                    .horizontalTabSwipe(
+                        onPrevious: { stepFilter(-1) },
+                        onNext: { stepFilter(1) }
+                    )
+                    .onChange(of: filter) { _, _ in
+                        withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("todo-top", anchor: .top) }
+                    }
                 }
-                .scrollIndicators(.hidden)
-                .scrollDismissesKeyboard(.interactively)
-                .refreshable { await reload() }
-                .onTapGesture { composerFocused = false }
 
                 if let toast {
                     Text(toast)
@@ -403,6 +413,15 @@ struct TodoView: View {
             .buttonStyle(.plain)
         }
         .whaleCard(padding: 16)
+    }
+
+    private func stepFilter(_ delta: Int) {
+        let all = TodoFilter.allCases
+        guard let index = all.firstIndex(of: filter) else { return }
+        let next = min(max(index + delta, 0), all.count - 1)
+        guard next != index else { return }
+        composerFocused = false
+        withAnimation(.easeInOut(duration: 0.18)) { filter = all[next] }
     }
 
     private var filterBar: some View {
