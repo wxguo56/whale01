@@ -411,48 +411,6 @@ struct WhaleHomeCanvas: View {
                     metricsGrid(current, today: today)
                 }
 
-                if !today.advice.isEmpty {
-                    Text(today.advice)
-                        .font(.system(size: 14))
-                        .foregroundStyle(WhaleTheme.muted)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                if weatherDays.count > 1 {
-                    Rectangle()
-                        .fill(WhaleTheme.line)
-                        .frame(height: 0.5)
-
-                    VStack(spacing: 9) {
-                        ForEach(Array(weatherDays.prefix(7))) { day in
-                            HStack(spacing: 10) {
-                                Text(day.dayLabel)
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundStyle(WhaleTheme.muted)
-                                    .frame(width: 58, alignment: .leading)
-                                Image(systemName: day.icon)
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundStyle(WhaleTheme.coral)
-                                    .frame(width: 21)
-                                Text(day.summary)
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundStyle(WhaleTheme.ink)
-                                    .lineLimit(1)
-                                Spacer(minLength: 4)
-                                if let rain = day.precipitationText {
-                                    Text(rain)
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundStyle(WhaleTheme.moon)
-                                }
-                                Text(day.temperatureText)
-                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(WhaleTheme.ink)
-                                    .lineLimit(1)
-                            }
-                        }
-                    }
-                }
-
                 HStack(spacing: 5) {
                     Text("Open-Meteo · 真实预报")
                         .font(.system(size: 10, weight: .medium))
