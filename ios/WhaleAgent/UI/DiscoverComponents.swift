@@ -17,9 +17,11 @@ struct DiscoverSegment: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: channel.icon)
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 10, weight: .semibold))
                         Text(channel.title)
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 12, weight: .semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
                     }
                     .foregroundStyle(selection == channel ? WhaleTheme.ink : WhaleTheme.muted)
                     .frame(maxWidth: .infinity)
@@ -92,14 +94,14 @@ struct NewsFeatureCard: View {
                     .foregroundStyle(WhaleTheme.muted)
             }
 
-            Text(item.title)
+            Text(item.displayTitle)
                 .font(.system(size: 20, weight: .bold, design: .rounded))
                 .foregroundStyle(WhaleTheme.ink)
                 .lineLimit(4)
                 .multilineTextAlignment(.leading)
 
-            if !item.summary.isEmpty {
-                Text(item.summary)
+            if !item.displaySummary.isEmpty {
+                Text(item.displaySummary)
                     .font(.system(size: 12))
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(3)
@@ -141,13 +143,13 @@ struct NewsRowCard: View {
                 .fill(WhaleTheme.auroraGradient)
                 .frame(width: 48, height: 48)
                 .overlay {
-                    Image(systemName: item.channel == "ai" ? "sparkles" : "newspaper.fill")
+                    Image(systemName: channelIcon)
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(WhaleTheme.onAccent.opacity(0.88))
                 }
 
             VStack(alignment: .leading, spacing: 5) {
-                Text(item.title)
+                Text(item.displayTitle)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(3)
@@ -170,6 +172,14 @@ struct NewsRowCard: View {
         .padding(.horizontal, 14)
         .background(WhaleTheme.card.opacity(0.72), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+    }
+
+    private var channelIcon: String {
+        switch item.channel {
+        case "ai": return "sparkles"
+        case "game": return "gamecontroller.fill"
+        default: return "newspaper.fill"
+        }
     }
 }
 
@@ -399,5 +409,150 @@ struct StockSeedLoaderView: View {
         } catch {
             errorText = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
+    }
+}
+
+struct GameSectionSegment: View {
+    @Binding var selection: GameSection
+    var onSelect: ((GameSection) -> Void)?
+    @Namespace private var animation
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(GameSection.allCases) { section in
+                Button {
+                    if let onSelect {
+                        onSelect(section)
+                    } else {
+                        withAnimation(.snappy(duration: 0.22)) { selection = section }
+                    }
+                } label: {
+                    Text(section.title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(selection == section ? WhaleTheme.ink : WhaleTheme.muted)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 30)
+                        .background {
+                            if selection == section {
+                                Capsule()
+                                    .fill(WhaleTheme.card.opacity(0.92))
+                                    .matchedGeometryEffect(id: "game.section", in: animation)
+                                    .overlay { Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(3)
+        .background(WhaleTheme.field.opacity(0.6), in: Capsule())
+    }
+}
+
+struct GameRankHeader: View {
+    let title: String
+    let source: String
+    let updatedAt: String?
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(WhaleTheme.auroraGradient)
+                .frame(width: 46, height: 46)
+                .overlay {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.onAccent.opacity(0.92))
+                }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("App Store 中国区 · \(title)")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(WhaleTheme.ink)
+                Text("来源：\(source.isEmpty ? "Apple App Store 公开榜单" : source)")
+                    .font(.system(size: 9))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .lineLimit(1)
+                if let updatedAt {
+                    Text("更新于 \(DiscoverFormat.relative(updatedAt))")
+                        .font(.system(size: 9))
+                        .foregroundStyle(WhaleTheme.muted.opacity(0.8))
+                }
+            }
+
+            Spacer(minLength: 4)
+
+            Text("\(count) 款")
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(WhaleTheme.accent)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
+                .background(WhaleTheme.accent.opacity(0.1), in: Capsule())
+        }
+        .padding(13)
+        .background(WhaleTheme.card.opacity(0.8), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+    }
+}
+
+struct GameRankRowCard: View {
+    let item: GameRankItem
+
+    var body: some View {
+        HStack(spacing: 11) {
+            Text("\(item.rank)")
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .foregroundStyle(item.rank <= 3 ? WhaleTheme.onAccent : WhaleTheme.muted)
+                .frame(width: 26, height: 26)
+                .background(
+                    Circle().fill(item.rank <= 3 ? WhaleTheme.accent : WhaleTheme.soft.opacity(0.7))
+                )
+
+            AsyncImage(url: item.iconURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                default:
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(WhaleTheme.soft)
+                        .overlay {
+                            Image(systemName: "gamecontroller.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(WhaleTheme.muted.opacity(0.6))
+                        }
+                }
+            }
+            .frame(width: 44, height: 44)
+            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .overlay { RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.6) }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.name)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                HStack(spacing: 6) {
+                    Text(item.category.isEmpty ? "游戏" : item.category)
+                    if !item.releaseText.isEmpty {
+                        Circle().fill(WhaleTheme.muted.opacity(0.5)).frame(width: 3, height: 3)
+                        Text("上架 \(item.releaseText)")
+                    }
+                }
+                .font(.system(size: 9))
+                .foregroundStyle(WhaleTheme.muted)
+            }
+
+            Spacer(minLength: 0)
+
+            Image(systemName: "arrow.up.right")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(WhaleTheme.muted.opacity(0.55))
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .background(WhaleTheme.card.opacity(0.72), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
     }
 }

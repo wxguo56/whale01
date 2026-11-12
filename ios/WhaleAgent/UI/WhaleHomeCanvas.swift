@@ -10,6 +10,7 @@ struct WhaleHomeCanvas: View {
     let onOpenMusic: () -> Void
     let onOpenTodo: () -> Void
     let onOpenDiscover: (DiscoverChannel) -> Void
+    let onOpenConversation: () -> Void
     @State private var weatherDays: [WeatherDaySummary] = []
     @State private var weatherLocation = ""
     @State private var weatherLoading = false
@@ -85,7 +86,11 @@ struct WhaleHomeCanvas: View {
         TimelineView(.periodic(from: Date(), by: 60)) { context in
             let quote = Self.quote(at: context.date)
             HStack(alignment: .top, spacing: 10) {
-                WhaleMarkView(size: 30)
+                Button(action: onOpenConversation) {
+                    WhaleMarkView(size: 30)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("进入对话")
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {

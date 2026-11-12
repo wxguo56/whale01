@@ -25,6 +25,7 @@ struct TodoReminder: Identifiable, Equatable {
 
 private enum TodoFilter: String, CaseIterable, Identifiable {
     case pending
+    case inProgress
     case completed
 
     var id: String { rawValue }
@@ -32,6 +33,7 @@ private enum TodoFilter: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .pending: return "待办"
+        case .inProgress: return "进行中"
         case .completed: return "已完成"
         }
     }
@@ -248,8 +250,21 @@ struct TodoView: View {
 
     private var reminderStatus: String { model.permissionsSnapshot["reminder"] ?? "unknown" }
     private var pendingItems: [TodoReminder] { items.filter { !$0.completed } }
+    private var inProgressItems: [TodoReminder] {
+        let endOfToday = Calendar.current.startOfDay(for: Date()).addingTimeInterval(86_400)
+        return items.filter { item in
+            guard !item.completed, let due = item.dueAt else { return false }
+            return due < endOfToday
+        }
+    }
     private var completedItems: [TodoReminder] { items.filter(\.completed) }
-    private var visibleItems: [TodoReminder] { filter == .pending ? pendingItems : completedItems }
+    private var visibleItems: [TodoReminder] {
+        switch filter {
+        case .pending: return pendingItems
+        case .inProgress: return inProgressItems
+        case .completed: return completedItems
+        }
+    }
 
     var body: some View {
         if embedded {
@@ -269,6 +284,7 @@ struct TodoView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         header
                         if reminderStatus != "granted" { permissionCard }
+                        statsCard
                         filterBar
                         content
                         if let errorText { errorBanner(errorText) }
@@ -392,9 +408,64 @@ struct TodoView: View {
     private var filterBar: some View {
         HStack(spacing: 8) {
             filterButton(.pending, count: pendingItems.count)
+            filterButton(.inProgress, count: inProgressItems.count)
             filterButton(.completed, count: completedItems.count)
             Spacer(minLength: 0)
         }
+    }
+
+    private var statsCard: some View {
+        VStack(spacing: 9) {
+            HStack(spacing: 0) {
+                statMetric(.pending, count: pendingItems.count, label: "待办事项", tint: WhaleTheme.ink)
+                statDivider
+                statMetric(.inProgress, count: inProgressItems.count, label: "进行中", tint: WhaleTheme.coral)
+                statDivider
+                statMetric(.completed, count: completedItems.count, label: "已完成", tint: WhaleTheme.success)
+            }
+            Text("进行中 = 今天到期或已逾期；待办 = 全部未完成")
+                .font(.system(size: 9))
+                .foregroundStyle(WhaleTheme.muted.opacity(0.8))
+                .frame(maxWidth: .infinity, alignment: .center)
+        }
+        .padding(.vertical, 13)
+        .padding(.horizontal, 8)
+        .background(WhaleTheme.card.opacity(0.78), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+        }
+    }
+
+    private func statMetric(_ value: TodoFilter, count: Int, label: String, tint: Color) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.18)) { filter = value }
+        } label: {
+            VStack(spacing: 2) {
+                Text("\(count)")
+                    .font(.system(size: 23, weight: .bold, design: .rounded))
+                    .foregroundStyle(tint)
+                    .monospacedDigit()
+                Text(label)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(WhaleTheme.muted)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(filter == value ? tint.opacity(0.08) : Color.clear)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(label) \(count) 条")
+    }
+
+    private var statDivider: some View {
+        Rectangle()
+            .fill(WhaleTheme.line.opacity(0.55))
+            .frame(width: 0.6, height: 34)
     }
 
     private func filterButton(_ value: TodoFilter, count: Int) -> some View {
@@ -449,18 +520,42 @@ struct TodoView: View {
 
     private var emptyState: some View {
         VStack(spacing: 10) {
-            Image(systemName: filter == .pending ? "checkmark.circle" : "archivebox")
+            Image(systemName: emptyIcon)
                 .font(.system(size: 28, weight: .light))
                 .foregroundStyle(WhaleTheme.muted.opacity(0.7))
-            Text(filter == .pending ? "还没有待办" : "还没有已完成事项")
+            Text(emptyTitle)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(WhaleTheme.ink)
-            Text(filter == .pending ? "在下面写一句，直接加到系统提醒事项。" : "勾掉的事会出现在这里，可以再恢复。")
+            Text(emptyHint)
                 .font(.system(size: 12))
                 .foregroundStyle(WhaleTheme.muted)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 34)
+    }
+
+    private var emptyIcon: String {
+        switch filter {
+        case .pending: return "checkmark.circle"
+        case .inProgress: return "clock.badge.checkmark"
+        case .completed: return "archivebox"
+        }
+    }
+
+    private var emptyTitle: String {
+        switch filter {
+        case .pending: return "还没有待办"
+        case .inProgress: return "没有进行中的事项"
+        case .completed: return "还没有已完成事项"
+        }
+    }
+
+    private var emptyHint: String {
+        switch filter {
+        case .pending: return "在下面写一句，直接加到系统提醒事项。"
+        case .inProgress: return "今天到期或已逾期的未完成事项会出现在这里。"
+        case .completed: return "勾掉的事会出现在这里，可以再恢复。"
+        }
     }
 
     private func row(_ item: TodoReminder) -> some View {

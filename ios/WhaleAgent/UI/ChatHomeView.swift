@@ -13,9 +13,10 @@ struct ConversationTabView: View {
     let onOpenDiscover: (DiscoverChannel) -> Void
 
     @State private var browsingStarter = false
+    @State private var showConversation = false
 
     private var showingStarter: Bool {
-        model.messages.isEmpty || browsingStarter
+        !showConversation && (model.messages.isEmpty || browsingStarter)
     }
 
     var body: some View {
@@ -30,17 +31,14 @@ struct ConversationTabView: View {
                         onOpenRecords: onOpenRecords,
                         onOpenMusic: onOpenMusic,
                         onOpenTodo: onOpenTodo,
-                        onOpenDiscover: onOpenDiscover
+                        onOpenDiscover: onOpenDiscover,
+                        onOpenConversation: enterConversation
                     )
                     .transition(.opacity)
                 } else {
                     ConversationSurface(
                         model: model,
-                        bottomInset: bottomInset,
-                        onOpenRecords: onOpenRecords,
-                        onOpenMusic: onOpenMusic,
-                        onOpenTodo: onOpenTodo,
-                        onOpenDiscover: onOpenDiscover
+                        bottomInset: bottomInset
                     )
                     .transition(.opacity)
                     .overlay(alignment: .leading) {
@@ -57,19 +55,31 @@ struct ConversationTabView: View {
             if newCount > oldCount || newCount == 0 {
                 browsingStarter = false
             }
+            if newCount > oldCount {
+                showConversation = true
+            }
         }
     }
 
     private func goToStarter() {
-        guard !model.messages.isEmpty else { return }
+        guard showConversation || !model.messages.isEmpty else { return }
         withAnimation(.easeInOut(duration: 0.2)) {
+            showConversation = false
             browsingStarter = true
+        }
+    }
+
+    private func enterConversation() {
+        guard showingStarter else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            browsingStarter = false
+            showConversation = true
         }
     }
 
     private var header: some View {
         HStack(spacing: 10) {
-            if !showingStarter && !model.messages.isEmpty {
+            if !showingStarter {
                 Button(action: goToStarter) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 15, weight: .semibold))
@@ -81,7 +91,11 @@ struct ConversationTabView: View {
                 .transition(.opacity)
             }
 
-            WhaleMarkView(size: showingStarter ? 40 : 36)
+            Button(action: enterConversation) {
+                WhaleMarkView(size: 40)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("进入对话")
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 7) {
@@ -130,8 +144,9 @@ struct ConversationTabView: View {
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     browsingStarter = false
-                    model.newConversation()
+                    showConversation = true
                 }
+                model.newConversation()
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "square.and.pencil")

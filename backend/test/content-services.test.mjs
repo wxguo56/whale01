@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { NewsService, parseFeed, cleanText } from "../src/news.mjs";
 import { MarketService, normalizeSymbol } from "../src/market.mjs";
+import { GameRankService } from "../src/gameRank.mjs";
 import { ServerToolExecutor } from "../src/serverTools.mjs";
 
 const NOW = new Date("2026-11-11T08:00:00.000Z");
@@ -17,6 +18,14 @@ test("RSS/Atom 解析保留标题、链接、摘要与时间", () => {
   const atom = `<feed><entry><title>Agent update</title><link rel="alternate" href="https://example.com/b"/><summary>summary</summary><updated>2026-11-11T06:00:00Z</updated></entry></feed>`;
   const atomItems = parseFeed(atom);
   assert.equal(atomItems[0].link, "https://example.com/b");
+});
+
+test("新闻摘要多层转义与 HTML 标签被清理成纯文本", () => {
+  assert.equal(cleanText("<![CDATA[<p data-vmark=\"abc\">AI <strong>新闻</strong></p>]]>"), "AI 新闻");
+  assert.equal(cleanText("&lt;p&gt;游戏&amp;lt;b&amp;gt;资讯&lt;/b&gt;&lt;/p&gt;"), "游戏 资讯");
+  assert.equal(cleanText("&amp;lt;p&amp;gt;双层转义&amp;lt;/p&amp;gt;"), "双层转义");
+  assert.equal(cleanText("&amp;amp;lt;p&amp;amp;gt;三层转义&amp;amp;lt;/p&amp;amp;gt;"), "三层转义");
+  assert.equal(cleanText("<style>.x{color:red}</style>正文&nbsp;&amp;&nbsp;更多"), "正文 & 更多");
 });
 
 test("NewsService 只返回真实源内容、去重并缓存", async () => {
@@ -75,6 +84,41 @@ test("MarketService 解析真实行情响应并标注延迟", async () => {
   assert.equal(result.quotes[0].volume, 1_234_500);
 });
 
+test("GameRankService 读取 App Store 公开榜单并缓存", async () => {
+  let calls = 0;
+  const payload = {
+    feed: {
+      entry: [
+        {
+          "im:name": { label: "王者荣耀" },
+          "im:image": [{ label: "https://example.com/53.png" }, { label: "https://example.com/100.png" }],
+          "im:artist": { label: "Tencent" },
+          "category": { attributes: { label: "游戏" } },
+          "im:releaseDate": { label: "2015-10-26T00:00:00-07:00" },
+          "id": { label: "989673964", attributes: { "im:id": "989673964" } },
+          link: [{ attributes: { href: "https://apps.apple.com/cn/app/id989673964" } }]
+        }
+      ]
+    }
+  };
+  const service = new GameRankService({
+    now: () => NOW,
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response(JSON.stringify(payload), { status: 200 });
+    }
+  });
+  const first = await service.list({ board: "free", limit: 10 });
+  assert.equal(first.items.length, 1);
+  assert.equal(first.items[0].rank, 1);
+  assert.equal(first.items[0].name, "王者荣耀");
+  assert.equal(first.items[0].icon, "https://example.com/100.png");
+  assert.equal(first.source, "Apple App Store 中国区公开榜单");
+  const second = await service.list({ board: "free", limit: 10 });
+  assert.equal(second.cached, true);
+  assert.equal(calls, 1);
+});
+
 test("服务端工具把新闻与行情转换为可引用的真实结果", async () => {
   const news = { list: async () => ({ channel: "ai", updatedAt: NOW.toISOString(), sources: ["源A"], unavailableSources: [], items: [{ title: "AI 新闻", summary: "摘要", source: "源A", publishedAt: NOW.toISOString(), link: "https://example.com/a" }] }) };
   const quote = { symbol: "sh600519", code: "600519", name: "贵州茅台", price: 1688.5, delayedMinutes: 15 };
@@ -83,7 +127,10 @@ test("服务端工具把新闻与行情转换为可引用的真实结果", async
     search: async () => ({ results: [] }),
     kline: async () => ({ points: [] })
   };
-  const executor = new ServerToolExecutor({ news, market });
+  const gameRank = {
+    list: async () => ({ board: "grossing", boardName: "畅销榜", updatedAt: NOW.toISOString(), source: "Apple App Store 中国区公开榜单", items: [{ rank: 1, name: "王者荣耀" }] })
+  };
+  const executor = new ServerToolExecutor({ news, market, gameRank });
   const newsResult = await executor.execute({ tool: "get_tech_news", arguments: { channel: "ai" } });
   assert.equal(newsResult.status, "success");
   assert.equal(newsResult.data.items[0].title, "AI 新闻");
@@ -91,4 +138,7 @@ test("服务端工具把新闻与行情转换为可引用的真实结果", async
   assert.equal(quoteResult.status, "success");
   assert.equal(quoteResult.data.quotes[0].name, "贵州茅台");
   assert.equal(quoteResult.data.delayedMinutes, 15);
+  const rankResult = await executor.execute({ tool: "get_game_rank", arguments: { board: "grossing" } });
+  assert.equal(rankResult.status, "success");
+  assert.equal(rankResult.data.items[0].name, "王者荣耀");
 });

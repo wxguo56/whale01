@@ -14,6 +14,21 @@ final class CoreTests: XCTestCase {
         XCTAssertThrowsError(try value.requiredString("missing"))
     }
 
+    func testDiscoverGameChannelAndRankBoards() {
+        XCTAssertEqual(DiscoverChannel.game.title, "游戏")
+        XCTAssertEqual(DiscoverChannel.game.icon, "gamecontroller.fill")
+        XCTAssertNil(GameSection.news.board)
+        XCTAssertEqual(GameSection.free.board, .free)
+        XCTAssertEqual(GameSection.grossing.board, .grossing)
+    }
+
+    func testNewsTextRemovesNestedHTMLAndEntities() {
+        XCTAssertEqual(NewsText.plain("&lt;p&gt;今天 &amp;quot;AI&amp;quot; 新闻&lt;/p&gt;"), "今天 \"AI\" 新闻")
+        XCTAssertEqual(NewsText.plain("<![CDATA[<b>标题</b>]]>"), "标题")
+        XCTAssertEqual(NewsText.plain("&lt;script&gt;alert(1)&lt;/script&gt;正文"), "正文")
+        XCTAssertEqual(NewsText.plain("&amp;lt;div&amp;gt;双层转义&amp;lt;/div&amp;gt;"), "双层转义")
+    }
+
     func testMusicAlbumAndTrackKeepRealLibraryIdentity() {
         let albumJSON = JSONValue.object([
             "albumId": .string("album:123"),

@@ -65,6 +65,14 @@ export function createHttpServer(runtime) {
         return;
       }
 
+      if (request.method === "GET" && url.pathname === "/v1/games/rank") {
+        const board = url.searchParams.get("board") ?? "free";
+        const limit = Number(url.searchParams.get("limit") ?? 50);
+        const result = await runtime.gameRank.list({ board, limit });
+        sendJson(response, 200, result);
+        return;
+      }
+
       if (request.method === "GET" && url.pathname === "/v1/market/quote") {
         const symbols = (url.searchParams.get("symbols") ?? "")
           .split(",")

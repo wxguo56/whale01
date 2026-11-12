@@ -681,7 +681,7 @@ final class NativeToolRouter {
     private func techNews(_ arguments: [String: JSONValue]) async throws -> JSONValue {
         let rawChannel = arguments.optionalString("channel") ?? "ai"
         guard let channel = DiscoverChannel(rawValue: rawChannel), channel != .market else {
-            throw ToolExecutionError(code: "invalid_arguments", message: "channel 只能是 ai 或 headline")
+            throw ToolExecutionError(code: "invalid_arguments", message: "channel 只能是 ai、headline 或 game")
         }
         let limit = min(max(arguments.optionalInt("limit") ?? 8, 1), 12)
         let response = try await discover.news(channel: channel, limit: limit)
@@ -691,6 +691,34 @@ final class NativeToolRouter {
             "sources": .array((response.sources ?? []).map { .string($0) }),
             "unavailableSources": .array((response.unavailableSources ?? []).map { .string($0) }),
             "items": .array(response.items.map(newsJSON))
+        ])
+    }
+
+    private func gameRank(_ arguments: [String: JSONValue]) async throws -> JSONValue {
+        let rawBoard = arguments.optionalString("board") ?? "free"
+        guard let board = GameRankBoard(rawValue: rawBoard) else {
+            throw ToolExecutionError(code: "invalid_arguments", message: "board 只能是 free 或 grossing")
+        }
+        let limit = min(max(arguments.optionalInt("limit") ?? 20, 1), 50)
+        let response = try await discover.gameRank(board: board, limit: limit)
+        return .object([
+            "board": .string(response.board),
+            "boardName": .string(response.boardName),
+            "updatedAt": .string(response.updatedAt),
+            "source": .string(response.source),
+            "note": .string(response.note ?? ""),
+            "items": .array(response.items.map { item -> JSONValue in
+                .object([
+                    "rank": .number(Double(item.rank)),
+                    "id": .string(item.id),
+                    "name": .string(item.name),
+                    "artist": .string(item.artist),
+                    "category": .string(item.category),
+                    "icon": .string(item.icon),
+                    "releaseDate": .string(item.releaseDate),
+                    "link": .string(item.link)
+                ])
+            })
         ])
     }
 
@@ -901,6 +929,8 @@ final class NativeToolRouter {
             return try await listWatchlist()
         case "get_tech_news":
             return try await techNews(pending.arguments)
+        case "get_game_rank":
+            return try await gameRank(pending.arguments)
         case "get_stock_quote":
             return try await stockQuote(pending.arguments)
         case "search_stock":

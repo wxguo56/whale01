@@ -19,6 +19,7 @@ test("工具目录覆盖系统操作、记录修改、记忆与公开信息能�
     "find_free_slots",
     "get_activity_summary",
     "get_current_location",
+    "get_game_rank",
     "get_playback_state",
     "get_stock_intraday",
     "get_stock_kline",

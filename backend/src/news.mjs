@@ -49,6 +49,27 @@ const DEFAULT_FEEDS = [
     url: "https://rss.sina.com.cn/news/china/focus15.xml",
     channels: ["headline"],
     requireAiKeyword: false
+  },
+  {
+    id: "youxiputao",
+    name: "游戏葡萄",
+    url: "https://www.youxituoluo.com/feed",
+    channels: ["game"],
+    requireAiKeyword: false
+  },
+  {
+    id: "youxichaguan",
+    name: "游戏茶馆",
+    url: "https://www.youxichaguan.com/feed",
+    channels: ["game"],
+    requireAiKeyword: false
+  },
+  {
+    id: "chuapp",
+    name: "触乐",
+    url: "https://www.chuapp.com/feed",
+    channels: ["game"],
+    requireAiKeyword: false
   }
 ];
 
@@ -81,8 +102,8 @@ export class NewsService {
   }
 
   async list({ channel = "ai", limit = 20 } = {}) {
-    const normalizedChannel = channel === "headline" ? "headline" : channel === "ai" ? "ai" : null;
-    if (!normalizedChannel) throw new NewsError("channel 只能是 ai 或 headline", "invalid_channel", 400);
+    const normalizedChannel = ["ai", "headline", "game"].includes(channel) ? channel : null;
+    if (!normalizedChannel) throw new NewsError("channel 只能是 ai、headline 或 game", "invalid_channel", 400);
     const safeLimit = clampInteger(limit, 1, 40, 20);
     const cacheKey = `${normalizedChannel}:${safeLimit}`;
     const cached = this.cache.get(cacheKey);
@@ -205,11 +226,18 @@ function pickLink(block) {
 export function cleanText(value) {
   if (!value) return "";
   let text = String(value);
-  text = text.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1");
-  text = text.replace(/<script\b[\s\S]*?<\/script>/gi, " ");
-  text = text.replace(/<style\b[\s\S]*?<\/style>/gi, " ");
-  text = text.replace(/<[^>]+>/g, " ");
-  text = decodeEntities(text);
+  // RSS 摘要常见多层转义：CDATA 里再套 &lt;p&gt;，甚至 &amp;lt;。
+  // 每轮先解实体再剥标签，多轮直到稳定，避免把 HTML 当正文展示。
+  for (let round = 0; round < 3; round += 1) {
+    text = text.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1");
+    text = text.replace(/<script\b[\s\S]*?<\/script>/gi, " ");
+    text = text.replace(/<style\b[\s\S]*?<\/style>/gi, " ");
+    text = text.replace(/<!--[\s\S]*?-->/g, " ");
+    text = text.replace(/<\/?[a-z][^>]*>/gi, " ");
+    text = decodeEntities(text);
+  }
+  text = text.replace(/<\/?[a-z][^>]*>/gi, " ");
+  text = text.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u200b-\u200d\ufeff]/gi, " ");
   return text.replace(/\s+/g, " ").trim();
 }
 

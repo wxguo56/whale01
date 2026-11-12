@@ -598,7 +598,7 @@
       "name": "get_tech_news",
       "version": "1.0",
       "skill": "research",
-      "description": "读取真实的 AI 科技或时事新闻列表。只返回标题、摘要、来源、发布时间和原文链接；不得把列表当成全文。",
+      "description": "读取真实的 AI 科技、时事或游戏产业新闻列表。只返回标题、摘要、来源、发布时间和原文链接；不得把列表当成全文。游戏频道来自游戏葡萄、游戏茶馆、触乐等公开 RSS。",
       "requiresConfirmation": false,
       "requiresAuthorization": [],
       "inputSchema": {
@@ -606,8 +606,25 @@
         "required": ["channel"],
         "additionalProperties": false,
         "properties": {
-          "channel": { "type": "string", "enum": ["ai", "headline"] },
+          "channel": { "type": "string", "enum": ["ai", "headline", "game"] },
           "limit": { "type": "integer", "minimum": 1, "maximum": 12 }
+        }
+      }
+    },
+    {
+      "name": "get_game_rank",
+      "version": "1.0",
+      "skill": "research",
+      "description": "读取 Apple App Store 中国区游戏免费榜或畅销榜的真实公开排名。board=free 为免费榜，board=grossing 为畅销榜。返回排名、游戏名、分类、图标、上架日期和 App Store 链接；不得编造排名或把榜单当成推荐。",
+      "requiresConfirmation": false,
+      "requiresAuthorization": [],
+      "inputSchema": {
+        "type": "object",
+        "required": ["board"],
+        "additionalProperties": false,
+        "properties": {
+          "board": { "type": "string", "enum": ["free", "grossing"] },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 50 }
         }
       }
     },

@@ -30,7 +30,10 @@ final class DirectContentClient: @unchecked Sendable {
         Feed(id: "36kr", name: "36氪", url: "https://36kr.com/feed", channels: ["ai", "headline"], requireAIKeyword: true),
         Feed(id: "bing-ai", name: "Bing 新闻", url: "https://www.bing.com/news/search?q=AI%20%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD&format=rss&setlang=zh-cn", channels: ["ai"], requireAIKeyword: false),
         Feed(id: "bing-headline", name: "Bing 新闻", url: "https://www.bing.com/news/search?q=%E4%BB%8A%E6%97%A5%E8%A6%81%E9%97%BB&format=rss&setlang=zh-cn", channels: ["headline"], requireAIKeyword: false),
-        Feed(id: "sina-china", name: "新浪新闻", url: "https://rss.sina.com.cn/news/china/focus15.xml", channels: ["headline"], requireAIKeyword: false)
+        Feed(id: "sina-china", name: "新浪新闻", url: "https://rss.sina.com.cn/news/china/focus15.xml", channels: ["headline"], requireAIKeyword: false),
+        Feed(id: "youxiputao", name: "游戏葡萄", url: "https://www.youxituoluo.com/feed", channels: ["game"], requireAIKeyword: false),
+        Feed(id: "youxichaguan", name: "游戏茶馆", url: "https://www.youxichaguan.com/feed", channels: ["game"], requireAIKeyword: false),
+        Feed(id: "chuapp", name: "触乐", url: "https://www.chuapp.com/feed", channels: ["game"], requireAIKeyword: false)
     ]
 
     private static let aiPattern = "(?:^|[^a-z])(ai|a\\.i\\.|agi|agent|llm|gpt|chatgpt|claude|gemini|deepseek|openai|anthropic|nvidia|transformer|diffusion|multimodal|大模型|人工智能|机器学习|深度学习|神经网络|智能体|生成式|多模态|算力|芯片)(?:$|[^a-z])"
@@ -155,6 +158,80 @@ final class DirectContentClient: @unchecked Sendable {
             ))
         }
         return items
+    }
+
+    // MARK: - Game rank
+
+    func gameRank(board: GameRankBoard, limit: Int) async throws -> GameRankResponse {
+        let path = board == .free ? "topfreeapplications" : "topgrossingapplications"
+        guard let url = URL(string: "https://itunes.apple.com/cn/rss/\(path)/limit=100/genre=6014/json") else {
+            throw DirectContentError.decode("App Store 榜单地址无效")
+        }
+        var request = URLRequest(url: url)
+        request.setValue("application/json", forHTTPHeaderField: "accept")
+        request.setValue("WhaleAgent/0.5", forHTTPHeaderField: "user-agent")
+        let (data, response) = try await session.data(for: request)
+        try Self.check(response)
+        guard let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let feed = payload["feed"] as? [String: Any] else {
+            throw DirectContentError.decode("App Store 榜单返回了无法识别的数据")
+        }
+
+        let entries: [[String: Any]]
+        if let list = feed["entry"] as? [[String: Any]] {
+            entries = list
+        } else if let single = feed["entry"] as? [String: Any] {
+            entries = [single]
+        } else {
+            entries = []
+        }
+
+        let safeLimit = min(max(limit, 1), 100)
+        var items: [GameRankItem] = []
+        for (index, entry) in entries.enumerated() {
+            guard items.count < safeLimit else { break }
+            guard let name = ((entry["im:name"] as? [String: Any])?["label"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty else { continue }
+            let idValue = ((entry["id"] as? [String: Any])?["attributes"] as? [String: Any])?["im:id"] as? String ?? ""
+            let artist = ((entry["im:artist"] as? [String: Any])?["label"] as? String) ?? ""
+            let category = ((entry["category"] as? [String: Any])?["attributes"] as? [String: Any])?["label"] as? String ?? "游戏"
+            let release = ((entry["im:releaseDate"] as? [String: Any])?["label"] as? String) ?? ""
+            let images = entry["im:image"] as? [[String: Any]] ?? []
+            let icon = (images.last?["label"] as? String ?? "").replacingOccurrences(of: "http://", with: "https://")
+            let link = Self.rankLink(entry["link"])
+            guard !link.isEmpty else { continue }
+            items.append(GameRankItem(
+                rank: index + 1,
+                id: idValue,
+                name: name,
+                artist: artist,
+                category: category,
+                icon: icon,
+                releaseDate: release,
+                link: link
+            ))
+        }
+
+        guard !items.isEmpty else { throw DirectContentError.notFound("App Store 榜单没有返回可用条目") }
+        return GameRankResponse(
+            board: board.rawValue,
+            boardName: board.title,
+            updatedAt: Self.isoNow(),
+            source: "Apple App Store 中国区公开榜单",
+            note: "榜单随 App Store 实时变化，仅展示公开排名，不构成推荐。",
+            items: items
+        )
+    }
+
+    private static func rankLink(_ raw: Any?) -> String {
+        let object: [String: Any]?
+        if let list = raw as? [[String: Any]] {
+            object = list.first
+        } else {
+            object = raw as? [String: Any]
+        }
+        let href = (object?["attributes"] as? [String: Any])?["href"] as? String ?? ""
+        return href.replacingOccurrences(of: "http://", with: "https://")
     }
 
     // MARK: - Market
@@ -485,11 +562,17 @@ final class DirectContentClient: @unchecked Sendable {
     private static func cleanText(_ value: String) -> String {
         guard !value.isEmpty else { return "" }
         var text = value
-        text = text.replacingOccurrences(of: "<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>", with: "$1", options: .regularExpression)
-        text = text.replacingOccurrences(of: "<script\\b[\\s\\S]*?</script>", with: " ", options: [.regularExpression, .caseInsensitive])
-        text = text.replacingOccurrences(of: "<style\\b[\\s\\S]*?</style>", with: " ", options: [.regularExpression, .caseInsensitive])
-        text = text.replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
-        text = decodeEntities(text)
+        // RSS 摘要可能多层转义：CDATA 里套 &lt;p&gt;，甚至 &amp;lt;。
+        // 每轮解实体并剥标签，多轮直到稳定，避免把 HTML 当正文显示。
+        for _ in 0..<3 {
+            text = text.replacingOccurrences(of: "<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>", with: "$1", options: .regularExpression)
+            text = text.replacingOccurrences(of: "<script\\b[\\s\\S]*?</script>", with: " ", options: [.regularExpression, .caseInsensitive])
+            text = text.replacingOccurrences(of: "<style\\b[\\s\\S]*?</style>", with: " ", options: [.regularExpression, .caseInsensitive])
+            text = text.replacingOccurrences(of: "<!--[\\s\\S]*?-->", with: " ", options: .regularExpression)
+            text = text.replacingOccurrences(of: "</?[a-zA-Z][^>]*>", with: " ", options: .regularExpression)
+            text = decodeEntities(text)
+        }
+        text = text.replacingOccurrences(of: "</?[a-zA-Z][^>]*>", with: " ", options: .regularExpression)
         text = text.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }

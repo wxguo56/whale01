@@ -1,8 +1,10 @@
 import { MarketError } from "./market.mjs";
 import { NewsError } from "./news.mjs";
+import { GameRankError } from "./gameRank.mjs";
 
 const SERVER_TOOLS = [
   "get_tech_news",
+  "get_game_rank",
   "get_stock_quote",
   "search_stock",
   "get_stock_kline",
@@ -10,9 +12,10 @@ const SERVER_TOOLS = [
 ];
 
 export class ServerToolExecutor {
-  constructor({ news, market }) {
+  constructor({ news, market, gameRank }) {
     this.news = news;
     this.market = market;
+    this.gameRank = gameRank;
   }
 
   capabilities() {
@@ -24,6 +27,8 @@ export class ServerToolExecutor {
       switch (tool) {
         case "get_tech_news":
           return await this.#news(args);
+        case "get_game_rank":
+          return await this.#gameRank(args);
         case "get_stock_quote":
           return await this.#quote(args);
         case "search_stock":
@@ -36,7 +41,7 @@ export class ServerToolExecutor {
           return unsupported(tool);
       }
     } catch (error) {
-      const message = error instanceof NewsError || error instanceof MarketError
+      const message = error instanceof NewsError || error instanceof MarketError || error instanceof GameRankError
         ? error.message
         : `服务端工具执行失败：${error.message}`;
       return {
@@ -49,8 +54,9 @@ export class ServerToolExecutor {
   }
 
   async #news(args) {
+    const channel = ["ai", "headline", "game"].includes(args.channel) ? args.channel : "ai";
     const result = await this.news.list({
-      channel: args.channel === "headline" ? "headline" : "ai",
+      channel,
       limit: Math.max(1, Math.min(12, Number(args.limit) || 8))
     });
     return success({
@@ -66,6 +72,16 @@ export class ServerToolExecutor {
         link: item.link
       }))
     });
+  }
+
+  async #gameRank(args) {
+    if (!this.gameRank) return unsupported("get_game_rank");
+    const board = args.board === "grossing" ? "grossing" : "free";
+    const result = await this.gameRank.list({
+      board,
+      limit: Math.max(1, Math.min(50, Number(args.limit) || 20))
+    });
+    return success(result);
   }
 
   async #quote(args) {

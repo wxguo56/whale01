@@ -5,6 +5,7 @@ import { TurnStore } from "./turnStore.mjs";
 import { MockDeviceExecutor } from "./mockDevice.mjs";
 import { NewsService } from "./news.mjs";
 import { MarketService } from "./market.mjs";
+import { GameRankService } from "./gameRank.mjs";
 import { ServerToolExecutor } from "./serverTools.mjs";
 import { DeepSeekAdapter, MockModelAdapter } from "./adapters.mjs";
 import { Agent } from "./agent.mjs";
@@ -17,7 +18,8 @@ export async function createRuntime(env = process.env, overrides = {}) {
   const operationLog = overrides.operationLog ?? (await OperationLog.open(config.paths.operationLog));
   const news = overrides.news ?? new NewsService({ fetchImpl: overrides.fetchImpl });
   const market = overrides.market ?? new MarketService({ fetchImpl: overrides.fetchImpl });
-  const serverExecutor = overrides.serverExecutor ?? new ServerToolExecutor({ news, market });
+  const gameRank = overrides.gameRank ?? new GameRankService({ fetchImpl: overrides.fetchImpl });
+  const serverExecutor = overrides.serverExecutor ?? new ServerToolExecutor({ news, market, gameRank });
   const executor =
     overrides.executor ??
     (config.executionMode === "mock"
@@ -57,5 +59,5 @@ export async function createRuntime(env = process.env, overrides = {}) {
     modelMode: config.modelMode,
     executionMode: config.executionMode
   });
-  return { config, registry, operationLog, executor, serverExecutor, news, market, adapter, conversations, turnStore, agent };
+  return { config, registry, operationLog, executor, serverExecutor, news, market, gameRank, adapter, conversations, turnStore, agent };
 }

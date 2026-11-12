@@ -59,6 +59,20 @@ final class DiscoverClient {
         }
     }
 
+    func gameRank(board: GameRankBoard, limit: Int = 50) async throws -> GameRankResponse {
+        if !hasBackend {
+            return try await DirectContentClient.shared.gameRank(board: board, limit: limit)
+        }
+        do {
+            return try await get("/v1/games/rank", query: [
+                URLQueryItem(name: "board", value: board.rawValue),
+                URLQueryItem(name: "limit", value: String(limit))
+            ])
+        } catch {
+            return try await DirectContentClient.shared.gameRank(board: board, limit: limit)
+        }
+    }
+
     func quotes(symbols: [String]) async throws -> MarketQuoteResponse {
         guard !symbols.isEmpty else {
             return MarketQuoteResponse(updatedAt: "", delayedMinutes: 15, source: "", quotes: [], errors: [])

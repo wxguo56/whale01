@@ -7,7 +7,9 @@ final class DiscoverModel: ObservableObject {
     let client = DiscoverClient()
     private let store = WatchlistStore.shared
     private var newsCache: [DiscoverChannel: (response: NewsFeedResponse, at: Date)] = [:]
+    private var rankCache: [GameRankBoard: (response: GameRankResponse, at: Date)] = [:]
     private var loadedNewsChannel: DiscoverChannel?
+    private var loadedRankBoard: GameRankBoard?
     private var searchTask: Task<Void, Never>?
     private var requestToken = UUID()
     private var watchlistCancellable: AnyCancellable?
@@ -17,6 +19,12 @@ final class DiscoverModel: ObservableObject {
     @Published private(set) var newsState: DiscoverLoadState = .idle
     @Published private(set) var newsUpdatedAt: String?
     @Published private(set) var newsSources: [String] = []
+
+    @Published var gameSection: GameSection = .news
+    @Published private(set) var rankItems: [GameRankItem] = []
+    @Published private(set) var rankState: DiscoverLoadState = .idle
+    @Published private(set) var rankUpdatedAt: String?
+    @Published private(set) var rankSource: String = ""
 
     @Published private(set) var indexes: [StockQuote] = []
     @Published private(set) var watchQuotes: [StockQuote] = []
@@ -44,6 +52,8 @@ final class DiscoverModel: ObservableObject {
     func loadInitial() async {
         if channel == .market {
             await loadMarket(force: false)
+        } else if channel == .game, let board = gameSection.board {
+            await loadRank(board, force: false)
         } else {
             await loadNews(channel: channel, force: false)
         }
@@ -53,16 +63,62 @@ final class DiscoverModel: ObservableObject {
         withAnimation(.snappy(duration: 0.24)) { channel = next }
         if next == .market {
             await loadMarket(force: false)
+        } else if next == .game, let board = gameSection.board {
+            await loadRank(board, force: false)
         } else {
             await loadNews(channel: next, force: false)
+        }
+    }
+
+    func selectGameSection(_ next: GameSection) async {
+        withAnimation(.snappy(duration: 0.22)) { gameSection = next }
+        if let board = next.board {
+            await loadRank(board, force: false)
+        } else {
+            await loadNews(channel: .game, force: false)
         }
     }
 
     func refresh() async {
         if channel == .market {
             await loadMarket(force: true)
+        } else if channel == .game, let board = gameSection.board {
+            await loadRank(board, force: true)
         } else {
             await loadNews(channel: channel, force: true)
+        }
+    }
+
+    func loadRank(_ board: GameRankBoard, force: Bool) async {
+        if !force, loadedRankBoard == board, rankState == .loaded { return }
+        if let cached = rankCache[board] {
+            if Date().timeIntervalSince(cached.at) < 300, !force {
+                apply(cached.response, board: board)
+                rankState = .loaded
+                return
+            }
+            apply(cached.response, board: board)
+        } else if loadedRankBoard != board {
+            rankItems = []
+            rankUpdatedAt = nil
+            rankSource = ""
+        }
+        if rankItems.isEmpty { rankState = .loading }
+        let token = UUID()
+        requestToken = token
+        do {
+            let response = try await client.gameRank(board: board, limit: 50)
+            guard requestToken == token, channel == .game, gameSection.board == board else { return }
+            rankCache[board] = (response, Date())
+            apply(response, board: board)
+            rankState = .loaded
+        } catch {
+            guard requestToken == token, channel == .game, gameSection.board == board else { return }
+            if rankItems.isEmpty {
+                rankState = .failed(message(error))
+            } else {
+                rankState = .loaded
+            }
         }
     }
 
@@ -192,6 +248,13 @@ final class DiscoverModel: ObservableObject {
         newsUpdatedAt = response.updatedAt
         newsSources = response.sources ?? []
         loadedNewsChannel = channel
+    }
+
+    private func apply(_ response: GameRankResponse, board: GameRankBoard) {
+        rankItems = response.items
+        rankUpdatedAt = response.updatedAt
+        rankSource = response.source
+        loadedRankBoard = board
     }
 
     private func message(_ error: Error) -> String {

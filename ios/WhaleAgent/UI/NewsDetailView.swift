@@ -15,7 +15,7 @@ struct NewsDetailView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         cover
                         meta
-                        Text(item.title)
+                        Text(item.displayTitle)
                             .font(.system(size: 25, weight: .bold, design: .rounded))
                             .foregroundStyle(WhaleTheme.ink)
                             .fixedSize(horizontal: false, vertical: true)
@@ -46,7 +46,7 @@ struct NewsDetailView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("返回")
             Spacer()
-            Text(channel == .ai ? "AI 科技" : "时事")
+            Text(channel.title)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(WhaleTheme.muted)
             Spacer()
@@ -81,7 +81,7 @@ struct NewsDetailView: View {
                 .blur(radius: 28)
                 .offset(x: 230, y: -60)
             VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: channel == .ai ? "sparkles.rectangle.stack.fill" : "newspaper.fill")
+                Image(systemName: channel == .ai ? "sparkles.rectangle.stack.fill" : channel == .game ? "gamecontroller.fill" : "newspaper.fill")
                     .font(.system(size: 28, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.92))
                 Text("来源摘要")
@@ -120,7 +120,7 @@ struct NewsDetailView: View {
                     .font(.system(size: 12, weight: .bold))
             }
             .foregroundStyle(WhaleTheme.accent)
-            Text(item.summary.isEmpty ? "这条资讯只提供标题，原文摘要需要打开来源查看。" : item.summary)
+            Text(item.displaySummary.isEmpty ? "这条资讯只提供标题，原文摘要需要打开来源查看。" : item.displaySummary)
                 .font(.system(size: 14))
                 .foregroundStyle(WhaleTheme.ink.opacity(0.9))
                 .lineSpacing(4)

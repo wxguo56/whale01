@@ -10,36 +10,14 @@ import UIKit
 struct ConversationSurface: View {
     @ObservedObject var model: AppModel
     let bottomInset: CGFloat
-    let onOpenRecords: () -> Void
-    let onOpenMusic: () -> Void
-    let onOpenTodo: () -> Void
-    let onOpenDiscover: (DiscoverChannel) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             if !model.backendOnline || model.errorText != nil {
                 connectionBanner
             }
-
-            if model.messages.isEmpty {
-                homeCanvas
-            } else {
-                conversation
-            }
+            conversation
         }
-    }
-
-    // MARK: - Empty home
-
-    private var homeCanvas: some View {
-        WhaleHomeCanvas(
-            model: model,
-            bottomInset: bottomInset,
-            onOpenRecords: onOpenRecords,
-            onOpenMusic: onOpenMusic,
-            onOpenTodo: onOpenTodo,
-            onOpenDiscover: onOpenDiscover
-        )
     }
 
     // MARK: - Conversation
@@ -48,6 +26,10 @@ struct ConversationSurface: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 14) {
+                    if model.messages.isEmpty && model.pending.isEmpty && !model.isBusy {
+                        emptyConversation
+                    }
+
                     ForEach(model.messages) { message in
                         MessageRow(
                             message: message,
@@ -83,6 +65,7 @@ struct ConversationSurface: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .scrollBounceBehavior(.basedOnSize)
+            .defaultScrollAnchor(.bottom)
             .onTapGesture { dismissKeyboard() }
             .onChange(of: model.messages.count) { _, _ in
                 pinToBottom(proxy)
@@ -100,10 +83,24 @@ struct ConversationSurface: View {
                     pinToBottom(proxy, animated: false)
                 }
             }
-            .onAppear {
-                DispatchQueue.main.async { pinToBottom(proxy, animated: false) }
-            }
         }
+    }
+
+    private var emptyConversation: some View {
+        VStack(spacing: 12) {
+            WhaleMarkView(size: 62)
+            Text("开始和鲸鱼说话")
+                .font(.system(size: 19, weight: .bold, design: .rounded))
+                .foregroundStyle(WhaleTheme.ink)
+            Text("直接输入，或点下方麦克风说一句。\n消息、执行结果和待确认操作都会留在这个页面。")
+                .font(.system(size: 12))
+                .foregroundStyle(WhaleTheme.muted)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 72)
+        .padding(.bottom, 24)
     }
 
     private static let bottomAnchor = "conversationBottom"

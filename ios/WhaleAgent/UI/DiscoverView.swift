@@ -49,7 +49,7 @@ struct DiscoverView: View {
                     Text("发现")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundStyle(WhaleTheme.ink)
-                    Text("真实资讯 · 延迟行情")
+                    Text("真实资讯 · 游戏榜单 · 延迟行情")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(WhaleTheme.muted)
                 }
@@ -89,8 +89,76 @@ struct DiscoverView: View {
         switch model.channel {
         case .ai, .headline:
             newsContent
+        case .game:
+            gameContent
         case .market:
             marketContent
+        }
+    }
+
+    private var gameContent: some View {
+        VStack(spacing: 0) {
+            GameSectionSegment(selection: $model.gameSection) { section in
+                Task { await model.selectGameSection(section) }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 2)
+
+            if model.gameSection == .news {
+                newsContent
+            } else {
+                gameRankContent
+            }
+        }
+    }
+
+    private var gameRankContent: some View {
+        ScrollView {
+            LazyVStack(spacing: 10) {
+                switch model.rankState {
+                case .loading where model.rankItems.isEmpty, .idle:
+                    NewsSkeleton().padding(.top, 6)
+                case .failed(let message) where model.rankItems.isEmpty:
+                    DiscoverErrorState(message: message) {
+                        if let board = model.gameSection.board {
+                            Task { await model.loadRank(board, force: true) }
+                        }
+                    }
+                default:
+                    GameRankHeader(
+                        title: model.gameSection.title,
+                        source: model.rankSource,
+                        updatedAt: model.rankUpdatedAt,
+                        count: model.rankItems.count
+                    )
+                    ForEach(model.rankItems) { item in
+                        if let url = item.url {
+                            Link(destination: url) {
+                                GameRankRowCard(item: item)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            GameRankRowCard(item: item)
+                        }
+                    }
+                    Text("来源：\(model.rankSource)；榜单随 App Store 实时变化，排名不代表推荐。")
+                        .font(.system(size: 9))
+                        .foregroundStyle(WhaleTheme.muted.opacity(0.82))
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 6)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 26)
+        }
+        .scrollIndicators(.hidden)
+        .refreshable {
+            if let board = model.gameSection.board {
+                await model.loadRank(board, force: true)
+            }
         }
     }
 
@@ -131,6 +199,9 @@ struct DiscoverView: View {
     private var newsFooter: some View {
         VStack(spacing: 5) {
             Text("只展示标题与来源摘要，阅读全文请跳转原文。")
+            if model.channel == .game {
+                Text("游戏频道来自游戏媒体公开 RSS，不是微信公众号。")
+            }
             if !model.newsSources.isEmpty {
                 Text("来源：\(model.newsSources.joined(separator: " · "))")
                     .lineLimit(2)
@@ -281,8 +352,8 @@ struct DiscoverView: View {
     }
 
     private var isRefreshing: Bool {
-        model.channel == .market
-            ? model.marketState == .loading
-            : model.newsState == .loading
+        if model.channel == .market { return model.marketState == .loading }
+        if model.channel == .game, model.gameSection.board != nil { return model.rankState == .loading }
+        return model.newsState == .loading
     }
 }
