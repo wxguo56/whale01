@@ -19,10 +19,9 @@ struct WhaleHomeCanvas: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                dailyQuote
-                discoverCards
-                suggestions
                 weatherCard
+                dailyQuote
+                categoryGrid
                 todayCard
                 if model.isBusy {
                     busyCard
@@ -149,13 +148,24 @@ struct WhaleHomeCanvas: View {
         return (model.playback.isPlaying ? "正在播放 · " : "") + track.title
     }
 
+    private var musicBadge: String {
+        guard model.playback.track != nil else { return "曲库" }
+        return model.playback.isPlaying ? "正在播放" : "已暂停"
+    }
+
     // MARK: - Prompts
 
-    private var discoverCards: some View {
-        HStack(spacing: 10) {
+    private var categoryGrid: some View {
+        LazyVGrid(
+            columns: [
+                GridItem(.flexible(), spacing: 10),
+                GridItem(.flexible(), spacing: 10)
+            ],
+            spacing: 10
+        ) {
             discoverCard(
-                title: "今日 AI",
-                subtitle: "AI 科技 · 时事要闻",
+                title: "AI科技",
+                subtitle: "模型 · 产品 · 前沿",
                 badge: "真实来源",
                 icon: "sparkles",
                 gradient: WhaleTheme.heroGradient
@@ -164,7 +174,7 @@ struct WhaleHomeCanvas: View {
             }
 
             discoverCard(
-                title: "A 股自选",
+                title: "A股自选",
                 subtitle: "指数 · 个股 · 日 K",
                 badge: "延迟 15 分钟",
                 icon: "chart.line.uptrend.xyaxis",
@@ -175,6 +185,45 @@ struct WhaleHomeCanvas: View {
                 )
             ) {
                 onOpenDiscover(.market)
+            }
+
+            discoverCard(
+                title: "游戏行情",
+                subtitle: "资讯 · 免费榜 · 畅销榜",
+                badge: "App Store",
+                icon: "gamecontroller.fill",
+                gradient: WhaleTheme.gameGradient
+            ) {
+                onOpenDiscover(.game)
+            }
+
+            discoverCard(
+                title: "我的音乐",
+                subtitle: musicQuickSubtitle,
+                badge: musicBadge,
+                icon: "music.note",
+                gradient: WhaleTheme.musicGradient,
+                action: onOpenMusic
+            )
+
+            discoverCard(
+                title: "时事新闻",
+                subtitle: "要闻 · 权威 RSS",
+                badge: "真实来源",
+                icon: "newspaper.fill",
+                gradient: WhaleTheme.headlineGradient
+            ) {
+                onOpenDiscover(.headline)
+            }
+
+            discoverCard(
+                title: "微博热搜",
+                subtitle: "实时榜 · 公开数据",
+                badge: "实时",
+                icon: "flame.fill",
+                gradient: WhaleTheme.weiboGradient
+            ) {
+                onOpenDiscover(.weibo)
             }
         }
     }
@@ -214,115 +263,13 @@ struct WhaleHomeCanvas: View {
                     .minimumScaleFactor(0.8)
             }
             .padding(13)
-            .frame(maxWidth: .infinity, minHeight: 122, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 114, alignment: .leading)
             .background(gradient, in: RoundedRectangle(cornerRadius: 19, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 19, style: .continuous)
                     .strokeBorder(.white.opacity(0.14), lineWidth: 0.8)
             }
             .shadow(color: .black.opacity(0.08), radius: 12, y: 5)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(title)，\(subtitle)")
-    }
-
-    private var suggestions: some View {
-        LazyVGrid(
-            columns: [
-                GridItem(.flexible(), spacing: 10),
-                GridItem(.flexible(), spacing: 10)
-            ],
-            spacing: 10
-        ) {
-            quickCard(
-                title: "附近找店",
-                subtitle: "环境·预算·可订位",
-                icon: "mappin.and.ellipse",
-                tint: WhaleTheme.accent,
-                soft: WhaleTheme.accentSoft
-            ) {
-                send("帮我找附近安静、适合两个人吃饭的地方，按距离和价格筛选。")
-            }
-
-            quickCard(
-                title: "事情待办",
-                subtitle: "新增·勾选",
-                icon: "square.stack.3d.up.fill",
-                tint: WhaleTheme.moon,
-                soft: WhaleTheme.blueSoft
-            ) {
-                onOpenTodo()
-            }
-
-            quickCard(
-                title: "音乐",
-                subtitle: musicQuickSubtitle,
-                icon: "music.note",
-                tint: WhaleTheme.coral,
-                soft: WhaleTheme.amberSoft,
-                action: onOpenMusic
-            )
-
-            quickCard(
-                title: "记录回顾",
-                subtitle: "提醒·日程·操作",
-                icon: "clock.arrow.circlepath",
-                tint: WhaleTheme.moon,
-                soft: WhaleTheme.blueSoft
-            ) {
-                onOpenRecords()
-            }
-        }
-    }
-
-    private func quickCard(
-        title: String,
-        subtitle: String,
-        icon: String,
-        tint: Color,
-        soft: Color,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(soft)
-                    .frame(width: 38, height: 38)
-                    .overlay {
-                        Image(systemName: icon)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(tint)
-                    }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.ink)
-                        .lineLimit(1)
-                    Text(subtitle)
-                        .font(.system(size: 10))
-                        .foregroundStyle(WhaleTheme.muted)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-                }
-
-                Spacer(minLength: 0)
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.muted.opacity(0.55))
-            }
-            .padding(.horizontal, 10)
-            .frame(height: 66)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(WhaleTheme.card.opacity(0.88))
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
-            }
-            .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(title)，\(subtitle)")
@@ -620,6 +567,20 @@ struct WhaleHomeCanvas: View {
                         .font(.system(size: 24, weight: .medium))
                         .foregroundStyle(WhaleTheme.muted.opacity(0.6))
                 }
+            }
+
+            HStack {
+                Spacer()
+                Button { onOpenRecords() } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.arrow.circlepath")
+                        Text("记录回顾")
+                        Image(systemName: "chevron.right")
+                    }
+                }
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(WhaleTheme.accent)
+                .buttonStyle(.plain)
             }
         }
         .whaleCard(padding: 17)

@@ -4,15 +4,17 @@ enum DiscoverChannel: String, CaseIterable, Identifiable, Hashable {
     case ai
     case headline
     case game
+    case weibo
     case market
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .ai: return "AI 科技"
+        case .ai: return "AI科技"
         case .headline: return "时事"
         case .game: return "游戏"
+        case .weibo: return "热搜"
         case .market: return "行情"
         }
     }
@@ -22,6 +24,7 @@ enum DiscoverChannel: String, CaseIterable, Identifiable, Hashable {
         case .ai: return "sparkles"
         case .headline: return "newspaper.fill"
         case .game: return "gamecontroller.fill"
+        case .weibo: return "flame.fill"
         case .market: return "chart.line.uptrend.xyaxis"
         }
     }
@@ -99,6 +102,37 @@ struct NewsItem: Decodable, Identifiable, Hashable {
     var url: URL? { URL(string: link) }
     var displayTitle: String { NewsText.plain(title) }
     var displaySummary: String { NewsText.plain(summary) }
+}
+
+struct WeiboHotResponse: Decodable {
+    let updatedAt: String
+    let source: String
+    let note: String
+    let items: [WeiboHotItem]
+}
+
+struct WeiboHotItem: Decodable, Identifiable, Hashable {
+    let rank: Int
+    let id: String
+    let word: String
+    let note: String
+    let category: String
+    let tag: String
+    let hotValue: Int
+    let link: String
+
+    var url: URL? { URL(string: link) }
+
+    var hotText: String {
+        guard hotValue > 0 else { return "" }
+        if hotValue >= 100_000_000 {
+            return String(format: "%.1f亿", Double(hotValue) / 100_000_000)
+        }
+        if hotValue >= 10_000 {
+            return String(format: "%.1f万", Double(hotValue) / 10_000)
+        }
+        return "\(hotValue)"
+    }
 }
 
 enum NewsText {

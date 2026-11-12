@@ -49,7 +49,7 @@ struct DiscoverView: View {
                     Text("发现")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundStyle(WhaleTheme.ink)
-                    Text("真实资讯 · 游戏榜单 · 延迟行情")
+                    Text("真实资讯 · 微博热搜 · 游戏榜单 · 行情")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(WhaleTheme.muted)
                 }
@@ -91,6 +91,8 @@ struct DiscoverView: View {
             newsContent
         case .game:
             gameContent
+        case .weibo:
+            weiboContent
         case .market:
             marketContent
         }
@@ -194,6 +196,48 @@ struct DiscoverView: View {
         }
         .scrollIndicators(.hidden)
         .refreshable { await model.refresh() }
+    }
+
+    private var weiboContent: some View {
+        ScrollView {
+            LazyVStack(spacing: 10) {
+                switch model.hotState {
+                case .loading where model.hotItems.isEmpty, .idle:
+                    NewsSkeleton().padding(.top, 6)
+                case .failed(let message) where model.hotItems.isEmpty:
+                    DiscoverErrorState(message: message) {
+                        Task { await model.loadWeiboHot(force: true) }
+                    }
+                default:
+                    WeiboHotHeader(
+                        source: model.hotSource,
+                        updatedAt: model.hotUpdatedAt,
+                        count: model.hotItems.count
+                    )
+                    ForEach(model.hotItems) { item in
+                        if let url = item.url {
+                            Link(destination: url) {
+                                WeiboHotRowCard(item: item)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            WeiboHotRowCard(item: item)
+                        }
+                    }
+                    Text("来源：\(model.hotSource)；\(model.hotNote)")
+                        .font(.system(size: 9))
+                        .foregroundStyle(WhaleTheme.muted.opacity(0.82))
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 6)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 26)
+        }
+        .scrollIndicators(.hidden)
+        .refreshable { await model.loadWeiboHot(force: true) }
     }
 
     private var newsFooter: some View {
@@ -354,6 +398,7 @@ struct DiscoverView: View {
     private var isRefreshing: Bool {
         if model.channel == .market { return model.marketState == .loading }
         if model.channel == .game, model.gameSection.board != nil { return model.rankState == .loading }
+        if model.channel == .weibo { return model.hotState == .loading }
         return model.newsState == .loading
     }
 }

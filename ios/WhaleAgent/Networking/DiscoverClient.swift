@@ -45,7 +45,9 @@ final class DiscoverClient {
     }
 
     func news(channel: DiscoverChannel, limit: Int = 20) async throws -> NewsFeedResponse {
-        guard channel != .market else { throw DiscoverClientError.invalidURL }
+        guard channel == .ai || channel == .headline || channel == .game else {
+            throw DiscoverClientError.invalidURL
+        }
         if !hasBackend {
             return try await DirectContentClient.shared.news(channel: channel, limit: limit)
         }
@@ -71,6 +73,10 @@ final class DiscoverClient {
         } catch {
             return try await DirectContentClient.shared.gameRank(board: board, limit: limit)
         }
+    }
+
+    func weiboHot(limit: Int = 50) async throws -> WeiboHotResponse {
+        try await DirectContentClient.shared.weiboHot(limit: limit)
     }
 
     func quotes(symbols: [String]) async throws -> MarketQuoteResponse {

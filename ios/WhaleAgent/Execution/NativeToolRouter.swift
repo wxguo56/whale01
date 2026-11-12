@@ -680,7 +680,8 @@ final class NativeToolRouter {
 
     private func techNews(_ arguments: [String: JSONValue]) async throws -> JSONValue {
         let rawChannel = arguments.optionalString("channel") ?? "ai"
-        guard let channel = DiscoverChannel(rawValue: rawChannel), channel != .market else {
+        guard let channel = DiscoverChannel(rawValue: rawChannel),
+              channel == .ai || channel == .headline || channel == .game else {
             throw ToolExecutionError(code: "invalid_arguments", message: "channel 只能是 ai、headline 或 game")
         }
         let limit = min(max(arguments.optionalInt("limit") ?? 8, 1), 12)

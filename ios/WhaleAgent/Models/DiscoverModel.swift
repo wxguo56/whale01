@@ -8,6 +8,7 @@ final class DiscoverModel: ObservableObject {
     private let store = WatchlistStore.shared
     private var newsCache: [DiscoverChannel: (response: NewsFeedResponse, at: Date)] = [:]
     private var rankCache: [GameRankBoard: (response: GameRankResponse, at: Date)] = [:]
+    private var hotCache: (response: WeiboHotResponse, at: Date)?
     private var loadedNewsChannel: DiscoverChannel?
     private var loadedRankBoard: GameRankBoard?
     private var searchTask: Task<Void, Never>?
@@ -25,6 +26,12 @@ final class DiscoverModel: ObservableObject {
     @Published private(set) var rankState: DiscoverLoadState = .idle
     @Published private(set) var rankUpdatedAt: String?
     @Published private(set) var rankSource: String = ""
+
+    @Published private(set) var hotItems: [WeiboHotItem] = []
+    @Published private(set) var hotState: DiscoverLoadState = .idle
+    @Published private(set) var hotUpdatedAt: String?
+    @Published private(set) var hotSource: String = ""
+    @Published private(set) var hotNote: String = ""
 
     @Published private(set) var indexes: [StockQuote] = []
     @Published private(set) var watchQuotes: [StockQuote] = []
@@ -54,6 +61,8 @@ final class DiscoverModel: ObservableObject {
             await loadMarket(force: false)
         } else if channel == .game, let board = gameSection.board {
             await loadRank(board, force: false)
+        } else if channel == .weibo {
+            await loadWeiboHot(force: false)
         } else {
             await loadNews(channel: channel, force: false)
         }
@@ -65,6 +74,8 @@ final class DiscoverModel: ObservableObject {
             await loadMarket(force: false)
         } else if next == .game, let board = gameSection.board {
             await loadRank(board, force: false)
+        } else if next == .weibo {
+            await loadWeiboHot(force: false)
         } else {
             await loadNews(channel: next, force: false)
         }
@@ -84,8 +95,37 @@ final class DiscoverModel: ObservableObject {
             await loadMarket(force: true)
         } else if channel == .game, let board = gameSection.board {
             await loadRank(board, force: true)
+        } else if channel == .weibo {
+            await loadWeiboHot(force: true)
         } else {
             await loadNews(channel: channel, force: true)
+        }
+    }
+
+    func loadWeiboHot(force: Bool) async {
+        if !force, let cached = hotCache, Date().timeIntervalSince(cached.at) < 180, hotState == .loaded {
+            apply(cached.response)
+            return
+        }
+        if let cached = hotCache {
+            apply(cached.response)
+        }
+        if hotItems.isEmpty { hotState = .loading }
+        let token = UUID()
+        requestToken = token
+        do {
+            let response = try await client.weiboHot(limit: 50)
+            guard requestToken == token, channel == .weibo else { return }
+            hotCache = (response, Date())
+            apply(response)
+            hotState = .loaded
+        } catch {
+            guard requestToken == token, channel == .weibo else { return }
+            if hotItems.isEmpty {
+                hotState = .failed(message(error))
+            } else {
+                hotState = .loaded
+            }
         }
     }
 
@@ -123,7 +163,7 @@ final class DiscoverModel: ObservableObject {
     }
 
     func loadNews(channel: DiscoverChannel, force: Bool) async {
-        guard channel != .market else { return }
+        guard channel == .ai || channel == .headline || channel == .game else { return }
         let token = UUID()
         requestToken = token
         if let cached = newsCache[channel] {
@@ -255,6 +295,13 @@ final class DiscoverModel: ObservableObject {
         rankUpdatedAt = response.updatedAt
         rankSource = response.source
         loadedRankBoard = board
+    }
+
+    private func apply(_ response: WeiboHotResponse) {
+        hotItems = response.items
+        hotUpdatedAt = response.updatedAt
+        hotSource = response.source
+        hotNote = response.note
     }
 
     private func message(_ error: Error) -> String {

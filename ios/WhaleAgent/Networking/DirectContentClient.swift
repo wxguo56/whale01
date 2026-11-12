@@ -49,8 +49,8 @@ final class DirectContentClient: @unchecked Sendable {
     // MARK: - News
 
     func news(channel: DiscoverChannel, limit: Int) async throws -> NewsFeedResponse {
-        guard channel != .market else {
-            throw DirectContentError.decode("行情频道没有新闻")
+        guard channel == .ai || channel == .headline || channel == .game else {
+            throw DirectContentError.decode("该频道没有新闻列表")
         }
         let feeds = Self.feeds.filter { $0.channels.contains(channel.rawValue) }
         let safeLimit = min(max(limit, 1), 40)
@@ -232,6 +232,115 @@ final class DirectContentClient: @unchecked Sendable {
         }
         let href = (object?["attributes"] as? [String: Any])?["href"] as? String ?? ""
         return href.replacingOccurrences(of: "http://", with: "https://")
+    }
+
+    // MARK: - Weibo hot search
+
+    func weiboHot(limit: Int) async throws -> WeiboHotResponse {
+        let safeLimit = min(max(limit, 1), 50)
+        var firstError: Error?
+        do {
+            return try await loadWeiboHot(kind: "search", limit: safeLimit)
+        } catch {
+            firstError = error
+        }
+        do {
+            return try await loadWeiboHot(kind: "band", limit: safeLimit)
+        } catch {
+            let previous = (firstError as? LocalizedError)?.errorDescription ?? firstError?.localizedDescription ?? "未知错误"
+            throw DirectContentError.decode("微博热搜暂时不可用：\(previous)；备用榜：\(error.localizedDescription)")
+        }
+    }
+
+    private func loadWeiboHot(kind: String, limit: Int) async throws -> WeiboHotResponse {
+        let endpoint = kind == "band"
+            ? "https://weibo.com/ajax/statuses/hot_band"
+            : "https://weibo.com/ajax/side/hotSearch"
+        guard let url = URL(string: endpoint) else {
+            throw DirectContentError.decode("微博热搜地址无效")
+        }
+        var request = URLRequest(url: url)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "user-agent")
+        request.setValue("https://weibo.com/", forHTTPHeaderField: "referer")
+        request.setValue("application/json, text/plain, */*", forHTTPHeaderField: "accept")
+        let (data, response) = try await session.data(for: request)
+        try Self.check(response)
+        guard let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let dataObject = payload["data"] as? [String: Any] else {
+            throw DirectContentError.decode("微博热搜返回了无法识别的数据")
+        }
+        let entries: [[String: Any]]
+        if kind == "band" {
+            entries = dataObject["band_list"] as? [[String: Any]] ?? []
+        } else {
+            entries = dataObject["realtime"] as? [[String: Any]] ?? []
+        }
+        guard !entries.isEmpty else {
+            throw DirectContentError.notFound("微博热搜没有返回条目")
+        }
+
+        var items: [WeiboHotItem] = []
+        var seen = Set<String>()
+        for entry in entries {
+            guard items.count < limit else { break }
+            if Self.weiboBool(entry["is_ad"]) { continue }
+            let word = Self.text(entry["word"])
+            guard !word.isEmpty, !seen.contains(word) else { continue }
+            let realPosition = Self.weiboInt(entry["realpos"]) ?? 0
+            if kind != "band", realPosition <= 0 { continue }
+            let position = realPosition > 0 ? realPosition : items.count + 1
+            let scheme = Self.text(entry["word_scheme"])
+            seen.insert(word)
+            items.append(WeiboHotItem(
+                rank: position,
+                id: "weibo-\(position)-\(word)",
+                word: word,
+                note: Self.text(entry["note"]),
+                category: Self.text(entry["category"]),
+                tag: Self.text(entry["label_name"]).isEmpty ? Self.text(entry["icon_desc"]) : Self.text(entry["label_name"]),
+                hotValue: Self.weiboInt(entry["num"]) ?? 0,
+                link: Self.weiboLink(word: word, scheme: scheme)
+            ))
+        }
+        guard !items.isEmpty else {
+            throw DirectContentError.notFound("微博热搜没有返回可用条目")
+        }
+        return WeiboHotResponse(
+            updatedAt: Self.isoNow(),
+            source: "微博公开热搜接口",
+            note: "实时榜随微博变化，仅展示公开条目，不代表平台立场。",
+            items: items
+        )
+    }
+
+    private static func weiboInt(_ raw: Any?) -> Int? {
+        if let value = raw as? Int { return value }
+        if let value = raw as? NSNumber { return value.intValue }
+        if let value = raw as? String { return Int(value) }
+        return nil
+    }
+
+    private static func text(_ raw: Any?) -> String {
+        if let value = raw as? String {
+            return value.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if let value = raw as? NSNumber {
+            return value.stringValue
+        }
+        return ""
+    }
+
+    private static func weiboBool(_ raw: Any?) -> Bool {
+        if let value = raw as? Bool { return value }
+        if let value = raw as? Int { return value != 0 }
+        return false
+    }
+
+    private static func weiboLink(word: String, scheme: String) -> String {
+        let query = scheme.isEmpty ? word : scheme
+        var components = URLComponents(string: "https://s.weibo.com/weibo")
+        components?.queryItems = [URLQueryItem(name: "q", value: query)]
+        return components?.url?.absoluteString ?? "https://s.weibo.com/"
     }
 
     // MARK: - Market

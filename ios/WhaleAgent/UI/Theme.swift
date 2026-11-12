@@ -76,6 +76,42 @@ enum WhaleTheme {
         endPoint: .bottomTrailing
     )
 
+    static let gameGradient = LinearGradient(
+        colors: [
+            Color(light: 0xB85C2E, dark: 0x6B2C12),
+            Color(light: 0xD79A3F, dark: 0x4A3510)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    static let musicGradient = LinearGradient(
+        colors: [
+            Color(light: 0x8A4B8F, dark: 0x3A1E45),
+            Color(light: 0xC0566F, dark: 0x5A2436)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    static let headlineGradient = LinearGradient(
+        colors: [
+            Color(light: 0x1E8A7A, dark: 0x0C4A42),
+            Color(light: 0x2E73C8, dark: 0x143352)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    static let weiboGradient = LinearGradient(
+        colors: [
+            Color(light: 0xD34747, dark: 0x5A1A1A),
+            Color(light: 0xD77B3D, dark: 0x5B3216)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
     /// Composer send button. Matches the v9 reference: mint-to-sky paper plane
     /// tile that stays legible on both the abyss and the morning-mist surface.
     static let composerSendGradient = LinearGradient(

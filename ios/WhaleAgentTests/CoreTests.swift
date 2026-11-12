@@ -17,9 +17,26 @@ final class CoreTests: XCTestCase {
     func testDiscoverGameChannelAndRankBoards() {
         XCTAssertEqual(DiscoverChannel.game.title, "游戏")
         XCTAssertEqual(DiscoverChannel.game.icon, "gamecontroller.fill")
+        XCTAssertEqual(DiscoverChannel.weibo.title, "热搜")
+        XCTAssertEqual(DiscoverChannel.weibo.icon, "flame.fill")
         XCTAssertNil(GameSection.news.board)
         XCTAssertEqual(GameSection.free.board, .free)
         XCTAssertEqual(GameSection.grossing.board, .grossing)
+    }
+
+    func testWeiboHotItemFormatsRealHeat() {
+        let item = WeiboHotItem(
+            rank: 1,
+            id: "weibo-1",
+            word: "测试热搜",
+            note: "测试热搜",
+            category: "社会",
+            tag: "热",
+            hotValue: 1_092_000,
+            link: "https://s.weibo.com/weibo?q=%E6%B5%8B%E8%AF%95"
+        )
+        XCTAssertEqual(item.hotText, "109.2万")
+        XCTAssertNotNil(item.url)
     }
 
     func testNewsTextRemovesNestedHTMLAndEntities() {

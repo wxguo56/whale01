@@ -556,3 +556,110 @@ struct GameRankRowCard: View {
         .overlay { RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
     }
 }
+
+struct WeiboHotHeader: View {
+    let source: String
+    let updatedAt: String?
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(WhaleTheme.weiboGradient)
+                .frame(width: 46, height: 46)
+                .overlay {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.94))
+                }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("微博热搜")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(WhaleTheme.ink)
+                Text("来源：\(source.isEmpty ? "微博公开热搜接口" : source)")
+                    .font(.system(size: 9))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .lineLimit(1)
+                if let updatedAt {
+                    Text("更新于 \(DiscoverFormat.relative(updatedAt))")
+                        .font(.system(size: 9))
+                        .foregroundStyle(WhaleTheme.muted.opacity(0.8))
+                }
+            }
+
+            Spacer(minLength: 4)
+
+            Text("\(count) 条")
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(WhaleTheme.danger)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
+                .background(WhaleTheme.danger.opacity(0.1), in: Capsule())
+        }
+        .padding(13)
+        .background(WhaleTheme.card.opacity(0.8), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+    }
+}
+
+struct WeiboHotRowCard: View {
+    let item: WeiboHotItem
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 11) {
+            Text("\(item.rank)")
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .foregroundStyle(item.rank <= 3 ? Color.white : WhaleTheme.muted)
+                .frame(width: 27, height: 27)
+                .background(
+                    Circle().fill(item.rank <= 3 ? WhaleTheme.danger : WhaleTheme.soft.opacity(0.7))
+                )
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(item.word)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+
+                if !item.note.isEmpty && item.note != item.word {
+                    Text(item.note)
+                        .font(.system(size: 10))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .lineLimit(1)
+                }
+
+                HStack(spacing: 6) {
+                    if !item.tag.isEmpty {
+                        Text(item.tag)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(WhaleTheme.danger, in: Capsule())
+                    }
+                    if !item.category.isEmpty {
+                        Text(item.category)
+                    }
+                    if !item.hotText.isEmpty {
+                        Text("热度 \(item.hotText)")
+                    }
+                }
+                .font(.system(size: 9))
+                .foregroundStyle(WhaleTheme.muted)
+            }
+
+            Spacer(minLength: 0)
+
+            Image(systemName: "arrow.up.right")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(WhaleTheme.muted.opacity(0.55))
+                .padding(.top, 5)
+        }
+        .padding(.vertical, 11)
+        .padding(.horizontal, 12)
+        .background(WhaleTheme.card.opacity(0.72), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+    }
+}
