@@ -495,6 +495,7 @@ struct MarketDisclaimer: View {
 struct StockSeedLoaderView: View {
     let result: StockSearchResult
     @ObservedObject var discover: DiscoverModel
+    @Environment(\.dismiss) private var dismiss
     @State private var quote: StockQuote?
     @State private var errorText: String?
 
@@ -502,32 +503,77 @@ struct StockSeedLoaderView: View {
         Group {
             if let quote {
                 StockDetailView(quote: quote, discover: discover)
-            } else if let errorText {
-                VStack(spacing: 12) {
-                    Image(systemName: "chart.line.downtrend.xyaxis")
-                        .font(.system(size: 28, weight: .light))
-                        .foregroundStyle(WhaleTheme.muted)
-                    Text(errorText)
-                        .font(.system(size: 13))
-                        .foregroundStyle(WhaleTheme.muted)
-                        .multilineTextAlignment(.center)
-                    Button("重试") { Task { await load() } }
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.accent)
-                }
-                .padding(28)
             } else {
-                VStack(spacing: 12) {
-                    ProgressView().tint(WhaleTheme.accent)
-                    Text("正在读取 \(result.name) 的真实行情")
-                        .font(.system(size: 12))
-                        .foregroundStyle(WhaleTheme.muted)
+                loadingShell
+                    .toolbar(.hidden, for: .navigationBar)
+                    .background(SwipeBackEnabler().frame(width: 1, height: 1))
+                    .task { await load() }
+            }
+        }
+    }
+
+    private var loadingShell: some View {
+        ZStack {
+            WhaleBackdrop()
+            VStack(spacing: 0) {
+                topBar
+                Spacer()
+                if let errorText {
+                    VStack(spacing: 12) {
+                        Image(systemName: "chart.line.downtrend.xyaxis")
+                            .font(.system(size: 28, weight: .light))
+                            .foregroundStyle(WhaleTheme.muted)
+                        Text(errorText)
+                            .font(.system(size: 13))
+                            .foregroundStyle(WhaleTheme.muted)
+                            .multilineTextAlignment(.center)
+                        Button("重试") { Task { await load() } }
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(WhaleTheme.accent)
+                    }
+                    .padding(28)
+                } else {
+                    VStack(spacing: 12) {
+                        ProgressView().tint(WhaleTheme.accent)
+                        Text("正在读取 \(result.name) 的真实行情")
+                            .font(.system(size: 12))
+                            .foregroundStyle(WhaleTheme.muted)
+                    }
                 }
+                Spacer()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(WhaleBackdrop())
-        .task { await load() }
+    }
+
+    private var topBar: some View {
+        HStack(spacing: 10) {
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .whaleGlassCircle(size: 34)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("返回")
+            VStack(alignment: .leading, spacing: 1) {
+                Text(result.name)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .lineLimit(1)
+                Text(result.displayCode)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(WhaleTheme.muted)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(WhaleChromeBackground())
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(WhaleTheme.line.opacity(0.55)).frame(height: 0.6)
+        }
     }
 
     private func load() async {
