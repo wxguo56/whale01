@@ -89,3 +89,20 @@ jobs:
           name: ios-ui-snapshot
           path: snapshots
           if-no-files-found: warn
+
+      - name: Compress screenshots
+        if: always()
+        run: |
+          mkdir -p snapshots-jpg
+          for f in snapshots/*.png; do
+            [ -e "$f" ] || continue
+            sips -s format jpeg -s formatOptions 72 "$f" --out "snapshots-jpg/$(basename "${f%.png}").jpg" >/dev/null
+          done
+
+      - name: Upload compressed screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ui-snapshot-jpg
+          path: snapshots-jpg
+          if-no-files-found: warn
