@@ -67,7 +67,10 @@ struct ConversationSurface: View {
             .scrollBounceBehavior(.basedOnSize)
             .defaultScrollAnchor(.bottom)
             .onTapGesture { dismissKeyboard() }
-            .onChange(of: model.messages.count) { _, _ in
+            .onChange(of: model.messages.count) { oldCount, newCount in
+                // Clearing for a new conversation should not animate a scroll
+                // from the old last message to the empty state.
+                guard newCount > oldCount else { return }
                 pinToBottom(proxy)
             }
             .onChange(of: model.pending.count) { _, _ in
