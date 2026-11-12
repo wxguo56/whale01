@@ -690,7 +690,7 @@ struct GameRankRowCard: View {
 
             Spacer(minLength: 0)
 
-            Image(systemName: "arrow.up.right")
+            Image(systemName: "chevron.right")
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(WhaleTheme.muted.opacity(0.55))
         }

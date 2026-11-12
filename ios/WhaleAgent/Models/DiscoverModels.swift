@@ -104,6 +104,7 @@ enum DiscoverRoute: Hashable {
     case news(NewsItem)
     case stock(StockQuote)
     case search(StockSearchResult)
+    case game(GameRankItem, GameRankBoard)
 }
 
 enum DiscoverLoadState: Equatable {
@@ -259,6 +260,93 @@ struct GameRankItem: Decodable, Identifiable, Hashable {
     var releaseText: String {
         guard let date = DiscoverFormat.date(from: releaseDate) else { return releaseDate }
         return date.formatted(.dateTime.year().month().day())
+    }
+}
+
+struct AppStoreLookupResponse: Decodable {
+    let resultCount: Int
+    let results: [AppStoreAppDetail]
+}
+
+struct AppStoreAppDetail: Decodable, Identifiable, Hashable {
+    let trackId: Int
+    let trackName: String
+    let artistName: String
+    let sellerName: String?
+    let artworkUrl512: String?
+    let artworkUrl100: String?
+    let primaryGenreName: String?
+    let genres: [String]?
+    let averageUserRating: Double?
+    let userRatingCount: Int?
+    let formattedPrice: String?
+    let price: Double?
+    let releaseDate: String?
+    let currentVersionReleaseDate: String?
+    let version: String?
+    let fileSizeBytes: String?
+    let minimumOsVersion: String?
+    let contentAdvisoryRating: String?
+    let languageCodesISO2A: [String]?
+    let trackViewUrl: String?
+    let screenshotUrls: [String]?
+    let ipadScreenshotUrls: [String]?
+    let summaryText: String?
+
+    enum CodingKeys: String, CodingKey {
+        case trackId, trackName, artistName, sellerName, artworkUrl512, artworkUrl100
+        case primaryGenreName, genres, averageUserRating, userRatingCount, formattedPrice, price
+        case releaseDate, currentVersionReleaseDate, version, fileSizeBytes, minimumOsVersion
+        case contentAdvisoryRating, languageCodesISO2A, trackViewUrl, screenshotUrls, ipadScreenshotUrls
+        case summaryText = "description"
+    }
+
+    var id: Int { trackId }
+
+    var iconURL: URL? {
+        let raw = artworkUrl512 ?? artworkUrl100 ?? ""
+        return URL(string: raw)
+    }
+
+    var appStoreURL: URL? {
+        guard let trackViewUrl else { return nil }
+        return URL(string: trackViewUrl)
+    }
+
+    var descriptionText: String {
+        NewsText.plain(summaryText ?? "")
+    }
+
+    var sizeText: String {
+        guard let fileSizeBytes, let bytes = Double(fileSizeBytes), bytes > 0 else { return "—" }
+        if bytes >= 1_073_741_824 { return String(format: "%.2f GB", bytes / 1_073_741_824) }
+        if bytes >= 1_048_576 { return String(format: "%.1f MB", bytes / 1_048_576) }
+        return String(format: "%.0f KB", bytes / 1024)
+    }
+
+    var ratingText: String {
+        guard let averageUserRating else { return "暂无评分" }
+        return String(format: "%.1f", averageUserRating)
+    }
+
+    var ratingCountText: String {
+        guard let userRatingCount else { return "—" }
+        if userRatingCount >= 10_000 { return String(format: "%.1f 万人评分", Double(userRatingCount) / 10_000) }
+        return "\(userRatingCount) 人评分"
+    }
+
+    var releaseText: String {
+        DiscoverFormat.longDate(releaseDate)
+    }
+
+    var updateText: String {
+        DiscoverFormat.longDate(currentVersionReleaseDate)
+    }
+
+    var screenshots: [String] {
+        let phone = screenshotUrls ?? []
+        if !phone.isEmpty { return phone }
+        return ipadScreenshotUrls ?? []
     }
 }
 
@@ -421,6 +509,11 @@ enum DiscoverFormat {
     static func clock(_ iso: String?) -> String {
         guard let date = date(from: iso) else { return "时间未知" }
         return date.formatted(.dateTime.hour().minute())
+    }
+
+    static func longDate(_ iso: String?) -> String {
+        guard let date = date(from: iso) else { return iso ?? "—" }
+        return date.formatted(.dateTime.year().month().day())
     }
 
     static func price(_ value: Double?) -> String {

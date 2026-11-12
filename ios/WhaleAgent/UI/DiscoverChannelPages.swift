@@ -415,8 +415,8 @@ struct GameChannelPage: View {
                         count: model.rankItems.count
                     )
                     ForEach(model.rankItems) { item in
-                        if let url = item.url {
-                            Link(destination: url) {
+                        if let board = model.gameSection.board {
+                            NavigationLink(value: DiscoverRoute.game(item, board)) {
                                 GameRankRowCard(item: item)
                             }
                             .buttonStyle(.plain)
@@ -424,7 +424,7 @@ struct GameChannelPage: View {
                             GameRankRowCard(item: item)
                         }
                     }
-                    Text("来源：\(model.rankSource)；榜单随 App Store 实时变化，排名不代表推荐。")
+                    Text("点击任意游戏查看更多资料与榜单表现。来源：\(model.rankSource)；排名随 App Store 实时变化，不代表推荐。")
                         .font(.system(size: 9))
                         .foregroundStyle(WhaleTheme.muted.opacity(0.82))
                         .multilineTextAlignment(.center)

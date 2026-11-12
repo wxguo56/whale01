@@ -75,6 +75,10 @@ final class DiscoverClient {
         }
     }
 
+    func appStoreLookup(id: String) async throws -> AppStoreAppDetail {
+        try await DirectContentClient.shared.appStoreLookup(id: id)
+    }
+
     func weiboHot(limit: Int = 50) async throws -> WeiboHotResponse {
         try await DirectContentClient.shared.weiboHot(limit: limit)
     }

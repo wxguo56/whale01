@@ -97,6 +97,12 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.2), value: model.playback.track?.trackId)
         .preferredColorScheme(colorScheme)
         .task {
+#if DEBUG
+            if ProcessInfo.processInfo.environment["WHALE_DEMO_DISCOVER"] == "1" {
+                discoverChannel = .ai
+                showDiscover = true
+            }
+#endif
             await model.health()
             await model.reconcileUnknownWrites()
             await model.flushResultOutbox()

@@ -18,15 +18,13 @@ struct DiscoverView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            GeometryReader { proxy in
-                ZStack {
-                    WhaleBackdrop()
-                    VStack(spacing: 0) {
-                        topChrome
-                        pager(width: proxy.size.width)
-                    }
-                    .frame(width: proxy.size.width)
+            ZStack {
+                WhaleBackdrop()
+                VStack(spacing: 0) {
+                    topChrome
+                    pager
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: DiscoverRoute.self) { route in
@@ -38,29 +36,33 @@ struct DiscoverView: View {
                         StockDetailView(quote: quote, discover: model)
                     case .search(let result):
                         StockSeedLoaderView(result: result, discover: model)
+                    case .game(let item, let board):
+                        GameDetailView(item: item, board: board)
                     }
                 }
             }
         }
     }
 
-    private func pager(width: CGFloat) -> some View {
+    private var pager: some View {
         ScrollView(.horizontal) {
             LazyHStack(spacing: 0) {
                 ForEach(DiscoverChannel.allCases) { item in
                     if let model = models[item] {
                         DiscoverChannelPage(model: model, appModel: appModel)
-                            .frame(width: width)
+                            .containerRelativeFrame(.horizontal)
                             .id(item)
                     }
                 }
             }
             .scrollTargetLayout()
         }
+        .contentMargins(0, for: .scrollContent)
         .scrollTargetBehavior(.paging)
         .scrollPosition(id: channelScroll)
         .scrollIndicators(.hidden)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .clipped()
     }
 
     private var channelScroll: Binding<DiscoverChannel?> {

@@ -1,0 +1,67 @@
+name: iOS UI Snapshot
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-ui-snapshot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  snapshot:
+    name: Capture discover tab screenshots
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Build for simulator
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project WhaleAgent.xcodeproj \
+            -scheme WhaleAgent \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            MARKETING_VERSION=0.6.0 \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            WHALE_API_TOKEN="${{ secrets.WHALE_API_TOKEN }}" \
+            DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Boot simulator and capture screenshots
+        run: |
+          set -euo pipefail
+          DEVICE_ID=$(xcrun simctl list devices available -j | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; c=[x for rt in d.values() for x in rt if x["name"].startswith("iPhone")]; print(c[0]["udid"] if c else "")')
+          test -n "$DEVICE_ID"
+          echo "Using device $DEVICE_ID"
+          xcrun simctl boot "$DEVICE_ID" || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcrun simctl install "$DEVICE_ID" ios/build/Build/Products/Debug-iphonesimulator/WhaleAgent.app
+          SIMCTL_CHILD_WHALE_DEMO_DISCOVER=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 8
+          mkdir -p snapshots
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/discover.png
+          xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ui-snapshot
+          path: snapshots
+          if-no-files-found: warn

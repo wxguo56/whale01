@@ -290,6 +290,32 @@ final class DirectContentClient: @unchecked Sendable {
         return href.replacingOccurrences(of: "http://", with: "https://")
     }
 
+    func appStoreLookup(id: String) async throws -> AppStoreAppDetail {
+        let trimmed = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.allSatisfy({ $0.isNumber }) else {
+            throw DirectContentError.decode("缺少有效的 App Store 应用编号")
+        }
+        guard let url = URL(string: "https://itunes.apple.com/lookup?id=\(trimmed)&country=cn&entity=software") else {
+            throw DirectContentError.decode("App Store 详情地址无效")
+        }
+        var request = URLRequest(url: url)
+        request.setValue("application/json", forHTTPHeaderField: "accept")
+        request.setValue("WhaleAgent/0.6", forHTTPHeaderField: "user-agent")
+        let (data, response) = try await session.data(for: request)
+        try Self.check(response)
+
+        let payload: AppStoreLookupResponse
+        do {
+            payload = try JSONDecoder().decode(AppStoreLookupResponse.self, from: data)
+        } catch {
+            throw DirectContentError.decode("App Store 详情返回了无法识别的数据")
+        }
+        guard let app = payload.results.first else {
+            throw DirectContentError.notFound("App Store 没有返回这个应用的详情")
+        }
+        return app
+    }
+
     // MARK: - Weibo hot search
 
     func weiboHot(limit: Int) async throws -> WeiboHotResponse {

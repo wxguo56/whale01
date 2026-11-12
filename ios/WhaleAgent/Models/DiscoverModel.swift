@@ -428,3 +428,27 @@ final class StockDetailModel: ObservableObject {
         }
     }
 }
+
+@MainActor
+final class GameDetailModel: ObservableObject {
+    let item: GameRankItem
+    private let client = DiscoverClient()
+
+    @Published private(set) var detail: AppStoreAppDetail?
+    @Published private(set) var state: DiscoverLoadState = .idle
+
+    init(item: GameRankItem) {
+        self.item = item
+    }
+
+    func load() async {
+        if state == .idle { state = .loading }
+        do {
+            let response = try await client.appStoreLookup(id: item.id)
+            detail = response
+            state = .loaded
+        } catch {
+            state = .failed((error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
+        }
+    }
+}
