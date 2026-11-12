@@ -57,6 +57,10 @@ struct DiscoverView: View {
                     gameModel.gameSection = section
                     await gameModel.selectGameSection(section)
                 }
+                if let raw = environment["WHALE_DEMO_AI_SECTION"],
+                   let aiModel = models[.ai] {
+                    await aiModel.selectNewsSection(raw, for: .ai)
+                }
 #endif
             }
             .navigationDestination(for: DiscoverRoute.self) { route in
