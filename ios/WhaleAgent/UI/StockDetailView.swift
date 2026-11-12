@@ -31,6 +31,7 @@ struct StockDetailView: View {
                         }
                         chartCard
                         statsCard
+                        fundFlowCard
                         actionCard
                         MarketDisclaimer(source: model.source.isEmpty ? (quote.source ?? "") : model.source, updatedAt: model.updatedAt ?? quote.timestamp)
                     }
@@ -188,6 +189,7 @@ struct StockDetailView: View {
                 stat("市盈率", quote.pe == nil ? "—" : String(format: "%.2f", quote.pe!))
                 stat("总市值", DiscoverFormat.compactAmount(quote.marketCap))
                 stat("流通市值", DiscoverFormat.compactAmount(quote.floatMarketCap))
+                stat("振幅", amplitudeText)
             }
         }
         .padding(15)
@@ -202,6 +204,13 @@ struct StockDetailView: View {
         return String(format: "%.0f 股", volume)
     }
 
+    private var amplitudeText: String {
+        guard let high = quote.high, let low = quote.low, let previous = quote.previousClose, previous > 0 else {
+            return "—"
+        }
+        return String(format: "%.2f%%", (high - low) / previous * 100)
+    }
+
     private func stat(_ label: String, _ value: String) -> some View {
         HStack {
             Text(label)
@@ -212,6 +221,81 @@ struct StockDetailView: View {
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(WhaleTheme.ink)
+        }
+        .padding(.horizontal, 11)
+        .frame(height: 38)
+        .background(WhaleTheme.field.opacity(0.62), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+    }
+
+    private var fundFlowCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("资金动向")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(WhaleTheme.ink)
+                Spacer()
+                Text("近 6 个交易日 · 东方财富")
+                    .font(.system(size: 9))
+                    .foregroundStyle(WhaleTheme.muted)
+            }
+
+            switch model.fundFlowState {
+            case .loading, .idle:
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(WhaleTheme.soft)
+                    .frame(height: 120)
+                    .redacted(reason: .placeholder)
+            case .failed(let message):
+                Text(message)
+                    .font(.system(size: 11))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .frame(maxWidth: .infinity, minHeight: 70, alignment: .leading)
+            case .loaded:
+                FundFlowChart(points: model.fundFlow)
+                if let latest = model.fundFlow.last {
+                    HStack {
+                        Text(latest.date)
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundStyle(WhaleTheme.muted)
+                        Spacer()
+                        Text("主力 \(DiscoverFormat.signedCompactAmount(latest.mainNet))")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(latest.isInflow ? WhaleTheme.danger : WhaleTheme.success)
+                    }
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                        flowStat("超大单", latest.superLargeNet)
+                        flowStat("大单", latest.largeNet)
+                        flowStat("中单", latest.mediumNet)
+                        flowStat("小单", latest.smallNet)
+                    }
+                }
+                Text("红柱为主力净流入，绿柱为净流出；单位：亿元。数据来自东方财富公开资金流，不构成投资建议。")
+                    .font(.system(size: 9))
+                    .foregroundStyle(WhaleTheme.muted.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(15)
+        .background(WhaleTheme.card.opacity(0.72), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+        }
+    }
+
+    private func flowStat(_ label: String, _ value: Double?) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundStyle(WhaleTheme.muted)
+            Spacer()
+            Text(DiscoverFormat.signedCompactAmount(value))
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle((value ?? 0) >= 0 ? WhaleTheme.danger : WhaleTheme.success)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
         }
         .padding(.horizontal, 11)
         .frame(height: 38)
@@ -245,6 +329,36 @@ struct StockDetailView: View {
             }
             .buttonStyle(.plain)
         }
+    }
+}
+
+struct FundFlowChart: View {
+    let points: [FundFlowPoint]
+
+    var body: some View {
+        Chart(points) { point in
+            BarMark(
+                x: .value("日期", String(point.date.suffix(5))),
+                y: .value("主力净流入", (point.mainNet ?? 0) / 100_000_000)
+            )
+            .foregroundStyle((point.mainNet ?? 0) >= 0 ? WhaleTheme.danger : WhaleTheme.success)
+        }
+        .chartXAxis {
+            AxisMarks { _ in
+                AxisValueLabel()
+                    .font(.system(size: 8))
+                    .foregroundStyle(WhaleTheme.muted)
+            }
+        }
+        .chartYAxis {
+            AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { _ in
+                AxisGridLine().foregroundStyle(WhaleTheme.line.opacity(0.45))
+                AxisValueLabel()
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(WhaleTheme.muted)
+            }
+        }
+        .frame(height: 120)
     }
 }
 

@@ -79,6 +79,18 @@ final class DiscoverClient {
         try await DirectContentClient.shared.weiboHot(limit: limit)
     }
 
+    func aiPapers(category: AIPaperCategory, limit: Int = 6) async throws -> AIPaperFeedResponse {
+        try await DirectContentClient.shared.aiPapers(category: category, limit: limit)
+    }
+
+    func fundFlow(symbol: String, days: Int = 6) async throws -> StockFundFlowResponse {
+        try await DirectContentClient.shared.fundFlow(symbol: symbol, days: days)
+    }
+
+    func todayFundFlows(symbols: [String]) async -> [String: FundFlowPoint] {
+        await DirectContentClient.shared.todayFundFlows(symbols: symbols)
+    }
+
     func quotes(symbols: [String]) async throws -> MarketQuoteResponse {
         guard !symbols.isEmpty else {
             return MarketQuoteResponse(updatedAt: "", delayedMinutes: 15, source: "", quotes: [], errors: [])

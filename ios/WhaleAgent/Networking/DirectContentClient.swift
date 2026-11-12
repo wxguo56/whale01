@@ -162,6 +162,62 @@ final class DirectContentClient: @unchecked Sendable {
 
     // MARK: - Game rank
 
+    // MARK: - AI papers
+
+    func aiPapers(category: AIPaperCategory, limit: Int) async throws -> AIPaperFeedResponse {
+        let safeLimit = min(max(limit, 1), 12)
+        var components = URLComponents(string: "https://export.arxiv.org/api/query")
+        components?.queryItems = [
+            URLQueryItem(name: "search_query", value: "cat:\(category.rawValue)"),
+            URLQueryItem(name: "sortBy", value: "submittedDate"),
+            URLQueryItem(name: "sortOrder", value: "descending"),
+            URLQueryItem(name: "max_results", value: String(safeLimit))
+        ]
+        guard let url = components?.url else { throw DirectContentError.decode("arXiv 地址无效") }
+
+        var request = URLRequest(url: url)
+        request.setValue("application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5", forHTTPHeaderField: "accept")
+        request.setValue("WhaleAgent/0.5 (iOS)", forHTTPHeaderField: "user-agent")
+        let (data, response) = try await session.data(for: request)
+        try Self.check(response)
+        guard let xml = String(data: data, encoding: .utf8) else {
+            throw DirectContentError.decode("arXiv 返回了无法识别的编码")
+        }
+
+        var papers: [AIPaper] = []
+        for block in Self.blocks(in: xml, tag: "entry") {
+            let title = Self.cleanText(Self.tag("title", in: block))
+            guard !title.isEmpty else { continue }
+            let rawLink = Self.cleanLink(Self.tag("id", in: block))
+            let link = rawLink.isEmpty ? Self.cleanLink(Self.pickLink(block)) : rawLink
+            let summary = String(Self.cleanText(Self.tag("summary", in: block)).prefix(420))
+            let authors = Self.globalMatches("<author>[\\s\\S]*?<name>([\\s\\S]*?)</name>[\\s\\S]*?</author>", in: block)
+                .compactMap { $0.count > 1 ? Self.cleanText($0[1]) : nil }
+                .prefix(3)
+                .joined(separator: "、")
+            let primary = Self.capture("primary_category[^>]*term=\"([^\"]+)\"", in: block)?.last ?? category.rawValue
+            papers.append(AIPaper(
+                id: Self.stableID(link + "|" + title),
+                title: title,
+                summary: summary,
+                authors: authors,
+                publishedAt: Self.isoDate(Self.tag("published", in: block)),
+                link: link,
+                category: primary
+            ))
+        }
+        guard !papers.isEmpty else {
+            throw DirectContentError.notFound("arXiv 暂时没有返回 \(category.title) 论文")
+        }
+        return AIPaperFeedResponse(
+            category: category.rawValue,
+            categoryName: category.title,
+            updatedAt: Self.isoNow(),
+            source: "arXiv \(category.rawValue)",
+            papers: papers
+        )
+    }
+
     func gameRank(board: GameRankBoard, limit: Int) async throws -> GameRankResponse {
         let path = board == .free ? "topfreeapplications" : "topgrossingapplications"
         guard let url = URL(string: "https://itunes.apple.com/cn/rss/\(path)/limit=100/genre=6014/json") else {
@@ -344,6 +400,70 @@ final class DirectContentClient: @unchecked Sendable {
     }
 
     // MARK: - Market
+
+    func fundFlow(symbol input: String, days: Int) async throws -> StockFundFlowResponse {
+        guard let symbol = Self.normalizeSymbol(input), symbol.market != "BJ" else {
+            throw DirectContentError.decode("资金流暂不支持该证券 \(input)")
+        }
+        let safeDays = min(max(days, 1), 30)
+        let secid = (symbol.market == "SH" ? "1." : "0.") + symbol.code
+        let urlString = "https://push2.eastmoney.com/api/qt/stock/fflow/kline/get?klt=101&lmt=\(safeDays)&secid=\(secid)&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"
+        guard let url = URL(string: urlString) else { throw DirectContentError.decode("资金流地址无效") }
+        let json = try await fetchJSON(url, referer: "https://quote.eastmoney.com/")
+        guard let root = json as? [String: Any],
+              let data = root["data"] as? [String: Any] else {
+            throw DirectContentError.notFound("东方财富未返回 \(symbol.symbol) 的资金流")
+        }
+
+        var points: [FundFlowPoint] = []
+        for raw in (data["klines"] as? [Any] ?? []) {
+            let fields = Self.text(raw).split(separator: ",", omittingEmptySubsequences: false).map(String.init)
+            guard fields.count >= 6 else { continue }
+            func value(_ index: Int) -> Double? { Self.numberFromText(fields[index]) }
+            let hasPercent = fields.count >= 11
+            points.append(FundFlowPoint(
+                date: fields[0],
+                mainNet: value(1),
+                smallNet: value(2),
+                mediumNet: value(3),
+                largeNet: value(4),
+                superLargeNet: value(5),
+                mainNetPercent: hasPercent ? value(6) : nil,
+                smallNetPercent: hasPercent ? value(7) : nil,
+                mediumNetPercent: hasPercent ? value(8) : nil,
+                largeNetPercent: hasPercent ? value(9) : nil,
+                superLargeNetPercent: hasPercent ? value(10) : nil
+            ))
+        }
+        guard !points.isEmpty else {
+            throw DirectContentError.notFound("\(symbol.symbol) 暂时没有资金流数据")
+        }
+        return StockFundFlowResponse(
+            symbol: symbol.symbol,
+            code: Self.text(data["code"]).isEmpty ? symbol.code : Self.text(data["code"]),
+            name: Self.text(data["name"]),
+            updatedAt: Self.isoNow(),
+            source: "东方财富公开资金流",
+            points: points
+        )
+    }
+
+    func todayFundFlows(symbols: [String]) async -> [String: FundFlowPoint] {
+        let unique = Array(Set(symbols.map { $0.lowercased() })).sorted().prefix(10)
+        var result: [String: FundFlowPoint] = [:]
+        await withTaskGroup(of: (String, FundFlowPoint?).self) { group in
+            for symbol in unique {
+                group.addTask {
+                    let point = try? await self.fundFlow(symbol: symbol, days: 1).points.last
+                    return (symbol, point)
+                }
+            }
+            for await (symbol, point) in group {
+                if let point { result[symbol] = point }
+            }
+        }
+        return result
+    }
 
     func indexes() async throws -> MarketQuoteResponse {
         try await quotes(symbols: ["sh000001", "sz399001", "sz399006", "sh000688"])
@@ -549,11 +669,11 @@ final class DirectContentClient: @unchecked Sendable {
         return results
     }
 
-    private func fetchJSON(_ url: URL) async throws -> Any {
+    private func fetchJSON(_ url: URL, referer: String = "https://gu.qq.com/") async throws -> Any {
         var request = URLRequest(url: url)
         request.setValue("application/json, text/plain, */*", forHTTPHeaderField: "accept")
         request.setValue("Mozilla/5.0", forHTTPHeaderField: "user-agent")
-        request.setValue("https://gu.qq.com/", forHTTPHeaderField: "referer")
+        request.setValue(referer, forHTTPHeaderField: "referer")
         let (data, response) = try await session.data(for: request)
         try Self.check(response)
         do {

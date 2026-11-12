@@ -6,7 +6,10 @@ struct DiscoverSegment: View {
     @Namespace private var animation
 
     var body: some View {
-        HStack(spacing: 3) {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 3),
+            spacing: 4
+        ) {
             ForEach(DiscoverChannel.allCases) { channel in
                 Button {
                     if let onSelect {
@@ -15,27 +18,62 @@ struct DiscoverSegment: View {
                         withAnimation(.snappy(duration: 0.24)) { selection = channel }
                     }
                 } label: {
-                    Text(channel.title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .foregroundStyle(selection == channel ? WhaleTheme.ink : WhaleTheme.muted)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 38)
-                        .background {
-                            if selection == channel {
-                                Capsule()
-                                    .fill(WhaleTheme.card.opacity(0.92))
-                                    .matchedGeometryEffect(id: "discover.segment", in: animation)
-                                    .overlay { Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8) }
-                            }
+                    HStack(spacing: 5) {
+                        Image(systemName: channel.icon)
+                            .font(.system(size: 10, weight: .semibold))
+                        Text(channel.title)
+                            .font(.system(size: 14, weight: .semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+                    }
+                    .foregroundStyle(selection == channel ? WhaleTheme.ink : WhaleTheme.muted)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 36)
+                    .background {
+                        if selection == channel {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(WhaleTheme.card.opacity(0.94))
+                                .matchedGeometryEffect(id: "discover.segment", in: animation)
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+                                }
                         }
+                    }
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(4)
-        .background(WhaleTheme.field.opacity(0.78), in: Capsule())
+        .background(WhaleTheme.field.opacity(0.78), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+
+struct DiscoverChannelHeader: View {
+    let channel: DiscoverChannel
+    var detail: String? = nil
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: channel.icon)
+                .font(.system(size: 21, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 46, height: 46)
+                .background(WhaleTheme.auroraGradient, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(channel.title)
+                    .font(.system(size: 27, weight: .bold, design: .rounded))
+                    .foregroundStyle(WhaleTheme.ink)
+                Text(detail ?? channel.subtitle)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 2)
     }
 }
 
@@ -263,6 +301,7 @@ struct MarketIndexCard: View {
 
 struct QuoteRowCard: View {
     let quote: StockQuote
+    var flow: FundFlowPoint? = nil
 
     private var tint: Color {
         quote.isUp ? WhaleTheme.danger : quote.isDown ? WhaleTheme.success : WhaleTheme.muted
@@ -278,6 +317,15 @@ struct QuoteRowCard: View {
                 Text(quote.displayCode)
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(WhaleTheme.muted)
+                if let flow {
+                    HStack(spacing: 4) {
+                        Text("主力")
+                        Text(DiscoverFormat.signedCompactAmount(flow.mainNet))
+                    }
+                    .font(.system(size: 9, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(flow.isInflow ? WhaleTheme.danger : WhaleTheme.success)
+                }
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 3) {
@@ -298,6 +346,106 @@ struct QuoteRowCard: View {
         .padding(.horizontal, 15)
         .background(WhaleTheme.card.opacity(0.74), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+    }
+}
+
+struct AIPaperCategoryBar: View {
+    let selection: AIPaperCategory
+    let onSelect: (AIPaperCategory) -> Void
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 7) {
+                ForEach(AIPaperCategory.allCases) { category in
+                    Button {
+                        onSelect(category)
+                    } label: {
+                        VStack(spacing: 1) {
+                            Text(category.title)
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(category.rawValue)
+                                .font(.system(size: 8, weight: .medium, design: .monospaced))
+                        }
+                        .foregroundStyle(selection == category ? WhaleTheme.onAccent : WhaleTheme.muted)
+                        .padding(.horizontal, 11)
+                        .frame(height: 38)
+                        .background {
+                            if selection == category {
+                                Capsule().fill(WhaleTheme.auroraGradient)
+                            } else {
+                                Capsule().fill(WhaleTheme.card.opacity(0.78))
+                            }
+                        }
+                        .overlay {
+                            Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: selection == category ? 0 : 0.7)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 1)
+        }
+        .scrollIndicators(.hidden)
+    }
+}
+
+struct AIPaperCard: View {
+    let paper: AIPaper
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 7) {
+                Text(paper.category)
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(WhaleTheme.accent)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(WhaleTheme.accent.opacity(0.11), in: Capsule())
+                if !paper.authors.isEmpty {
+                    Text(paper.authors)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 4)
+                Text(DiscoverFormat.relative(paper.publishedAt))
+                    .font(.system(size: 9))
+                    .foregroundStyle(WhaleTheme.muted)
+            }
+
+            Text(paper.displayTitle)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(WhaleTheme.ink)
+                .lineLimit(3)
+                .multilineTextAlignment(.leading)
+
+            if !paper.displaySummary.isEmpty {
+                Text(paper.displaySummary)
+                    .font(.system(size: 11))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+            }
+
+            if let url = paper.url {
+                Link(destination: url) {
+                    HStack(spacing: 4) {
+                        Text("阅读 arXiv 原文")
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 8, weight: .bold))
+                    }
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.accent)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(WhaleTheme.card.opacity(0.74), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7)
+        }
     }
 }
 

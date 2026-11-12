@@ -2,30 +2,62 @@ import Foundation
 
 enum DiscoverChannel: String, CaseIterable, Identifiable, Hashable {
     case ai
-    case headline
-    case game
-    case weibo
     case market
+    case game
+    case music
+    case headline
+    case weibo
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .ai: return "AI科技"
-        case .headline: return "时事"
-        case .game: return "游戏"
-        case .weibo: return "热搜"
-        case .market: return "行情"
+        case .market: return "A股自选"
+        case .game: return "游戏行情"
+        case .music: return "我的音乐"
+        case .headline: return "时事新闻"
+        case .weibo: return "微博热搜"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .ai: return "RSS 资讯 · arXiv 最新论文"
+        case .market: return "指数 · 自选 · 详情资料 · 资金动向"
+        case .game: return "游戏媒体资讯 · App Store 榜单"
+        case .music: return "系统资料库 · 本地音乐 · 播放控制"
+        case .headline: return "要闻 · 权威媒体 RSS"
+        case .weibo: return "实时热搜榜 · 公开数据"
         }
     }
 
     var icon: String {
         switch self {
         case .ai: return "sparkles"
-        case .headline: return "newspaper.fill"
-        case .game: return "gamecontroller.fill"
-        case .weibo: return "flame.fill"
         case .market: return "chart.line.uptrend.xyaxis"
+        case .game: return "gamecontroller.fill"
+        case .music: return "music.note"
+        case .headline: return "newspaper.fill"
+        case .weibo: return "flame.fill"
+        }
+    }
+}
+
+enum AIPaperCategory: String, CaseIterable, Identifiable, Hashable {
+    case ai = "cs.AI"
+    case machineLearning = "cs.LG"
+    case language = "cs.CL"
+    case vision = "cs.CV"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .ai: return "人工智能"
+        case .machineLearning: return "机器学习"
+        case .language: return "自然语言"
+        case .vision: return "计算机视觉"
         }
     }
 }
@@ -133,6 +165,28 @@ struct WeiboHotItem: Decodable, Identifiable, Hashable {
         }
         return "\(hotValue)"
     }
+}
+
+struct AIPaperFeedResponse: Decodable {
+    let category: String
+    let categoryName: String
+    let updatedAt: String
+    let source: String
+    let papers: [AIPaper]
+}
+
+struct AIPaper: Decodable, Identifiable, Hashable {
+    let id: String
+    let title: String
+    let summary: String
+    let authors: String
+    let publishedAt: String
+    let link: String
+    let category: String
+
+    var url: URL? { URL(string: link) }
+    var displayTitle: String { NewsText.plain(title) }
+    var displaySummary: String { NewsText.plain(summary) }
 }
 
 enum NewsText {
@@ -317,6 +371,32 @@ struct IntradayPoint: Decodable, Identifiable, Hashable {
     var id: String { time }
 }
 
+struct StockFundFlowResponse: Decodable {
+    let symbol: String
+    let code: String
+    let name: String
+    let updatedAt: String
+    let source: String
+    let points: [FundFlowPoint]
+}
+
+struct FundFlowPoint: Decodable, Identifiable, Hashable {
+    let date: String
+    let mainNet: Double?
+    let smallNet: Double?
+    let mediumNet: Double?
+    let largeNet: Double?
+    let superLargeNet: Double?
+    let mainNetPercent: Double?
+    let smallNetPercent: Double?
+    let mediumNetPercent: Double?
+    let largeNetPercent: Double?
+    let superLargeNetPercent: Double?
+
+    var id: String { date }
+    var isInflow: Bool { (mainNet ?? 0) >= 0 }
+}
+
 enum DiscoverFormat {
     static func date(from iso: String?) -> Date? {
         guard let iso, !iso.isEmpty else { return nil }
@@ -363,5 +443,18 @@ enum DiscoverFormat {
         if abs(value) >= 100_000_000 { return String(format: "%.2f 亿", value / 100_000_000) }
         if abs(value) >= 10_000 { return String(format: "%.1f 万", value / 10_000) }
         return String(format: "%.0f", value)
+    }
+
+    static func signedCompactAmount(_ value: Double?) -> String {
+        guard let value, value.isFinite else { return "—" }
+        let sign = value > 0 ? "+" : value < 0 ? "-" : ""
+        if abs(value) >= 100_000_000 { return sign + String(format: "%.2f 亿", abs(value) / 100_000_000) }
+        if abs(value) >= 10_000 { return sign + String(format: "%.1f 万", abs(value) / 10_000) }
+        return sign + String(format: "%.0f", abs(value))
+    }
+
+    static func signedPercent(_ value: Double?) -> String {
+        guard let value else { return "—" }
+        return "\(value > 0 ? "+" : "")\(String(format: "%.2f", value))%"
     }
 }

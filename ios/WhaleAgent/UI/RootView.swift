@@ -7,7 +7,6 @@ struct RootView: View {
     @StateObject private var model = AppModel()
     @StateObject private var keyboard = KeyboardObserver()
     @State private var page: AppTab? = .conversation
-    @State private var showMusic = false
     @State private var showRecords = false
     @State private var showDiscover = false
     @State private var discoverChannel: DiscoverChannel = .ai
@@ -27,7 +26,7 @@ struct RootView: View {
                             bottomInset: ConversationComposerBar.reservedHeight + WhaleTabBar.height + keyboardOverlap,
                             onOpenRecords: { showRecords = true },
                             onOpenSettings: { go(.settings) },
-                            onOpenMusic: { showMusic = true },
+                            onOpenMusic: { openDiscover(.music) },
                             onOpenTodo: { go(.records) },
                             onOpenDiscover: openDiscover
                         )
@@ -57,7 +56,7 @@ struct RootView: View {
                 .scrollPosition(id: $page)
                 .scrollIndicators(.hidden)
                 .scrollDisabled(
-                    settingsDetailOpen || showMusic || showRecords || model.presentedConfirmation != nil || keyboard.isVisible
+                    settingsDetailOpen || showRecords || model.presentedConfirmation != nil || keyboard.isVisible
                 )
                 .background(WhaleBackdrop())
 
@@ -89,14 +88,11 @@ struct RootView: View {
         .sheet(item: $model.presentedConfirmation) { item in
             ConfirmationSheet(model: model, item: item)
         }
-        .sheet(isPresented: $showMusic) {
-            MusicView(model: model, showsClose: true)
-        }
         .sheet(isPresented: $showRecords) {
             RecordsView(model: model, showsClose: true, onClose: { showRecords = false })
         }
         .fullScreenCover(isPresented: $showDiscover) {
-            DiscoverView(initialChannel: discoverChannel)
+            DiscoverView(initialChannel: discoverChannel, appModel: model)
         }
         .animation(.easeInOut(duration: 0.2), value: model.playback.track?.trackId)
         .preferredColorScheme(colorScheme)

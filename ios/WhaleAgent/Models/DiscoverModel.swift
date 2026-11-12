@@ -9,6 +9,7 @@ final class DiscoverModel: ObservableObject {
     private var newsCache: [DiscoverChannel: (response: NewsFeedResponse, at: Date)] = [:]
     private var rankCache: [GameRankBoard: (response: GameRankResponse, at: Date)] = [:]
     private var hotCache: (response: WeiboHotResponse, at: Date)?
+    private var paperCache: [AIPaperCategory: (response: AIPaperFeedResponse, at: Date)] = [:]
     private var loadedNewsChannel: DiscoverChannel?
     private var loadedRankBoard: GameRankBoard?
     private var searchTask: Task<Void, Never>?
@@ -20,6 +21,12 @@ final class DiscoverModel: ObservableObject {
     @Published private(set) var newsState: DiscoverLoadState = .idle
     @Published private(set) var newsUpdatedAt: String?
     @Published private(set) var newsSources: [String] = []
+
+    @Published private(set) var papers: [AIPaper] = []
+    @Published private(set) var papersState: DiscoverLoadState = .idle
+    @Published private(set) var papersUpdatedAt: String?
+    @Published private(set) var papersSource: String = ""
+    @Published private(set) var paperCategory: AIPaperCategory = .ai
 
     @Published var gameSection: GameSection = .news
     @Published private(set) var rankItems: [GameRankItem] = []
@@ -39,6 +46,7 @@ final class DiscoverModel: ObservableObject {
     @Published private(set) var marketUpdatedAt: String?
     @Published private(set) var marketSource: String = ""
     @Published private(set) var watchlist: [String]
+    @Published private(set) var watchFlows: [String: FundFlowPoint] = [:]
 
     @Published var searchQuery = ""
     @Published private(set) var searchResults: [StockSearchResult] = []
@@ -63,7 +71,10 @@ final class DiscoverModel: ObservableObject {
             await loadRank(board, force: false)
         } else if channel == .weibo {
             await loadWeiboHot(force: false)
-        } else {
+        } else if channel == .ai {
+            await loadNews(channel: .ai, force: false)
+            await loadPapers(category: paperCategory, force: false)
+        } else if channel == .headline || channel == .game {
             await loadNews(channel: channel, force: false)
         }
     }
@@ -76,7 +87,10 @@ final class DiscoverModel: ObservableObject {
             await loadRank(board, force: false)
         } else if next == .weibo {
             await loadWeiboHot(force: false)
-        } else {
+        } else if next == .ai {
+            await loadNews(channel: .ai, force: false)
+            await loadPapers(category: paperCategory, force: false)
+        } else if next == .headline || next == .game {
             await loadNews(channel: next, force: false)
         }
     }
@@ -97,9 +111,48 @@ final class DiscoverModel: ObservableObject {
             await loadRank(board, force: true)
         } else if channel == .weibo {
             await loadWeiboHot(force: true)
-        } else {
+        } else if channel == .ai {
+            await loadNews(channel: .ai, force: true)
+            await loadPapers(category: paperCategory, force: true)
+        } else if channel == .headline || channel == .game {
             await loadNews(channel: channel, force: true)
         }
+    }
+
+    func loadPapers(category: AIPaperCategory, force: Bool) async {
+        if !force, let cached = paperCache[category], Date().timeIntervalSince(cached.at) < 600, papersState == .loaded, paperCategory == category {
+            apply(cached.response)
+            return
+        }
+        if let cached = paperCache[category] {
+            apply(cached.response)
+        } else if paperCategory != category {
+            papers = []
+            papersUpdatedAt = nil
+            papersSource = ""
+        }
+        paperCategory = category
+        if papers.isEmpty { papersState = .loading }
+        let token = UUID()
+        requestToken = token
+        do {
+            let response = try await client.aiPapers(category: category, limit: 6)
+            guard requestToken == token, channel == .ai, paperCategory == category else { return }
+            paperCache[category] = (response, Date())
+            apply(response)
+            papersState = .loaded
+        } catch {
+            guard requestToken == token, channel == .ai, paperCategory == category else { return }
+            papersState = papers.isEmpty ? .failed(message(error)) : .loaded
+        }
+    }
+
+    func selectPaperCategory(_ next: AIPaperCategory) async {
+        guard next != paperCategory else { return }
+        paperCategory = next
+        papers = []
+        papersState = .idle
+        await loadPapers(category: next, force: false)
     }
 
     func loadWeiboHot(force: Bool) async {
@@ -215,11 +268,14 @@ final class DiscoverModel: ObservableObject {
                 watchQuotes = response.quotes
                 marketUpdatedAt = response.updatedAt
                 marketSource = response.source
+                watchFlows = await client.todayFundFlows(symbols: watchlist)
             } catch {
                 messages.append(message(error))
+                watchFlows = [:]
             }
         } else {
             watchQuotes = []
+            watchFlows = [:]
         }
 
         if indexes.isEmpty && watchQuotes.isEmpty, let first = messages.first {
@@ -304,6 +360,12 @@ final class DiscoverModel: ObservableObject {
         hotNote = response.note
     }
 
+    private func apply(_ response: AIPaperFeedResponse) {
+        papers = response.papers
+        papersUpdatedAt = response.updatedAt
+        papersSource = response.source
+    }
+
     private func message(_ error: Error) -> String {
         (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
@@ -319,6 +381,9 @@ final class StockDetailModel: ObservableObject {
     @Published private(set) var kline: [KlinePoint] = []
     @Published private(set) var state: DiscoverLoadState = .idle
     @Published private(set) var chartState: DiscoverLoadState = .idle
+    @Published private(set) var fundFlow: [FundFlowPoint] = []
+    @Published private(set) var fundFlowState: DiscoverLoadState = .idle
+    @Published private(set) var fundFlowSource: String = ""
     @Published private(set) var updatedAt: String?
     @Published private(set) var source: String = ""
 
@@ -330,6 +395,7 @@ final class StockDetailModel: ObservableObject {
     func load() async {
         if state == .idle { state = .loading }
         if chartState == .idle { chartState = .loading }
+        if fundFlowState == .idle { fundFlowState = .loading }
         do {
             let response = try await client.quotes(symbols: [quote.symbol])
             if let next = response.quotes.first {
@@ -344,7 +410,8 @@ final class StockDetailModel: ObservableObject {
 
         async let intradayResult = try? client.intraday(symbol: quote.symbol)
         async let klineResult = try? client.kline(symbol: quote.symbol, days: 160)
-        let (intradayResponse, klineResponse) = await (intradayResult, klineResult)
+        async let flowResult = try? client.fundFlow(symbol: quote.symbol, days: 6)
+        let (intradayResponse, klineResponse, flowResponse) = await (intradayResult, klineResult, flowResult)
         if let intradayResponse {
             intraday = intradayResponse.points
         }
@@ -352,5 +419,12 @@ final class StockDetailModel: ObservableObject {
             kline = klineResponse.points
         }
         chartState = intraday.isEmpty && kline.isEmpty ? .failed("分时与日线暂时没有取到") : .loaded
+        if let flowResponse {
+            fundFlow = flowResponse.points
+            fundFlowSource = flowResponse.source
+            fundFlowState = .loaded
+        } else {
+            fundFlowState = .failed("资金流暂时没有取到，稍后下拉重试")
+        }
     }
 }

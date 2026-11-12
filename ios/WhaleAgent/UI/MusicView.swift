@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 struct MusicView: View {
     @ObservedObject var model: AppModel
     var showsClose = false
+    var embedded = false
 
     @Environment(\.dismiss) private var dismiss
     @State private var showImporter = false
@@ -16,53 +17,61 @@ struct MusicView: View {
     @State private var isSwitchingAlbum = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    searchField
-                    playerCard
-                    librarySection
-                    neteaseCard
-                    if model.permissionsSnapshot["music"] != "granted" {
-                        permissionCard
-                    }
-                }
-                .padding(.horizontal, WhaleTheme.pagePadding)
-                .padding(.top, 8)
-                .padding(.bottom, 32)
+        Group {
+            if embedded {
+                content
+            } else {
+                NavigationStack { content }
             }
-            .scrollIndicators(.hidden)
-            .scrollDismissesKeyboard(.interactively)
-            .background(WhaleTheme.pageGradient)
-            .navigationTitle("音乐")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if showsClose {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("完成") { dismiss() }
-                            .font(.system(size: 15, weight: .semibold))
-                    }
+        }
+    }
+
+    private var content: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                searchField
+                playerCard
+                librarySection
+                neteaseCard
+                if model.permissionsSnapshot["music"] != "granted" {
+                    permissionCard
                 }
             }
-            .task { await model.musicAppeared() }
-            .refreshable {
-                model.refreshPermissions()
-                await model.loadMusicLibrary()
-                await model.refreshPlayback()
+            .padding(.horizontal, WhaleTheme.pagePadding)
+            .padding(.top, 8)
+            .padding(.bottom, 32)
+        }
+        .scrollIndicators(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+        .background(WhaleTheme.pageGradient)
+        .navigationTitle("音乐")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if showsClose {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("完成") { dismiss() }
+                        .font(.system(size: 15, weight: .semibold))
+                }
             }
-            .fileImporter(
-                isPresented: $showImporter,
-                allowedContentTypes: [.audio],
-                allowsMultipleSelection: true
-            ) { result in
-                guard case .success(let urls) = result else { return }
-                Task { await model.importLocalMusic(from: urls) }
-            }
-            .alert("音乐从哪来", isPresented: $showSourceInfo) {
-                Button("知道了", role: .cancel) {}
-            } message: {
-                Text("系统「音乐」资料库里的歌曲和专辑可以直接读取和播放。网易云等第三方 App 的账号、歌单和离线缓存位于各自沙盒，iOS 不允许鲸鱼读取或代替它播放；鲸鱼只能打开已登录的网易云 App。")
-            }
+        }
+        .task { await model.musicAppeared() }
+        .refreshable {
+            model.refreshPermissions()
+            await model.loadMusicLibrary()
+            await model.refreshPlayback()
+        }
+        .fileImporter(
+            isPresented: $showImporter,
+            allowedContentTypes: [.audio],
+            allowsMultipleSelection: true
+        ) { result in
+            guard case .success(let urls) = result else { return }
+            Task { await model.importLocalMusic(from: urls) }
+        }
+        .alert("音乐从哪来", isPresented: $showSourceInfo) {
+            Button("知道了", role: .cancel) {}
+        } message: {
+            Text("系统「音乐」资料库里的歌曲和专辑可以直接读取和播放。网易云等第三方 App 的账号、歌单和离线缓存位于各自沙盒，iOS 不允许鲸鱼读取或代替它播放；鲸鱼只能打开已登录的网易云 App。")
         }
     }
 
