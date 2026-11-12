@@ -382,12 +382,26 @@ struct WhaleHomeCanvas: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("天气详情")
 
+                if !weatherExpanded, let current = weather?.current {
+                    weatherQuickStats(current)
+                }
+
                 if weatherExpanded {
                 if let hours = weather?.hours, !hours.isEmpty {
                     Rectangle()
                         .fill(WhaleTheme.line)
                         .frame(height: 0.5)
                     hourlyStrip(hours)
+                }
+
+                if let sun = weather?.sun {
+                    HStack(spacing: 18) {
+                        Label("日出 \(sun.sunriseText)", systemImage: "sunrise.fill")
+                        Label("日落 \(sun.sunsetText)", systemImage: "sunset.fill")
+                        Spacer(minLength: 0)
+                    }
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(WhaleTheme.muted)
                 }
 
                 if let current = weather?.current, !weatherDays.isEmpty {
@@ -399,7 +413,7 @@ struct WhaleHomeCanvas: View {
 
                 if !today.advice.isEmpty {
                     Text(today.advice)
-                        .font(.system(size: 13))
+                        .font(.system(size: 14))
                         .foregroundStyle(WhaleTheme.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -413,25 +427,25 @@ struct WhaleHomeCanvas: View {
                         ForEach(Array(weatherDays.prefix(7))) { day in
                             HStack(spacing: 10) {
                                 Text(day.dayLabel)
-                                    .font(.system(size: 13, weight: .medium))
+                                    .font(.system(size: 14, weight: .medium))
                                     .foregroundStyle(WhaleTheme.muted)
-                                    .frame(width: 56, alignment: .leading)
+                                    .frame(width: 58, alignment: .leading)
                                 Image(systemName: day.icon)
-                                    .font(.system(size: 15, weight: .medium))
+                                    .font(.system(size: 16, weight: .medium))
                                     .foregroundStyle(WhaleTheme.coral)
-                                    .frame(width: 20)
+                                    .frame(width: 21)
                                 Text(day.summary)
-                                    .font(.system(size: 13, weight: .medium))
+                                    .font(.system(size: 14, weight: .medium))
                                     .foregroundStyle(WhaleTheme.ink)
                                     .lineLimit(1)
                                 Spacer(minLength: 4)
                                 if let rain = day.precipitationText {
                                     Text(rain)
-                                        .font(.system(size: 11, weight: .medium))
+                                        .font(.system(size: 12, weight: .medium))
                                         .foregroundStyle(WhaleTheme.moon)
                                 }
                                 Text(day.temperatureText)
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                                     .foregroundStyle(WhaleTheme.ink)
                                     .lineLimit(1)
                             }
@@ -489,30 +503,74 @@ struct WhaleHomeCanvas: View {
         return parts.joined(separator: " · ")
     }
 
+    private func weatherQuickStats(_ current: WeatherSnapshot.Current) -> some View {
+        HStack(spacing: 10) {
+            weatherQuickStat(
+                "体感",
+                current.apparentC.map { "\(Int($0.rounded()))°" } ?? "—",
+                icon: "thermometer.medium"
+            )
+            weatherQuickStat(
+                "湿度",
+                current.humidity.map { "\(Int($0.rounded()))%" } ?? "—",
+                icon: "humidity.fill"
+            )
+            weatherQuickStat(
+                "风速",
+                current.windKph.map { String(format: "%.0f km/h", $0) } ?? "—",
+                icon: "wind"
+            )
+        }
+        .padding(10)
+        .background(WhaleTheme.soft.opacity(0.5), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.snappy(duration: 0.2)) { weatherExpanded.toggle() }
+        }
+    }
+
+    private func weatherQuickStat(_ label: String, _ value: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .semibold))
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .foregroundStyle(WhaleTheme.muted)
+            Text(value)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(WhaleTheme.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private func hourlyStrip(_ hours: [WeatherSnapshot.Hour]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("逐小时预报")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(WhaleTheme.muted)
             ScrollView(.horizontal) {
                 HStack(spacing: 16) {
                     ForEach(hours) { hour in
                         VStack(spacing: 5) {
                             Text(hour.hourLabel)
-                                .font(.system(size: 11, weight: .medium))
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(WhaleTheme.muted)
                             Image(systemName: hour.icon)
-                                .font(.system(size: 16, weight: .medium))
+                                .font(.system(size: 17, weight: .medium))
                                 .symbolRenderingMode(.palette)
                                 .foregroundStyle(hour.isDay ? WhaleTheme.coral : WhaleTheme.moon, WhaleTheme.moon.opacity(0.5))
                             Text(hour.temperatureC.map { "\(Int($0.rounded()))°" } ?? "—")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .font(.system(size: 15, weight: .bold, design: .rounded))
                                 .foregroundStyle(WhaleTheme.ink)
                             Text(hour.precipitationChance.map { "\(Int($0.rounded()))%" } ?? " ")
-                                .font(.system(size: 10, weight: .medium))
+                                .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(WhaleTheme.moon)
                         }
-                        .frame(width: 40)
+                        .frame(width: 42)
                     }
                 }
                 .padding(.vertical, 2)
@@ -536,13 +594,13 @@ struct WhaleHomeCanvas: View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 5) {
                 Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                 Text(label)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
             }
             .foregroundStyle(WhaleTheme.muted)
             Text(value)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
                 .foregroundStyle(WhaleTheme.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)

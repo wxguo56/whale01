@@ -128,17 +128,6 @@ struct ConversationTabView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("正在播放 \(track.title)，打开音乐")
-                Spacer(minLength: 2)
-            } else {
-                Spacer(minLength: 6)
-                Button(action: onOpenMusic) {
-                    Image(systemName: "music.note")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.ink)
-                        .whaleGlassCircle(size: 38)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("打开音乐")
             }
 
         }

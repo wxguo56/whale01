@@ -106,6 +106,10 @@ struct RootView: View {
         .preferredColorScheme(colorScheme)
         .task {
 #if DEBUG
+            if ProcessInfo.processInfo.environment["WHALE_DEMO_HOME"] == "1" {
+                showDiscover = false
+                page = .conversation
+            }
             if ProcessInfo.processInfo.environment["WHALE_DEMO_WEATHER"] == "1" {
                 showDiscover = false
                 page = .conversation

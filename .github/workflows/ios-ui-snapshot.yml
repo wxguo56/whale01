@@ -81,6 +81,10 @@ jobs:
           sleep 16
           xcrun simctl io "$DEVICE_ID" screenshot snapshots/weather-detail.png
           xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+          SIMCTL_CHILD_WHALE_DEMO_HOME=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 12
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/home-weather-collapsed.png
+          xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
 
       - name: Upload screenshots
         if: always()
