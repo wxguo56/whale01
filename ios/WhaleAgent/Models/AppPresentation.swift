@@ -218,7 +218,10 @@ struct WeatherDaySummary: Identifiable, Equatable, Codable {
         let calendar = Calendar.current
         if calendar.isDateInToday(parsed) { return "今天" }
         if calendar.isDateInTomorrow(parsed) { return "明天" }
-        return parsed.formatted(.dateTime.month().day().weekday(.abbreviated))
+        let start = calendar.startOfDay(for: Date())
+        let days = calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: parsed)).day ?? 99
+        if days < 7 { return parsed.formatted(.dateTime.weekday(.abbreviated)) }
+        return parsed.formatted(.dateTime.month().day())
     }
 
     var icon: String {

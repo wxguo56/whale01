@@ -374,7 +374,10 @@ final class WeatherExecutor {
                     continuation.resume(returning: nil)
                     return
                 }
-                let text = LocationExecutor.displayAddress(placemark)
+                let text = placemark.locality
+                    ?? placemark.subAdministrativeArea
+                    ?? placemark.administrativeArea
+                    ?? LocationExecutor.displayAddress(placemark)
                 continuation.resume(returning: text.isEmpty ? nil : text)
             }
         }
@@ -451,7 +454,7 @@ final class WeatherExecutor {
 
     static func advice(high: Double?, low: Double?, chance: Double?, code: Int?) -> String {
         var notes: [String] = []
-        if let chance, chance >= 50 {
+        if let chance, chance >= 30 {
             notes.append("降水概率 \(Int(chance.rounded()))%，建议带伞")
         } else if let code, [61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99].contains(code) {
             notes.append("预报有降水，建议带伞")
