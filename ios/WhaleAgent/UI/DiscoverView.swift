@@ -14,17 +14,15 @@ struct DiscoverView: View {
     }
 
     private var models: [DiscoverChannel: DiscoverModel] { store.models }
-    private var activeModel: DiscoverModel? { store.models[channel] }
-
     var body: some View {
         NavigationStack(path: $path) {
             ZStack {
                 WhaleBackdrop()
-                VStack(spacing: 0) {
-                    topChrome
-                    pager
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                pager
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            }
+            .overlay(alignment: .leading) {
+                edgeBackZone
             }
             .toolbar(.hidden, for: .navigationBar)
             .task {
@@ -85,6 +83,22 @@ struct DiscoverView: View {
         .clipped()
     }
 
+    private var edgeBackZone: some View {
+        Color.clear
+            .frame(width: 24)
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 10)
+                    .onEnded { value in
+                        guard value.translation.width > 60,
+                              abs(value.translation.height) < 90 else { return }
+                        dismiss()
+                    }
+            )
+            .accessibilityHidden(true)
+    }
+
     private var channelScroll: Binding<DiscoverChannel?> {
         Binding(
             get: { channel },
@@ -95,79 +109,6 @@ struct DiscoverView: View {
         )
     }
 
-    private func select(_ next: DiscoverChannel) {
-        guard next != channel else { return }
-        withAnimation(.snappy(duration: 0.28)) { channel = next }
-    }
-
-    private var isRefreshing: Bool {
-        guard let model = activeModel else { return false }
-        switch channel {
-        case .market:
-            return model.marketState == .loading
-        case .game:
-            return model.gameSection.board == nil ? model.newsState == .loading : model.rankState == .loading
-        case .weibo:
-            return model.hotState == .loading
-        case .ai:
-            return model.newsState == .loading || model.papersState == .loading
-        case .music:
-            return false
-        case .headline:
-            return model.newsState == .loading
-        }
-    }
-
-    private var topChrome: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                Button { dismiss() } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.ink)
-                        .whaleGlassCircle(size: 38)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("返回")
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("发现")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(WhaleTheme.ink)
-                    Text("左右滑动切换频道 · 真实数据")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(WhaleTheme.muted)
-                }
-                Spacer()
-
-                if channel != .music {
-                    Button {
-                        Task { await activeModel?.refresh() }
-                    } label: {
-                        if isRefreshing {
-                            ProgressView().controlSize(.small).tint(WhaleTheme.accent)
-                                .frame(width: 38, height: 38)
-                        } else {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(WhaleTheme.ink)
-                                .whaleGlassCircle(size: 38)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("刷新")
-                }
-            }
-
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 9)
-        .background(WhaleChromeBackground())
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(WhaleTheme.line.opacity(0.55)).frame(height: 0.6)
-        }
-    }
 }
 
 @MainActor

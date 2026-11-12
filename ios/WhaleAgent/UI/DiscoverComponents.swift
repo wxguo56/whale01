@@ -1,54 +1,5 @@
 import SwiftUI
 
-struct DiscoverSegment: View {
-    @Binding var selection: DiscoverChannel
-    var onSelect: ((DiscoverChannel) -> Void)?
-    @Namespace private var animation
-
-    var body: some View {
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 3),
-            spacing: 4
-        ) {
-            ForEach(DiscoverChannel.allCases) { channel in
-                Button {
-                    if let onSelect {
-                        onSelect(channel)
-                    } else {
-                        withAnimation(.snappy(duration: 0.24)) { selection = channel }
-                    }
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: channel.icon)
-                            .font(.system(size: 10, weight: .semibold))
-                        Text(channel.title)
-                            .font(.system(size: 14, weight: .semibold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.82)
-                    }
-                    .foregroundStyle(selection == channel ? WhaleTheme.ink : WhaleTheme.muted)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 36)
-                    .background {
-                        if selection == channel {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(WhaleTheme.card.opacity(0.94))
-                                .matchedGeometryEffect(id: "discover.segment", in: animation)
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                        .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
-                                }
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(4)
-        .background(WhaleTheme.field.opacity(0.78), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-    }
-}
-
 struct DiscoverChannelHeader: View {
     let channel: DiscoverChannel
     var detail: String? = nil
