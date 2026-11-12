@@ -23,7 +23,7 @@ enum DiscoverChannel: String, CaseIterable, Identifiable, Hashable {
 
     var subtitle: String {
         switch self {
-        case .ai: return "RSS 资讯 · arXiv 最新论文"
+        case .ai: return "游戏应用 · 程序开发 · 视频生成 · 游戏科技"
         case .market: return "指数 · 自选 · 详情资料 · 资金动向"
         case .game: return "游戏媒体资讯 · App Store 榜单"
         case .music: return "系统资料库 · 本地音乐 · 播放控制"
@@ -188,11 +188,11 @@ extension DiscoverChannel {
         case .ai:
             return [
                 NewsSectionOption(id: "all", title: "全部"),
-                NewsSectionOption(id: "openai", title: "OpenAI"),
-                NewsSectionOption(id: "claude", title: "Claude"),
-                NewsSectionOption(id: "deepseek", title: "DeepSeek"),
-                NewsSectionOption(id: "google", title: "DeepMind"),
-                NewsSectionOption(id: "media", title: "行业媒体")
+                NewsSectionOption(id: "game-ai", title: "游戏应用"),
+                NewsSectionOption(id: "coding", title: "程序开发"),
+                NewsSectionOption(id: "video", title: "视频生成"),
+                NewsSectionOption(id: "gametech", title: "游戏科技"),
+                NewsSectionOption(id: "vendor", title: "厂商动态")
             ]
         case .headline:
             return [

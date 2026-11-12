@@ -48,6 +48,9 @@ final class DiscoverClient {
         guard channel == .ai || channel == .headline || channel == .game else {
             throw DiscoverClientError.invalidURL
         }
+        if channel == .ai {
+            return try await DirectContentClient.shared.news(channel: channel, section: section, limit: limit)
+        }
         if !hasBackend {
             return try await DirectContentClient.shared.news(channel: channel, section: section, limit: limit)
         }

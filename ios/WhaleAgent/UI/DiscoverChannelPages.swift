@@ -44,8 +44,6 @@ struct AIChannelPage: View {
                         onPrevious: { model.stepNewsSection(.ai, by: -1) },
                         onNext: { model.stepNewsSection(.ai, by: 1) }
                     )
-                    AIPaperSection(model: model)
-                        .id("ai-papers")
                     NewsSourceFooter(model: model)
                 }
                 .padding(.horizontal, 16)
@@ -57,9 +55,6 @@ struct AIChannelPage: View {
             .refreshable { await model.refresh() }
             .onChange(of: model.aiSection) { _, _ in
                 withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("ai-top", anchor: .top) }
-            }
-            .onChange(of: model.paperCategory) { _, _ in
-                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("ai-papers", anchor: .top) }
             }
             .task { await model.loadInitial() }
         }
@@ -90,7 +85,7 @@ struct AIChannelPage: View {
     @ViewBuilder
     private var moreNews: some View {
         if model.aiNews.count > 1 {
-            DiscoverSectionTitle(title: "更多 AI 资讯", subtitle: "公开 RSS · 阅读全文请跳转原文")
+            DiscoverSectionTitle(title: "更多动态", subtitle: "公开 RSS · 阅读全文请跳转原文")
             ForEach(Array(model.aiNews.dropFirst())) { item in
                 NavigationLink(value: DiscoverRoute.news(item)) {
                     NewsRowCard(item: item)
@@ -98,57 +93,6 @@ struct AIChannelPage: View {
                 .buttonStyle(.plain)
             }
         }
-    }
-}
-
-struct AIPaperSection: View {
-    @ObservedObject var model: DiscoverModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            DiscoverSectionTitle(
-                title: "arXiv 最新论文",
-                subtitle: model.papersSource.isEmpty
-                    ? "按提交时间排序 · 点击阅读原文"
-                    : "\(model.papersSource) · 按提交时间排序"
-            )
-
-            AIPaperCategoryBar(selection: model.paperCategory) { category in
-                Task { await model.selectPaperCategory(category) }
-            }
-
-            if model.papers.isEmpty {
-                switch model.papersState {
-                case .failed(let message):
-                    DiscoverErrorState(message: message) {
-                        Task { await model.loadPapers(category: model.paperCategory, force: true) }
-                    }
-                case .idle, .loading:
-                    VStack(spacing: 8) {
-                        ForEach(0..<2, id: \.self) { _ in
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(WhaleTheme.soft)
-                                .frame(height: 118)
-                                .redacted(reason: .placeholder)
-                        }
-                    }
-                case .loaded:
-                    Text("这个分类暂时没有新的论文")
-                        .font(.system(size: 12))
-                        .foregroundStyle(WhaleTheme.muted)
-                        .padding(.vertical, 14)
-                }
-            } else {
-                ForEach(model.papers) { paper in
-                    AIPaperCard(paper: paper)
-                }
-            }
-        }
-        .padding(.top, 4)
-        .horizontalTabSwipe(
-            onPrevious: { Task { await model.stepPaperCategory(by: -1) } },
-            onNext: { Task { await model.stepPaperCategory(by: 1) } }
-        )
     }
 }
 

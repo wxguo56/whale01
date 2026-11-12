@@ -162,7 +162,6 @@ final class DiscoverModel: ObservableObject {
             await loadWeiboHot(force: false)
         } else if channel == .ai {
             await loadNews(channel: .ai, force: false)
-            await loadPapers(category: paperCategory, force: false)
         } else if channel == .headline || channel == .game {
             await loadNews(channel: channel, force: false)
         }
@@ -178,7 +177,6 @@ final class DiscoverModel: ObservableObject {
             await loadWeiboHot(force: false)
         } else if next == .ai {
             await loadNews(channel: .ai, force: false)
-            await loadPapers(category: paperCategory, force: false)
         } else if next == .headline || next == .game {
             await loadNews(channel: next, force: false)
         }
@@ -231,7 +229,6 @@ final class DiscoverModel: ObservableObject {
             await loadWeiboHot(force: true)
         } else if channel == .ai {
             await loadNews(channel: .ai, force: true)
-            await loadPapers(category: paperCategory, force: true)
         } else if channel == .headline || channel == .game {
             await loadNews(channel: channel, force: true)
         }
@@ -357,7 +354,7 @@ final class DiscoverModel: ObservableObject {
             let response = try await client.news(channel: channel, limit: 40)
             guard requestToken == token, self.channel == channel else { return }
             newsCache[channel] = (response, Date())
-            DiscoverDiskCache.save(response, key: "news-\(channel.rawValue)")
+            DiscoverDiskCache.save(response, key: newsDiskKey(channel))
             apply(response, channel: channel)
             newsState = .loaded
         } catch {
@@ -463,16 +460,12 @@ final class DiscoverModel: ObservableObject {
 
     private func hydrateFromDisk() {
         for item in [DiscoverChannel.ai, .headline, .game] {
-            guard let cached = DiscoverDiskCache.load(NewsFeedResponse.self, key: "news-\(item.rawValue)") else { continue }
+            guard let cached = DiscoverDiskCache.load(NewsFeedResponse.self, key: newsDiskKey(item)) else { continue }
             newsCache[item] = (cached, .distantPast)
         }
         for board in GameRankBoard.allCases {
             guard let cached = DiscoverDiskCache.load(GameRankResponse.self, key: "rank-\(board.rawValue)") else { continue }
             rankCache[board] = (cached, .distantPast)
-        }
-        for category in AIPaperCategory.allCases {
-            guard let cached = DiscoverDiskCache.load(AIPaperFeedResponse.self, key: "papers-\(category.rawValue)") else { continue }
-            paperCache[category] = (cached, .distantPast)
         }
         if let cached = DiscoverDiskCache.load(WeiboHotResponse.self, key: "weibo") {
             hotCache = (cached, .distantPast)
@@ -486,10 +479,6 @@ final class DiscoverModel: ObservableObject {
             if let cached = newsCache[.ai] {
                 apply(cached.response, channel: .ai)
                 newsState = .loaded
-            }
-            if let cached = paperCache[paperCategory] {
-                apply(cached.response)
-                papersState = .loaded
             }
         case .headline:
             if let cached = newsCache[.headline] {
@@ -515,6 +504,10 @@ final class DiscoverModel: ObservableObject {
         case .market, .music:
             break
         }
+    }
+
+    private func newsDiskKey(_ channel: DiscoverChannel) -> String {
+        channel == .ai ? "news-ai-topics" : "news-\(channel.rawValue)"
     }
 
     private func apply(_ response: NewsFeedResponse, channel: DiscoverChannel) {
