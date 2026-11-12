@@ -55,6 +55,7 @@ jobs:
           for service in reminders calendar photos microphone location contacts; do
             xcrun simctl privacy "$DEVICE_ID" grant "$service" com.whale01.agent || true
           done
+          xcrun simctl location "$DEVICE_ID" set 30.2741,120.1551 || true
           SIMCTL_CHILD_WHALE_DEMO_DISCOVER=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
           sleep 8
           mkdir -p snapshots
