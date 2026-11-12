@@ -3,7 +3,7 @@ import Foundation
 import SwiftUI
 import UIKit
 
-enum AppTab: Hashable {
+enum AppTab: String, Hashable {
     case conversation
     case records
     case settings

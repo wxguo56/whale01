@@ -6,6 +6,12 @@ import SwiftUI
 final class DiscoverModel: ObservableObject {
     let client = DiscoverClient()
     private let store = WatchlistStore.shared
+    private let defaults = UserDefaults.standard
+    private static let aiSectionKey = "whale.discover.aiSection"
+    private static let headlineSectionKey = "whale.discover.headlineSection"
+    private static let gameNewsSectionKey = "whale.discover.gameNewsSection"
+    private static let paperCategoryKey = "whale.discover.paperCategory"
+    private static let gameSectionKey = "whale.discover.gameSection"
     private var newsCache: [DiscoverChannel: (response: NewsFeedResponse, at: Date)] = [:]
     private var rankCache: [GameRankBoard: (response: GameRankResponse, at: Date)] = [:]
     private var hotCache: (response: WeiboHotResponse, at: Date)?
@@ -27,17 +33,27 @@ final class DiscoverModel: ObservableObject {
     @Published private(set) var papersState: DiscoverLoadState = .idle
     @Published private(set) var papersUpdatedAt: String?
     @Published private(set) var papersSource: String = ""
-    @Published private(set) var paperCategory: AIPaperCategory = .ai
+    @Published private(set) var paperCategory: AIPaperCategory = .ai {
+        didSet { defaults.set(paperCategory.rawValue, forKey: Self.paperCategoryKey) }
+    }
 
-    @Published var gameSection: GameSection = .news
+    @Published var gameSection: GameSection = .news {
+        didSet { defaults.set(gameSection.rawValue, forKey: Self.gameSectionKey) }
+    }
     @Published private(set) var rankItems: [GameRankItem] = []
     @Published private(set) var rankState: DiscoverLoadState = .idle
     @Published private(set) var rankUpdatedAt: String?
     @Published private(set) var rankSource: String = ""
 
-    @Published var aiSection: String = "all"
-    @Published var headlineSection: String = "all"
-    @Published var gameNewsSection: String = "all"
+    @Published var aiSection: String = "all" {
+        didSet { defaults.set(aiSection, forKey: Self.aiSectionKey) }
+    }
+    @Published var headlineSection: String = "all" {
+        didSet { defaults.set(headlineSection, forKey: Self.headlineSectionKey) }
+    }
+    @Published var gameNewsSection: String = "all" {
+        didSet { defaults.set(gameNewsSection, forKey: Self.gameNewsSectionKey) }
+    }
 
     @Published private(set) var steam: SteamFeaturedResponse?
     @Published private(set) var steamState: DiscoverLoadState = .idle
@@ -63,6 +79,12 @@ final class DiscoverModel: ObservableObject {
     init(initialChannel: DiscoverChannel = .ai) {
         channel = initialChannel
         watchlist = store.symbols
+        let saved = UserDefaults.standard
+        aiSection = saved.string(forKey: Self.aiSectionKey) ?? "all"
+        headlineSection = saved.string(forKey: Self.headlineSectionKey) ?? "all"
+        gameNewsSection = saved.string(forKey: Self.gameNewsSectionKey) ?? "all"
+        paperCategory = AIPaperCategory(rawValue: saved.string(forKey: Self.paperCategoryKey) ?? "") ?? .ai
+        gameSection = GameSection(rawValue: saved.string(forKey: Self.gameSectionKey) ?? "") ?? .news
         watchlistCancellable = store.$symbols.sink { [weak self] symbols in
             guard let self, symbols != self.watchlist else { return }
             self.watchlist = symbols
@@ -85,11 +107,48 @@ final class DiscoverModel: ObservableObject {
     }
 
     func selectNewsSection(_ section: String, for channel: DiscoverChannel) async {
+        applyNewsSection(section, for: channel)
+    }
+
+    func stepNewsSection(_ channel: DiscoverChannel, by delta: Int) {
+        let sections = channel.newsSections
+        let current: String
         switch channel {
-        case .ai: aiSection = section
-        case .headline: headlineSection = section
-        case .game: gameNewsSection = section
+        case .ai: current = aiSection
+        case .headline: current = headlineSection
+        case .game: current = gameNewsSection
         default: return
+        }
+        guard let index = sections.firstIndex(where: { $0.id == current }) else { return }
+        let next = min(max(index + delta, 0), sections.count - 1)
+        guard next != index else { return }
+        applyNewsSection(sections[next].id, for: channel)
+    }
+
+    func stepGameSection(by delta: Int) async {
+        let sections = GameSection.allCases
+        guard let index = sections.firstIndex(of: gameSection) else { return }
+        let next = min(max(index + delta, 0), sections.count - 1)
+        guard next != index else { return }
+        await selectGameSection(sections[next])
+    }
+
+    func stepPaperCategory(by delta: Int) async {
+        let categories = AIPaperCategory.allCases
+        guard let index = categories.firstIndex(of: paperCategory) else { return }
+        let next = min(max(index + delta, 0), categories.count - 1)
+        guard next != index else { return }
+        await selectPaperCategory(categories[next])
+    }
+
+    private func applyNewsSection(_ section: String, for channel: DiscoverChannel) {
+        withAnimation(.easeInOut(duration: 0.18)) {
+            switch channel {
+            case .ai: aiSection = section
+            case .headline: headlineSection = section
+            case .game: gameNewsSection = section
+            default: return
+            }
         }
     }
 

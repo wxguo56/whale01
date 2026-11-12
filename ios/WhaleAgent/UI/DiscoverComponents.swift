@@ -1,5 +1,32 @@
 import SwiftUI
 
+struct HorizontalTabSwipe: ViewModifier {
+    var onPrevious: () -> Void
+    var onNext: () -> Void
+
+    func body(content: Content) -> some View {
+        content.simultaneousGesture(
+            DragGesture(minimumDistance: 28)
+                .onEnded { value in
+                    let dx = value.translation.width
+                    let dy = value.translation.height
+                    guard abs(dx) > 64, abs(dy) < 56, abs(dx) > abs(dy) * 1.4 else { return }
+                    if dx < 0 {
+                        onNext()
+                    } else {
+                        onPrevious()
+                    }
+                }
+        )
+    }
+}
+
+extension View {
+    func horizontalTabSwipe(onPrevious: @escaping () -> Void, onNext: @escaping () -> Void) -> some View {
+        modifier(HorizontalTabSwipe(onPrevious: onPrevious, onNext: onNext))
+    }
+}
+
 struct DiscoverChannelHeader: View {
     let channel: DiscoverChannel
     var detail: String? = nil
@@ -305,38 +332,46 @@ struct AIPaperCategoryBar: View {
     let onSelect: (AIPaperCategory) -> Void
 
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 7) {
-                ForEach(AIPaperCategory.allCases) { category in
-                    Button {
-                        onSelect(category)
-                    } label: {
-                        VStack(spacing: 1) {
-                            Text(category.title)
-                                .font(.system(size: 12, weight: .semibold))
-                            Text(category.rawValue)
-                                .font(.system(size: 8, weight: .medium, design: .monospaced))
-                        }
-                        .foregroundStyle(selection == category ? WhaleTheme.onAccent : WhaleTheme.muted)
-                        .padding(.horizontal, 11)
-                        .frame(height: 38)
-                        .background {
-                            if selection == category {
-                                Capsule().fill(WhaleTheme.auroraGradient)
-                            } else {
-                                Capsule().fill(WhaleTheme.card.opacity(0.78))
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                HStack(spacing: 7) {
+                    ForEach(AIPaperCategory.allCases) { category in
+                        Button {
+                            onSelect(category)
+                        } label: {
+                            VStack(spacing: 1) {
+                                Text(category.title)
+                                    .font(.system(size: 12, weight: .semibold))
+                                Text(category.rawValue)
+                                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                            }
+                            .foregroundStyle(selection == category ? WhaleTheme.onAccent : WhaleTheme.muted)
+                            .padding(.horizontal, 11)
+                            .frame(height: 38)
+                            .background {
+                                if selection == category {
+                                    Capsule().fill(WhaleTheme.auroraGradient)
+                                } else {
+                                    Capsule().fill(WhaleTheme.card.opacity(0.78))
+                                }
+                            }
+                            .overlay {
+                                Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: selection == category ? 0 : 0.7)
                             }
                         }
-                        .overlay {
-                            Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: selection == category ? 0 : 0.7)
-                        }
+                        .buttonStyle(.plain)
+                        .id(category)
                     }
-                    .buttonStyle(.plain)
+                }
+                .padding(.vertical, 1)
+            }
+            .scrollIndicators(.hidden)
+            .onChange(of: selection) { _, next in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    proxy.scrollTo(next, anchor: .center)
                 }
             }
-            .padding(.vertical, 1)
         }
-        .scrollIndicators(.hidden)
     }
 }
 
@@ -513,37 +548,45 @@ struct GameSectionSegment: View {
     @Namespace private var animation
 
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 4) {
-                ForEach(GameSection.allCases) { section in
-                    Button {
-                        if let onSelect {
-                            onSelect(section)
-                        } else {
-                            withAnimation(.snappy(duration: 0.22)) { selection = section }
-                        }
-                    } label: {
-                        Text(section.title)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(selection == section ? WhaleTheme.ink : WhaleTheme.muted)
-                            .padding(.horizontal, 13)
-                            .frame(height: 30)
-                            .background {
-                                if selection == section {
-                                    Capsule()
-                                        .fill(WhaleTheme.card.opacity(0.92))
-                                        .matchedGeometryEffect(id: "game.section", in: animation)
-                                        .overlay { Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
-                                }
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                HStack(spacing: 4) {
+                    ForEach(GameSection.allCases) { section in
+                        Button {
+                            if let onSelect {
+                                onSelect(section)
+                            } else {
+                                withAnimation(.snappy(duration: 0.22)) { selection = section }
                             }
+                        } label: {
+                            Text(section.title)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(selection == section ? WhaleTheme.ink : WhaleTheme.muted)
+                                .padding(.horizontal, 13)
+                                .frame(height: 30)
+                                .background {
+                                    if selection == section {
+                                        Capsule()
+                                            .fill(WhaleTheme.card.opacity(0.92))
+                                            .matchedGeometryEffect(id: "game.section", in: animation)
+                                            .overlay { Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+                                    }
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .id(section)
                     }
-                    .buttonStyle(.plain)
+                }
+                .padding(3)
+                .background(WhaleTheme.field.opacity(0.6), in: Capsule())
+            }
+            .scrollIndicators(.hidden)
+            .onChange(of: selection) { _, next in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    proxy.scrollTo(next, anchor: .center)
                 }
             }
-            .padding(3)
-            .background(WhaleTheme.field.opacity(0.6), in: Capsule())
         }
-        .scrollIndicators(.hidden)
     }
 }
 

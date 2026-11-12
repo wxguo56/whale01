@@ -34,9 +34,15 @@ struct AIChannelPage: View {
                 NewsSectionBar(channel: .ai, selection: model.aiSection) { section in
                     Task { await model.selectNewsSection(section, for: .ai) }
                 }
-                newsHero
+                VStack(alignment: .leading, spacing: 12) {
+                    newsHero
+                    moreNews
+                }
+                .horizontalTabSwipe(
+                    onPrevious: { model.stepNewsSection(.ai, by: -1) },
+                    onNext: { model.stepNewsSection(.ai, by: 1) }
+                )
                 AIPaperSection(model: model)
-                moreNews
                 NewsSourceFooter(model: model)
             }
             .padding(.horizontal, 16)
@@ -128,6 +134,10 @@ struct AIPaperSection: View {
             }
         }
         .padding(.top, 4)
+        .horizontalTabSwipe(
+            onPrevious: { Task { await model.stepPaperCategory(by: -1) } },
+            onNext: { Task { await model.stepPaperCategory(by: 1) } }
+        )
     }
 }
 
@@ -358,13 +368,19 @@ struct GameChannelPage: View {
             .padding(.top, 12)
             .padding(.bottom, 8)
 
-            if model.gameSection == .news {
-                newsContent
-            } else if let kind = model.gameSection.steamKind {
-                steamContent(kind)
-            } else {
-                rankContent
+            Group {
+                if model.gameSection == .news {
+                    newsContent
+                } else if let kind = model.gameSection.steamKind {
+                    steamContent(kind)
+                } else {
+                    rankContent
+                }
             }
+            .horizontalTabSwipe(
+                onPrevious: { Task { await model.stepGameSection(by: -1) } },
+                onNext: { Task { await model.stepGameSection(by: 1) } }
+            )
         }
         .task { await model.loadInitial() }
     }
@@ -541,32 +557,38 @@ struct HeadlineChannelPage: View {
                 NewsSectionBar(channel: .headline, selection: model.headlineSection) { section in
                     Task { await model.selectNewsSection(section, for: .headline) }
                 }
-                if model.newsState == .loading && model.newsItems.isEmpty {
-                    NewsSkeleton()
-                } else if case .failed(let message) = model.newsState, model.newsItems.isEmpty {
-                    DiscoverErrorState(message: message) {
-                        Task { await model.loadNews(channel: .headline, force: true) }
-                    }
-                } else if model.headlineNews.isEmpty {
-                    Text("这个分类暂时没有新的资讯，换一个分类或下拉刷新。")
-                        .font(.system(size: 12))
-                        .foregroundStyle(WhaleTheme.muted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 14)
-                } else {
-                    if let feature = model.headlineNews.first {
-                        NavigationLink(value: DiscoverRoute.news(feature)) {
-                            NewsFeatureCard(item: feature)
+                VStack(alignment: .leading, spacing: 11) {
+                    if model.newsState == .loading && model.newsItems.isEmpty {
+                        NewsSkeleton()
+                    } else if case .failed(let message) = model.newsState, model.newsItems.isEmpty {
+                        DiscoverErrorState(message: message) {
+                            Task { await model.loadNews(channel: .headline, force: true) }
                         }
-                        .buttonStyle(.plain)
-                    }
-                    ForEach(Array(model.headlineNews.dropFirst())) { item in
-                        NavigationLink(value: DiscoverRoute.news(item)) {
-                            NewsRowCard(item: item)
+                    } else if model.headlineNews.isEmpty {
+                        Text("这个分类暂时没有新的资讯，换一个分类或下拉刷新。")
+                            .font(.system(size: 12))
+                            .foregroundStyle(WhaleTheme.muted)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 14)
+                    } else {
+                        if let feature = model.headlineNews.first {
+                            NavigationLink(value: DiscoverRoute.news(feature)) {
+                                NewsFeatureCard(item: feature)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
+                        ForEach(Array(model.headlineNews.dropFirst())) { item in
+                            NavigationLink(value: DiscoverRoute.news(item)) {
+                                NewsRowCard(item: item)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                 }
+                .horizontalTabSwipe(
+                    onPrevious: { model.stepNewsSection(.headline, by: -1) },
+                    onNext: { model.stepNewsSection(.headline, by: 1) }
+                )
                 NewsSourceFooter(model: model)
             }
             .padding(.horizontal, 16)
@@ -663,34 +685,42 @@ struct NewsSectionBar: View {
     let onSelect: (String) -> Void
 
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 7) {
-                ForEach(channel.newsSections) { option in
-                    Button {
-                        onSelect(option.id)
-                    } label: {
-                        Text(option.title)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(selection == option.id ? WhaleTheme.onAccent : WhaleTheme.muted)
-                            .padding(.horizontal, 13)
-                            .frame(height: 30)
-                            .background {
-                                Capsule()
-                                    .fill(selection == option.id ? WhaleTheme.accent : WhaleTheme.card.opacity(0.7))
-                                    .overlay {
-                                        Capsule().strokeBorder(
-                                            selection == option.id ? Color.clear : WhaleTheme.glassStroke,
-                                            lineWidth: 0.7
-                                        )
-                                    }
-                            }
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                HStack(spacing: 7) {
+                    ForEach(channel.newsSections) { option in
+                        Button {
+                            onSelect(option.id)
+                        } label: {
+                            Text(option.title)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(selection == option.id ? WhaleTheme.onAccent : WhaleTheme.muted)
+                                .padding(.horizontal, 13)
+                                .frame(height: 30)
+                                .background {
+                                    Capsule()
+                                        .fill(selection == option.id ? WhaleTheme.accent : WhaleTheme.card.opacity(0.7))
+                                        .overlay {
+                                            Capsule().strokeBorder(
+                                                selection == option.id ? Color.clear : WhaleTheme.glassStroke,
+                                                lineWidth: 0.7
+                                            )
+                                        }
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .id(option.id)
                     }
-                    .buttonStyle(.plain)
+                }
+                .padding(.vertical, 2)
+            }
+            .scrollIndicators(.hidden)
+            .onChange(of: selection) { _, next in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    proxy.scrollTo(next, anchor: .center)
                 }
             }
-            .padding(.vertical, 2)
         }
-        .scrollIndicators(.hidden)
     }
 }
 

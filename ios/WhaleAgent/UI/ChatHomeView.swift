@@ -12,7 +12,7 @@ struct ConversationTabView: View {
     let onOpenTodo: () -> Void
     let onOpenDiscover: (DiscoverChannel) -> Void
 
-    @State private var browsingStarter = false
+    @AppStorage("whale.chat.browsingStarter") private var browsingStarter = false
     @State private var showConversation = false
 
     private var showingStarter: Bool {
@@ -141,29 +141,6 @@ struct ConversationTabView: View {
                 .accessibilityLabel("打开音乐")
             }
 
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    browsingStarter = false
-                    showConversation = true
-                }
-                model.newConversation()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "square.and.pencil")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("新对话")
-                        .font(.system(size: 12, weight: .semibold))
-                }
-                .foregroundStyle(WhaleTheme.ink)
-                .padding(.horizontal, 12)
-                .frame(height: 38)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay {
-                    Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("开启新会话")
         }
         .padding(.horizontal, 18)
         .padding(.top, 8)

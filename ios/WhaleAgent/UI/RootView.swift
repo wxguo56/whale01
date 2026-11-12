@@ -6,15 +6,22 @@ import UIKit
 struct RootView: View {
     @StateObject private var model = AppModel()
     @StateObject private var keyboard = KeyboardObserver()
-    @State private var page: AppTab? = .conversation
+    @State private var page: AppTab? = RootView.restoredTab()
     @State private var showRecords = false
-    @State private var showDiscover = false
-    @State private var discoverChannel: DiscoverChannel = .ai
+    @AppStorage("whale.discover.open") private var showDiscover = false
+    @State private var discoverChannel: DiscoverChannel
     @State private var settingsDetailOpen = false
     @State private var contentBottom: CGFloat = 0
     @AppStorage("whale.appearance") private var appearance = "system"
+    @AppStorage("whale.root.tab") private var savedTab = "conversation"
+    @AppStorage("whale.discover.channel") private var discoverChannelRaw = "ai"
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    init() {
+        let stored = UserDefaults.standard.string(forKey: "whale.discover.channel") ?? ""
+        _discoverChannel = State(initialValue: DiscoverChannel(rawValue: stored) ?? .ai)
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -93,22 +100,30 @@ struct RootView: View {
         }
         .fullScreenCover(isPresented: $showDiscover) {
             DiscoverView(initialChannel: discoverChannel, appModel: model)
+                .id(discoverChannel)
         }
         .animation(.easeInOut(duration: 0.2), value: model.playback.track?.trackId)
         .preferredColorScheme(colorScheme)
         .task {
 #if DEBUG
+            if ProcessInfo.processInfo.environment["WHALE_DEMO_WEATHER"] == "1" {
+                showDiscover = false
+                page = .conversation
+            }
             if ProcessInfo.processInfo.environment["WHALE_DEMO_DISCOVER"] == "1" {
                 discoverChannel = .ai
+                discoverChannelRaw = DiscoverChannel.ai.rawValue
                 showDiscover = true
             }
             if ProcessInfo.processInfo.environment["WHALE_DEMO_GAME"] == "1" {
                 discoverChannel = .game
+                discoverChannelRaw = DiscoverChannel.game.rawValue
                 showDiscover = true
             }
             if let raw = ProcessInfo.processInfo.environment["WHALE_DEMO_CHANNEL"],
                let channel = DiscoverChannel(rawValue: raw) {
                 discoverChannel = channel
+                discoverChannelRaw = raw
                 showDiscover = true
             }
 #endif
@@ -132,6 +147,7 @@ struct RootView: View {
         }
         .onChange(of: page) { oldPage, newPage in
             guard oldPage != newPage else { return }
+            savedTab = newPage?.rawValue ?? AppTab.conversation.rawValue
             UISelectionFeedbackGenerator().selectionChanged()
             UIApplication.shared.sendAction(
                 #selector(UIResponder.resignFirstResponder),
@@ -158,7 +174,12 @@ struct RootView: View {
 
     private func openDiscover(_ channel: DiscoverChannel) {
         discoverChannel = channel
+        discoverChannelRaw = channel.rawValue
         showDiscover = true
+    }
+
+    private static func restoredTab() -> AppTab {
+        AppTab(rawValue: UserDefaults.standard.string(forKey: "whale.root.tab") ?? "") ?? .conversation
     }
 
     private var colorScheme: ColorScheme? {

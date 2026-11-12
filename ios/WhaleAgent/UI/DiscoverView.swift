@@ -4,12 +4,12 @@ struct DiscoverView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var appModel: AppModel
     @State private var path = NavigationPath()
-    @State private var channel: DiscoverChannel
+    private let channel: DiscoverChannel
     @StateObject private var store: DiscoverChannelStore
 
     init(initialChannel: DiscoverChannel, appModel: AppModel) {
-        _channel = State(initialValue: initialChannel)
-        _store = StateObject(wrappedValue: DiscoverChannelStore())
+        channel = initialChannel
+        _store = StateObject(wrappedValue: DiscoverChannelStore.shared)
         self.appModel = appModel
     }
 
@@ -18,8 +18,10 @@ struct DiscoverView: View {
         NavigationStack(path: $path) {
             ZStack {
                 WhaleBackdrop()
-                pager
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                if let model = models[channel] {
+                    DiscoverChannelPage(model: model, appModel: appModel)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                }
             }
             .overlay(alignment: .leading) {
                 edgeBackZone
@@ -29,7 +31,6 @@ struct DiscoverView: View {
 #if DEBUG
                 let environment = ProcessInfo.processInfo.environment
                 if environment["WHALE_DEMO_GAME"] == "1", let gameModel = models[.game] {
-                    channel = .game
                     gameModel.gameSection = .grossing
                     await gameModel.selectGameSection(.grossing)
                     if let first = gameModel.rankItems.first {
@@ -39,7 +40,6 @@ struct DiscoverView: View {
                 if let raw = environment["WHALE_DEMO_GAME_SECTION"],
                    let section = GameSection(rawValue: raw),
                    let gameModel = models[.game] {
-                    channel = .game
                     gameModel.gameSection = section
                     await gameModel.selectGameSection(section)
                 }
@@ -62,27 +62,6 @@ struct DiscoverView: View {
         }
     }
 
-    private var pager: some View {
-        ScrollView(.horizontal) {
-            LazyHStack(spacing: 0) {
-                ForEach(DiscoverChannel.allCases) { item in
-                    if let model = models[item] {
-                        DiscoverChannelPage(model: model, appModel: appModel)
-                            .containerRelativeFrame(.horizontal)
-                            .id(item)
-                    }
-                }
-            }
-            .scrollTargetLayout()
-        }
-        .contentMargins(0, for: .scrollContent)
-        .scrollTargetBehavior(.paging)
-        .scrollPosition(id: channelScroll)
-        .scrollIndicators(.hidden)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .clipped()
-    }
-
     private var edgeBackZone: some View {
         Color.clear
             .frame(width: 24)
@@ -99,23 +78,14 @@ struct DiscoverView: View {
             .accessibilityHidden(true)
     }
 
-    private var channelScroll: Binding<DiscoverChannel?> {
-        Binding(
-            get: { channel },
-            set: { next in
-                guard let next, next != channel else { return }
-                channel = next
-            }
-        )
-    }
-
 }
 
 @MainActor
 final class DiscoverChannelStore: ObservableObject {
+    static let shared = DiscoverChannelStore()
     let models: [DiscoverChannel: DiscoverModel]
 
-    init() {
+    private init() {
         var built: [DiscoverChannel: DiscoverModel] = [:]
         for item in DiscoverChannel.allCases {
             built[item] = DiscoverModel(initialChannel: item)
