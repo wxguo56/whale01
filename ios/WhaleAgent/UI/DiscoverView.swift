@@ -134,7 +134,7 @@ struct DiscoverView: View {
                     Text("发现")
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(WhaleTheme.ink)
-                    Text("六个频道 · 左右滑动切换 · 真实数据")
+                    Text("左右滑动切换频道 · 真实数据")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(WhaleTheme.muted)
                 }
@@ -159,11 +159,6 @@ struct DiscoverView: View {
                 }
             }
 
-            DiscoverSegment(
-                selection: Binding(get: { channel }, set: { select($0) })
-            ) { next in
-                select(next)
-            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
