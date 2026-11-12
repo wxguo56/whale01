@@ -64,6 +64,9 @@ enum AIPaperCategory: String, CaseIterable, Identifiable, Hashable {
 
 enum GameSection: String, CaseIterable, Identifiable, Hashable {
     case news
+    case steamTop
+    case steamDeals
+    case comingSoon
     case free
     case grossing
 
@@ -71,7 +74,10 @@ enum GameSection: String, CaseIterable, Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .news: return "资讯"
+        case .news: return "游戏资讯"
+        case .steamTop: return "Steam畅销"
+        case .steamDeals: return "Steam折扣"
+        case .comingSoon: return "新作预告"
         case .free: return "免费榜"
         case .grossing: return "畅销榜"
         }
@@ -79,9 +85,42 @@ enum GameSection: String, CaseIterable, Identifiable, Hashable {
 
     var board: GameRankBoard? {
         switch self {
-        case .news: return nil
+        case .news, .steamTop, .steamDeals, .comingSoon: return nil
         case .free: return .free
         case .grossing: return .grossing
+        }
+    }
+
+    var steamKind: SteamKind? {
+        switch self {
+        case .steamTop: return .topSellers
+        case .steamDeals: return .specials
+        case .comingSoon: return .comingSoon
+        case .news, .free, .grossing: return nil
+        }
+    }
+}
+
+enum SteamKind: String, Identifiable, Hashable {
+    case topSellers
+    case specials
+    case comingSoon
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .topSellers: return "Steam 全球畅销"
+        case .specials: return "Steam 折扣特惠"
+        case .comingSoon: return "即将发售与新作预告"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .topSellers: return "Steam 商店中国区 · 实时畅销顺序"
+        case .specials: return "Steam 商店中国区 · 折扣与价格实时变动"
+        case .comingSoon: return "Steam 商店中国区 · 即将发售作品"
         }
     }
 }
@@ -131,10 +170,108 @@ struct NewsItem: Decodable, Identifiable, Hashable {
     let publishedAt: String
     let channel: String
     let rank: Int?
+    var section: String? = nil
 
     var url: URL? { URL(string: link) }
     var displayTitle: String { NewsText.plain(title) }
     var displaySummary: String { NewsText.plain(summary) }
+}
+
+struct NewsSectionOption: Identifiable, Hashable {
+    let id: String
+    let title: String
+}
+
+extension DiscoverChannel {
+    var newsSections: [NewsSectionOption] {
+        switch self {
+        case .ai:
+            return [
+                NewsSectionOption(id: "all", title: "全部"),
+                NewsSectionOption(id: "openai", title: "OpenAI"),
+                NewsSectionOption(id: "claude", title: "Claude"),
+                NewsSectionOption(id: "deepseek", title: "DeepSeek"),
+                NewsSectionOption(id: "google", title: "DeepMind"),
+                NewsSectionOption(id: "media", title: "行业媒体")
+            ]
+        case .headline:
+            return [
+                NewsSectionOption(id: "all", title: "全部"),
+                NewsSectionOption(id: "domestic", title: "国内"),
+                NewsSectionOption(id: "world", title: "国际"),
+                NewsSectionOption(id: "military", title: "军事"),
+                NewsSectionOption(id: "tech", title: "科技"),
+                NewsSectionOption(id: "auto", title: "汽车")
+            ]
+        case .game:
+            return [
+                NewsSectionOption(id: "all", title: "全部"),
+                NewsSectionOption(id: "cn", title: "国内"),
+                NewsSectionOption(id: "global", title: "国际")
+            ]
+        case .market, .music, .weibo:
+            return []
+        }
+    }
+
+    func matches(section: String, itemSection: String?) -> Bool {
+        section == "all" || itemSection == section
+    }
+}
+
+struct SteamFeaturedResponse: Decodable {
+    let updatedAt: String
+    let source: String
+    let note: String
+    let topSellers: [SteamItem]
+    let specials: [SteamItem]
+    let comingSoon: [SteamItem]
+    let newReleases: [SteamItem]
+
+    func items(for kind: SteamKind) -> [SteamItem] {
+        switch kind {
+        case .topSellers: return topSellers
+        case .specials: return specials
+        case .comingSoon: return comingSoon
+        }
+    }
+}
+
+struct SteamItem: Decodable, Identifiable, Hashable {
+    let id: Int
+    let name: String
+    let discounted: Bool
+    let discountPercent: Int
+    let originalPrice: Int?
+    let finalPrice: Int?
+    let currency: String
+    let headerImage: String
+
+    var headerURL: URL? { URL(string: headerImage) }
+    var storeURL: URL? { URL(string: "https://store.steampowered.com/app/\(id)/?l=schinese") }
+
+    var discountText: String? {
+        guard discounted, discountPercent > 0 else { return nil }
+        return "-\(discountPercent)%"
+    }
+
+    var originalPriceText: String? {
+        guard discounted, let originalPrice else { return nil }
+        return Self.price(originalPrice, currency: currency)
+    }
+
+    var finalPriceText: String {
+        guard let finalPrice else { return "价格未公布" }
+        if finalPrice == 0 { return "免费游玩" }
+        return Self.price(finalPrice, currency: currency)
+    }
+
+    static func price(_ cents: Int, currency: String) -> String {
+        let symbol = currency == "CNY" ? "¥" : currency == "USD" ? "$" : ""
+        let value = Double(cents) / 100
+        if value == value.rounded() { return "\(symbol)\(Int(value))" }
+        return "\(symbol)\(String(format: "%.2f", value))"
+    }
 }
 
 struct WeiboHotResponse: Decodable {

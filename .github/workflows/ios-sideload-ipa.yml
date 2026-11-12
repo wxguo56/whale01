@@ -39,7 +39,7 @@ jobs:
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -archivePath build/WhaleAgent.xcarchive \
-          MARKETING_VERSION=0.6.1 \
+          MARKETING_VERSION=0.6.2 \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             WHALE_API_TOKEN="${{ secrets.WHALE_API_TOKEN }}" \
             DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \

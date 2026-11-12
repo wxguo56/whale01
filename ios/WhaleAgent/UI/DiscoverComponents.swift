@@ -562,34 +562,37 @@ struct GameSectionSegment: View {
     @Namespace private var animation
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(GameSection.allCases) { section in
-                Button {
-                    if let onSelect {
-                        onSelect(section)
-                    } else {
-                        withAnimation(.snappy(duration: 0.22)) { selection = section }
-                    }
-                } label: {
-                    Text(section.title)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(selection == section ? WhaleTheme.ink : WhaleTheme.muted)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 30)
-                        .background {
-                            if selection == section {
-                                Capsule()
-                                    .fill(WhaleTheme.card.opacity(0.92))
-                                    .matchedGeometryEffect(id: "game.section", in: animation)
-                                    .overlay { Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
-                            }
+        ScrollView(.horizontal) {
+            HStack(spacing: 4) {
+                ForEach(GameSection.allCases) { section in
+                    Button {
+                        if let onSelect {
+                            onSelect(section)
+                        } else {
+                            withAnimation(.snappy(duration: 0.22)) { selection = section }
                         }
+                    } label: {
+                        Text(section.title)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(selection == section ? WhaleTheme.ink : WhaleTheme.muted)
+                            .padding(.horizontal, 13)
+                            .frame(height: 30)
+                            .background {
+                                if selection == section {
+                                    Capsule()
+                                        .fill(WhaleTheme.card.opacity(0.92))
+                                        .matchedGeometryEffect(id: "game.section", in: animation)
+                                        .overlay { Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
+            .padding(3)
+            .background(WhaleTheme.field.opacity(0.6), in: Capsule())
         }
-        .padding(3)
-        .background(WhaleTheme.field.opacity(0.6), in: Capsule())
+        .scrollIndicators(.hidden)
     }
 }
 

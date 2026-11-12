@@ -24,6 +24,82 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(GameSection.grossing.board, .grossing)
     }
 
+    func testDiscoverNewsSectionsCoverVendorsAndCategories() {
+        XCTAssertEqual(
+            DiscoverChannel.ai.newsSections.map(\.title),
+            ["全部", "OpenAI", "Claude", "DeepSeek", "DeepMind", "行业媒体"]
+        )
+        XCTAssertTrue(DiscoverChannel.headline.newsSections.contains { $0.id == "military" })
+        XCTAssertTrue(DiscoverChannel.headline.newsSections.contains { $0.id == "auto" })
+        XCTAssertEqual(GameSection.steamDeals.steamKind, .specials)
+        XCTAssertEqual(GameSection.comingSoon.title, "新作预告")
+    }
+
+    func testSteamPriceFormattingUsesStoreCents() {
+        let deal = SteamItem(
+            id: 1,
+            name: "影之刃零",
+            discounted: true,
+            discountPercent: 20,
+            originalPrice: 26_800,
+            finalPrice: 21_440,
+            currency: "CNY",
+            headerImage: ""
+        )
+        XCTAssertEqual(deal.discountText, "-20%")
+        XCTAssertEqual(deal.originalPriceText, "¥268")
+        XCTAssertEqual(deal.finalPriceText, "¥214.40")
+    }
+
+    func testWeatherSnapshotParsesCurrentHourlyAndAirQuality() throws {
+        let payload = JSONValue.object([
+            "locationName": .string("杭州市"),
+            "current": .object([
+                "temperatureC": .number(21.4),
+                "apparentC": .number(20.1),
+                "humidity": .number(63),
+                "windKph": .number(8.2),
+                "condition": .string("partlyCloudy"),
+                "summary": .string("局部多云"),
+                "isDay": .bool(true)
+            ]),
+            "hourly": .array([
+                .object([
+                    "time": .string("2026-11-12T14:00"),
+                    "temperatureC": .number(21.4),
+                    "condition": .string("clear"),
+                    "summary": .string("晴"),
+                    "isDay": .bool(true)
+                ])
+            ]),
+            "sun": .object([
+                "sunrise": .string("2026-11-12T06:32"),
+                "sunset": .string("2026-11-12T17:05")
+            ]),
+            "airQuality": .object([
+                "usAqi": .number(42),
+                "pm25": .number(18.5)
+            ]),
+            "days": .array([
+                .object([
+                    "date": .string("2026-11-12"),
+                    "condition": .string("partlyCloudy"),
+                    "summary": .string("局部多云"),
+                    "temperatureC": .object(["min": .number(16), "max": .number(23)]),
+                    "precipitationChance": .number(20),
+                    "advice": .string("暂无")
+                ])
+            ])
+        ])
+        let snapshot = try XCTUnwrap(WeatherSnapshot.from(payload))
+        XCTAssertEqual(snapshot.locationName, "杭州市")
+        XCTAssertEqual(snapshot.current?.temperatureC, 21.4)
+        XCTAssertEqual(snapshot.hours.count, 1)
+        XCTAssertEqual(snapshot.sun?.sunriseText, "06:32")
+        XCTAssertEqual(snapshot.air?.levelText, "优")
+        XCTAssertEqual(snapshot.days.count, 1)
+    }
+
     func testDiscoverChannelsMatchHomeOrder() {
         XCTAssertEqual(
             DiscoverChannel.allCases.map(\.title),

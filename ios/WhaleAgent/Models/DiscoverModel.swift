@@ -10,6 +10,7 @@ final class DiscoverModel: ObservableObject {
     private var rankCache: [GameRankBoard: (response: GameRankResponse, at: Date)] = [:]
     private var hotCache: (response: WeiboHotResponse, at: Date)?
     private var paperCache: [AIPaperCategory: (response: AIPaperFeedResponse, at: Date)] = [:]
+    private var steamCache: (response: SteamFeaturedResponse, at: Date)?
     private var loadedNewsChannel: DiscoverChannel?
     private var loadedRankBoard: GameRankBoard?
     private var searchTask: Task<Void, Never>?
@@ -33,6 +34,13 @@ final class DiscoverModel: ObservableObject {
     @Published private(set) var rankState: DiscoverLoadState = .idle
     @Published private(set) var rankUpdatedAt: String?
     @Published private(set) var rankSource: String = ""
+
+    @Published var aiSection: String = "all"
+    @Published var headlineSection: String = "all"
+    @Published var gameNewsSection: String = "all"
+
+    @Published private(set) var steam: SteamFeaturedResponse?
+    @Published private(set) var steamState: DiscoverLoadState = .idle
 
     @Published private(set) var hotItems: [WeiboHotItem] = []
     @Published private(set) var hotState: DiscoverLoadState = .idle
@@ -64,11 +72,32 @@ final class DiscoverModel: ObservableObject {
         }
     }
 
+    var aiNews: [NewsItem] {
+        newsItems.filter { DiscoverChannel.ai.matches(section: aiSection, itemSection: $0.section) }
+    }
+
+    var headlineNews: [NewsItem] {
+        newsItems.filter { DiscoverChannel.headline.matches(section: headlineSection, itemSection: $0.section) }
+    }
+
+    var gameNews: [NewsItem] {
+        newsItems.filter { DiscoverChannel.game.matches(section: gameNewsSection, itemSection: $0.section) }
+    }
+
+    func selectNewsSection(_ section: String, for channel: DiscoverChannel) async {
+        switch channel {
+        case .ai: aiSection = section
+        case .headline: headlineSection = section
+        case .game: gameNewsSection = section
+        default: return
+        }
+    }
+
     func loadInitial() async {
         if channel == .market {
             await loadMarket(force: false)
-        } else if channel == .game, let board = gameSection.board {
-            await loadRank(board, force: false)
+        } else if channel == .game {
+            await loadGameSection(gameSection, force: false)
         } else if channel == .weibo {
             await loadWeiboHot(force: false)
         } else if channel == .ai {
@@ -83,8 +112,8 @@ final class DiscoverModel: ObservableObject {
         withAnimation(.snappy(duration: 0.24)) { channel = next }
         if next == .market {
             await loadMarket(force: false)
-        } else if next == .game, let board = gameSection.board {
-            await loadRank(board, force: false)
+        } else if next == .game {
+            await loadGameSection(gameSection, force: false)
         } else if next == .weibo {
             await loadWeiboHot(force: false)
         } else if next == .ai {
@@ -97,18 +126,46 @@ final class DiscoverModel: ObservableObject {
 
     func selectGameSection(_ next: GameSection) async {
         withAnimation(.snappy(duration: 0.22)) { gameSection = next }
-        if let board = next.board {
-            await loadRank(board, force: false)
+        await loadGameSection(next, force: false)
+    }
+
+    private func loadGameSection(_ section: GameSection, force: Bool) async {
+        if let board = section.board {
+            await loadRank(board, force: force)
+        } else if let kind = section.steamKind {
+            await loadSteam(kind: kind, force: force)
         } else {
-            await loadNews(channel: .game, force: false)
+            await loadNews(channel: .game, force: force)
         }
+    }
+
+    func loadSteam(kind: SteamKind, force: Bool) async {
+        if !force, let cached = steamCache, Date().timeIntervalSince(cached.at) < 300, steamState == .loaded, steam != nil {
+            return
+        }
+        if let cached = steamCache {
+            steam = cached.response
+        }
+        if steam == nil { steamState = .loading }
+        do {
+            let response = try await client.steamFeatured()
+            steamCache = (response, Date())
+            steam = response
+            steamState = .loaded
+        } catch {
+            steamState = steam == nil ? .failed(message(error)) : .loaded
+        }
+    }
+
+    func steamItems(kind: SteamKind) -> [SteamItem] {
+        steam?.items(for: kind) ?? []
     }
 
     func refresh() async {
         if channel == .market {
             await loadMarket(force: true)
-        } else if channel == .game, let board = gameSection.board {
-            await loadRank(board, force: true)
+        } else if channel == .game {
+            await loadGameSection(gameSection, force: true)
         } else if channel == .weibo {
             await loadWeiboHot(force: true)
         } else if channel == .ai {
@@ -233,7 +290,7 @@ final class DiscoverModel: ObservableObject {
         }
         if newsItems.isEmpty { newsState = .loading }
         do {
-            let response = try await client.news(channel: channel, limit: 24)
+            let response = try await client.news(channel: channel, limit: 40)
             guard requestToken == token, self.channel == channel else { return }
             newsCache[channel] = (response, Date())
             apply(response, channel: channel)

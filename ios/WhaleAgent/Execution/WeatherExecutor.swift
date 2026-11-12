@@ -9,12 +9,55 @@ import Foundation
 @MainActor
 final class WeatherExecutor {
     private struct OpenMeteoResponse: Decodable {
+        struct Current: Decodable {
+            let time: String?
+            let temperature2m: Double?
+            let apparentTemperature: Double?
+            let relativeHumidity2m: Double?
+            let precipitation: Double?
+            let weatherCode: Int?
+            let windSpeed10m: Double?
+            let isDay: Int?
+
+            enum CodingKeys: String, CodingKey {
+                case time
+                case temperature2m = "temperature_2m"
+                case apparentTemperature = "apparent_temperature"
+                case relativeHumidity2m = "relative_humidity_2m"
+                case precipitation
+                case weatherCode = "weather_code"
+                case windSpeed10m = "wind_speed_10m"
+                case isDay = "is_day"
+            }
+        }
+
+        struct Hourly: Decodable {
+            let time: [String]?
+            let temperature2m: [Double?]?
+            let apparentTemperature: [Double?]?
+            let precipitationProbability: [Double?]?
+            let weatherCode: [Int?]?
+            let isDay: [Int?]?
+
+            enum CodingKeys: String, CodingKey {
+                case time
+                case temperature2m = "temperature_2m"
+                case apparentTemperature = "apparent_temperature"
+                case precipitationProbability = "precipitation_probability"
+                case weatherCode = "weather_code"
+                case isDay = "is_day"
+            }
+        }
+
         struct Daily: Decodable {
             let time: [String]?
             let weatherCode: [Int?]?
             let temperatureMax: [Double?]?
             let temperatureMin: [Double?]?
             let precipitationChance: [Double?]?
+            let uvIndexMax: [Double?]?
+            let sunrise: [String]?
+            let sunset: [String]?
 
             enum CodingKeys: String, CodingKey {
                 case time
@@ -22,11 +65,34 @@ final class WeatherExecutor {
                 case temperatureMax = "temperature_2m_max"
                 case temperatureMin = "temperature_2m_min"
                 case precipitationChance = "precipitation_probability_max"
+                case uvIndexMax = "uv_index_max"
+                case sunrise
+                case sunset
             }
         }
 
         let timezone: String?
+        let current: Current?
+        let hourly: Hourly?
         let daily: Daily?
+    }
+
+    private struct AirQualityResponse: Decodable {
+        struct Current: Decodable {
+            let time: String?
+            let usAqi: Double?
+            let pm25: Double?
+            let pm10: Double?
+
+            enum CodingKeys: String, CodingKey {
+                case time
+                case usAqi = "us_aqi"
+                case pm25 = "pm2_5"
+                case pm10
+            }
+        }
+
+        let current: Current?
     }
 
     private struct ResolvedLocation {
@@ -82,6 +148,12 @@ final class WeatherExecutor {
             startDay: startDay,
             endDay: endDay
         )
+        if let air = try? await fetchAirQuality(
+            latitude: target.coordinate.latitude,
+            longitude: target.coordinate.longitude
+        ) {
+            payload["airQuality"] = air
+        }
         payload["locationName"] = .string(target.name)
         payload["locationSource"] = .string(target.source)
         payload["latitude"] = .number(target.coordinate.latitude)
@@ -108,7 +180,15 @@ final class WeatherExecutor {
             URLQueryItem(name: "longitude", value: String(format: "%.4f", longitude)),
             URLQueryItem(
                 name: "daily",
-                value: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+                value: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset"
+            ),
+            URLQueryItem(
+                name: "current",
+                value: "temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,is_day"
+            ),
+            URLQueryItem(
+                name: "hourly",
+                value: "temperature_2m,apparent_temperature,precipitation_probability,weather_code,is_day"
             ),
             URLQueryItem(name: "timezone", value: "auto"),
             URLQueryItem(name: "start_date", value: startDay),
@@ -142,6 +222,36 @@ final class WeatherExecutor {
         return try Self.parseForecast(data: data)
     }
 
+    private func fetchAirQuality(latitude: Double, longitude: Double) async throws -> JSONValue {
+        var components = URLComponents(string: "https://air-quality-api.open-meteo.com/v1/air-quality")
+        components?.queryItems = [
+            URLQueryItem(name: "latitude", value: String(format: "%.4f", latitude)),
+            URLQueryItem(name: "longitude", value: String(format: "%.4f", longitude)),
+            URLQueryItem(name: "current", value: "us_aqi,pm2_5,pm10"),
+            URLQueryItem(name: "timezone", value: "auto")
+        ]
+        guard let url = components?.url else {
+            throw ToolExecutionError(code: "invalid_query", message: "无法生成空气质量请求地址")
+        }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 12
+        request.setValue("WhaleAgent/1.0 (iOS)", forHTTPHeaderField: "User-Agent")
+        let (data, response) = try await session.data(for: request)
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw ToolExecutionError(code: "air_quality_unavailable", message: "空气质量接口返回 HTTP \(http.statusCode)")
+        }
+        let decoded = try JSONDecoder().decode(AirQualityResponse.self, from: data)
+        guard let current = decoded.current else {
+            throw ToolExecutionError(code: "air_quality_no_data", message: "空气质量接口没有返回当前数据")
+        }
+        return .object([
+            "time": current.time.map { JSONValue.string($0) } ?? JSONValue.null,
+            "usAqi": current.usAqi.map { JSONValue.number(Self.round1($0)) } ?? JSONValue.null,
+            "pm25": current.pm25.map { JSONValue.number(Self.round1($0)) } ?? JSONValue.null,
+            "pm10": current.pm10.map { JSONValue.number(Self.round1($0)) } ?? JSONValue.null
+        ])
+    }
+
     static func parseForecast(data: Data) throws -> [String: JSONValue] {
         let decoded: OpenMeteoResponse
         do {
@@ -162,6 +272,9 @@ final class WeatherExecutor {
         let maximums = daily.temperatureMax ?? []
         let minimums = daily.temperatureMin ?? []
         let chances = daily.precipitationChance ?? []
+        let uvs = daily.uvIndexMax ?? []
+        let sunrises = daily.sunrise ?? []
+        let sunsets = daily.sunset ?? []
 
         func value<T>(_ list: [T?], _ index: Int) -> T? {
             guard index < list.count else { return nil }
@@ -183,6 +296,9 @@ final class WeatherExecutor {
                     "max": high.map { JSONValue.number(round1($0)) } ?? JSONValue.null
                 ]),
                 "precipitationChance": chance.map { JSONValue.number(round1($0)) } ?? JSONValue.null,
+                "uvIndexMax": value(uvs, index).map { JSONValue.number(round1($0)) } ?? JSONValue.null,
+                "sunrise": value(sunrises, index).map { JSONValue.string($0) } ?? JSONValue.null,
+                "sunset": value(sunsets, index).map { JSONValue.string($0) } ?? JSONValue.null,
                 "advice": .string(advice(high: high, low: low, chance: chance, code: code))
             ]
             days.append(.object(row))
@@ -194,6 +310,51 @@ final class WeatherExecutor {
         payload["days"] = .array(days)
         payload["dayCount"] = .number(Double(days.count))
         payload["timezone"] = decoded.timezone.map { JSONValue.string($0) } ?? JSONValue.null
+        if let sunrise = sunrises.first, let sunset = sunsets.first {
+            payload["sun"] = .object([
+                "sunrise": .string(sunrise),
+                "sunset": .string(sunset)
+            ])
+        }
+        if let current = decoded.current {
+            payload["current"] = .object([
+                "time": current.time.map { JSONValue.string($0) } ?? JSONValue.null,
+                "temperatureC": current.temperature2m.map { JSONValue.number(round1($0)) } ?? JSONValue.null,
+                "apparentC": current.apparentTemperature.map { JSONValue.number(round1($0)) } ?? JSONValue.null,
+                "humidity": current.relativeHumidity2m.map { JSONValue.number(round1($0)) } ?? JSONValue.null,
+                "precipitationMM": current.precipitation.map { JSONValue.number(round1($0)) } ?? JSONValue.null,
+                "windKph": current.windSpeed10m.map { JSONValue.number(round1($0)) } ?? JSONValue.null,
+                "condition": .string(conditionKey(for: current.weatherCode)),
+                "summary": .string(summary(for: current.weatherCode)),
+                "isDay": .bool((current.isDay ?? 1) == 1)
+            ])
+        }
+        if let hourly = decoded.hourly,
+           let times = hourly.time, !times.isEmpty {
+            let currentTime = decoded.current?.time ?? ""
+            let startIndex = times.firstIndex { currentTime.isEmpty || $0 >= currentTime } ?? 0
+            let temperatures = hourly.temperature2m ?? []
+            let apparents = hourly.apparentTemperature ?? []
+            let probabilities = hourly.precipitationProbability ?? []
+            let codesHourly = hourly.weatherCode ?? []
+            let daylight = hourly.isDay ?? []
+
+            var hours: [JSONValue] = []
+            for index in startIndex..<min(times.count, startIndex + 24) {
+                let code = value(codesHourly, index)
+                let row: [String: JSONValue] = [
+                    "time": .string(times[index]),
+                    "temperatureC": value(temperatures, index).map { JSONValue.number(round1($0)) } ?? JSONValue.null,
+                    "apparentC": value(apparents, index).map { JSONValue.number(round1($0)) } ?? JSONValue.null,
+                    "precipitationChance": value(probabilities, index).map { JSONValue.number(round1($0)) } ?? JSONValue.null,
+                    "condition": .string(conditionKey(for: code)),
+                    "summary": .string(summary(for: code)),
+                    "isDay": .bool((value(daylight, index) ?? 1) == 1)
+                ]
+                hours.append(.object(row))
+            }
+            payload["hourly"] = .array(hours)
+        }
         return payload
     }
 

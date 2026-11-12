@@ -31,6 +31,9 @@ struct AIChannelPage: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 12) {
                 DiscoverChannelHeader(channel: .ai)
+                NewsSectionBar(channel: .ai, selection: model.aiSection) { section in
+                    Task { await model.selectNewsSection(section, for: .ai) }
+                }
                 newsHero
                 AIPaperSection(model: model)
                 moreNews
@@ -53,19 +56,25 @@ struct AIChannelPage: View {
             DiscoverErrorState(message: message) {
                 Task { await model.loadNews(channel: .ai, force: true) }
             }
-        } else if let feature = model.newsItems.first {
+        } else if let feature = model.aiNews.first {
             NavigationLink(value: DiscoverRoute.news(feature)) {
                 NewsFeatureCard(item: feature)
             }
             .buttonStyle(.plain)
+        } else if model.newsState == .loaded {
+            Text("这个分类暂时没有新的资讯，换一个分类或下拉刷新。")
+                .font(.system(size: 12))
+                .foregroundStyle(WhaleTheme.muted)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 14)
         }
     }
 
     @ViewBuilder
     private var moreNews: some View {
-        if model.newsItems.count > 1 {
+        if model.aiNews.count > 1 {
             DiscoverSectionTitle(title: "更多 AI 资讯", subtitle: "公开 RSS · 阅读全文请跳转原文")
-            ForEach(Array(model.newsItems.dropFirst())) { item in
+            ForEach(Array(model.aiNews.dropFirst())) { item in
                 NavigationLink(value: DiscoverRoute.news(item)) {
                     NewsRowCard(item: item)
                 }
@@ -351,6 +360,8 @@ struct GameChannelPage: View {
 
             if model.gameSection == .news {
                 newsContent
+            } else if let kind = model.gameSection.steamKind {
+                steamContent(kind)
             } else {
                 rankContent
             }
@@ -361,6 +372,9 @@ struct GameChannelPage: View {
     private var newsContent: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 11) {
+                NewsSectionBar(channel: .game, selection: model.gameNewsSection) { section in
+                    Task { await model.selectNewsSection(section, for: .game) }
+                }
                 newsBody
                 NewsSourceFooter(model: model, extra: "游戏频道来自游戏媒体公开 RSS，不是微信公众号。")
             }
@@ -379,20 +393,73 @@ struct GameChannelPage: View {
             DiscoverErrorState(message: message) {
                 Task { await model.loadNews(channel: .game, force: true) }
             }
+        } else if model.gameNews.isEmpty {
+            Text("这个分类暂时没有新的游戏资讯，换一个分类或下拉刷新。")
+                .font(.system(size: 12))
+                .foregroundStyle(WhaleTheme.muted)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 14)
         } else {
-            if let feature = model.newsItems.first {
+            if let feature = model.gameNews.first {
                 NavigationLink(value: DiscoverRoute.news(feature)) {
                     NewsFeatureCard(item: feature)
                 }
                 .buttonStyle(.plain)
             }
-            ForEach(Array(model.newsItems.dropFirst())) { item in
+            ForEach(Array(model.gameNews.dropFirst())) { item in
                 NavigationLink(value: DiscoverRoute.news(item)) {
                     NewsRowCard(item: item)
                 }
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    private func steamContent(_ kind: SteamKind) -> some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                switch model.steamState {
+                case .loading where model.steam == nil, .idle:
+                    NewsSkeleton()
+                case .failed(let message) where model.steam == nil:
+                    DiscoverErrorState(message: message) {
+                        Task { await model.loadSteam(kind: kind, force: true) }
+                    }
+                default:
+                    SteamHeader(kind: kind, count: model.steamItems(kind: kind).count)
+                    ForEach(Array(model.steamItems(kind: kind).enumerated()), id: \.element.id) { index, item in
+                        if let url = item.storeURL {
+                            Link(destination: url) {
+                                SteamRowCard(item: item, rank: index + 1)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            SteamRowCard(item: item, rank: index + 1)
+                        }
+                    }
+                    if model.steamItems(kind: kind).isEmpty {
+                        Text("Steam 本次没有返回该栏目条目，请稍后刷新。")
+                            .font(.system(size: 12))
+                            .foregroundStyle(WhaleTheme.muted)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 14)
+                    }
+                    if let updated = model.steam?.updatedAt {
+                        Text("来源：Steam 商店中国区公开接口 · 更新于 \(DiscoverFormat.relative(updated)) · 点击条目打开 Steam 商店")
+                            .font(.system(size: 9))
+                            .foregroundStyle(WhaleTheme.muted.opacity(0.82))
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 6)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 4)
+            .padding(.bottom, 30)
+        }
+        .scrollIndicators(.hidden)
+        .refreshable { await model.loadSteam(kind: kind, force: true) }
     }
 
     private var rankContent: some View {
@@ -471,20 +538,29 @@ struct HeadlineChannelPage: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 11) {
                 DiscoverChannelHeader(channel: .headline)
+                NewsSectionBar(channel: .headline, selection: model.headlineSection) { section in
+                    Task { await model.selectNewsSection(section, for: .headline) }
+                }
                 if model.newsState == .loading && model.newsItems.isEmpty {
                     NewsSkeleton()
                 } else if case .failed(let message) = model.newsState, model.newsItems.isEmpty {
                     DiscoverErrorState(message: message) {
                         Task { await model.loadNews(channel: .headline, force: true) }
                     }
+                } else if model.headlineNews.isEmpty {
+                    Text("这个分类暂时没有新的资讯，换一个分类或下拉刷新。")
+                        .font(.system(size: 12))
+                        .foregroundStyle(WhaleTheme.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 14)
                 } else {
-                    if let feature = model.newsItems.first {
+                    if let feature = model.headlineNews.first {
                         NavigationLink(value: DiscoverRoute.news(feature)) {
                             NewsFeatureCard(item: feature)
                         }
                         .buttonStyle(.plain)
                     }
-                    ForEach(Array(model.newsItems.dropFirst())) { item in
+                    ForEach(Array(model.headlineNews.dropFirst())) { item in
                         NavigationLink(value: DiscoverRoute.news(item)) {
                             NewsRowCard(item: item)
                         }
@@ -578,5 +654,152 @@ struct NewsSourceFooter: View {
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
         .padding(.top, 8)
+    }
+}
+
+struct NewsSectionBar: View {
+    let channel: DiscoverChannel
+    let selection: String
+    let onSelect: (String) -> Void
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 7) {
+                ForEach(channel.newsSections) { option in
+                    Button {
+                        onSelect(option.id)
+                    } label: {
+                        Text(option.title)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(selection == option.id ? WhaleTheme.onAccent : WhaleTheme.muted)
+                            .padding(.horizontal, 13)
+                            .frame(height: 30)
+                            .background {
+                                Capsule()
+                                    .fill(selection == option.id ? WhaleTheme.accent : WhaleTheme.card.opacity(0.7))
+                                    .overlay {
+                                        Capsule().strokeBorder(
+                                            selection == option.id ? Color.clear : WhaleTheme.glassStroke,
+                                            lineWidth: 0.7
+                                        )
+                                    }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 2)
+        }
+        .scrollIndicators(.hidden)
+    }
+}
+
+struct SteamHeader: View {
+    let kind: SteamKind
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(WhaleTheme.auroraGradient)
+                .frame(width: 46, height: 46)
+                .overlay {
+                    Image(systemName: kind == .specials ? "tag.fill" : kind == .comingSoon ? "calendar.badge.clock" : "flame.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(WhaleTheme.onAccent.opacity(0.92))
+                }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(kind.title)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(WhaleTheme.ink)
+                Text(kind.subtitle)
+                    .font(.system(size: 10))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 4)
+
+            Text("\(count) 款")
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(WhaleTheme.accent)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
+                .background(WhaleTheme.accent.opacity(0.1), in: Capsule())
+        }
+        .padding(13)
+        .background(WhaleTheme.card.opacity(0.8), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+    }
+}
+
+struct SteamRowCard: View {
+    let item: SteamItem
+    let rank: Int
+
+    var body: some View {
+        HStack(spacing: 11) {
+            Text("\(rank)")
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .foregroundStyle(rank <= 3 ? WhaleTheme.onAccent : WhaleTheme.muted)
+                .frame(width: 24, height: 24)
+                .background(Circle().fill(rank <= 3 ? WhaleTheme.accent : WhaleTheme.soft.opacity(0.7)))
+
+            AsyncImage(url: item.headerURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                default:
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(WhaleTheme.soft)
+                        .overlay {
+                            Image(systemName: "gamecontroller.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(WhaleTheme.muted.opacity(0.6))
+                        }
+                }
+            }
+            .frame(width: 84, height: 48)
+            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+            .overlay { RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.6) }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.name)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                HStack(spacing: 6) {
+                    if let discount = item.discountText {
+                        Text(discount)
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(WhaleTheme.onAccent)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(WhaleTheme.success, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    }
+                    if let original = item.originalPriceText {
+                        Text(original)
+                            .font(.system(size: 10, design: .rounded))
+                            .foregroundStyle(WhaleTheme.muted)
+                            .strikethrough(true, color: WhaleTheme.muted)
+                    }
+                    Text(item.finalPriceText)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(item.discountText == nil ? WhaleTheme.ink : WhaleTheme.success)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(WhaleTheme.muted.opacity(0.55))
+        }
+        .padding(.vertical, 9)
+        .padding(.horizontal, 12)
+        .background(WhaleTheme.card.opacity(0.72), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
     }
 }

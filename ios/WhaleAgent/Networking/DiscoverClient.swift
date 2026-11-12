@@ -44,20 +44,21 @@ final class DiscoverClient {
         session = URLSession(configuration: configuration)
     }
 
-    func news(channel: DiscoverChannel, limit: Int = 20) async throws -> NewsFeedResponse {
+    func news(channel: DiscoverChannel, section: String = "all", limit: Int = 20) async throws -> NewsFeedResponse {
         guard channel == .ai || channel == .headline || channel == .game else {
             throw DiscoverClientError.invalidURL
         }
         if !hasBackend {
-            return try await DirectContentClient.shared.news(channel: channel, limit: limit)
+            return try await DirectContentClient.shared.news(channel: channel, section: section, limit: limit)
         }
         do {
             return try await get("/v1/news", query: [
                 URLQueryItem(name: "channel", value: channel.rawValue),
+                URLQueryItem(name: "section", value: section),
                 URLQueryItem(name: "limit", value: String(limit))
             ])
         } catch {
-            return try await DirectContentClient.shared.news(channel: channel, limit: limit)
+            return try await DirectContentClient.shared.news(channel: channel, section: section, limit: limit)
         }
     }
 
@@ -77,6 +78,10 @@ final class DiscoverClient {
 
     func appStoreLookup(id: String) async throws -> AppStoreAppDetail {
         try await DirectContentClient.shared.appStoreLookup(id: id)
+    }
+
+    func steamFeatured() async throws -> SteamFeaturedResponse {
+        try await DirectContentClient.shared.steamFeatured()
     }
 
     func weiboHot(limit: Int = 50) async throws -> WeiboHotResponse {

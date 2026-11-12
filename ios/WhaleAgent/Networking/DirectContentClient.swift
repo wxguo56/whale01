@@ -14,6 +14,7 @@ final class DirectContentClient: @unchecked Sendable {
         let name: String
         let url: String
         let channels: Set<String>
+        let section: String
         let requireAIKeyword: Bool
     }
 
@@ -24,16 +25,38 @@ final class DirectContentClient: @unchecked Sendable {
     }
 
     private static let feeds: [Feed] = [
-        Feed(id: "jiqizhixin", name: "机器之心", url: "https://www.jiqizhixin.com/rss", channels: ["ai"], requireAIKeyword: false),
-        Feed(id: "qbitai", name: "量子位", url: "https://www.qbitai.com/feed", channels: ["ai"], requireAIKeyword: false),
-        Feed(id: "ithome", name: "IT之家", url: "https://www.ithome.com/rss/", channels: ["ai", "headline"], requireAIKeyword: true),
-        Feed(id: "36kr", name: "36氪", url: "https://36kr.com/feed", channels: ["ai", "headline"], requireAIKeyword: true),
-        Feed(id: "bing-ai", name: "Bing 新闻", url: "https://www.bing.com/news/search?q=AI%20%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD&format=rss&setlang=zh-cn", channels: ["ai"], requireAIKeyword: false),
-        Feed(id: "bing-headline", name: "Bing 新闻", url: "https://www.bing.com/news/search?q=%E4%BB%8A%E6%97%A5%E8%A6%81%E9%97%BB&format=rss&setlang=zh-cn", channels: ["headline"], requireAIKeyword: false),
-        Feed(id: "sina-china", name: "新浪新闻", url: "https://rss.sina.com.cn/news/china/focus15.xml", channels: ["headline"], requireAIKeyword: false),
-        Feed(id: "youxiputao", name: "游戏葡萄", url: "https://www.youxituoluo.com/feed", channels: ["game"], requireAIKeyword: false),
-        Feed(id: "youxichaguan", name: "游戏茶馆", url: "https://www.youxichaguan.com/feed", channels: ["game"], requireAIKeyword: false),
-        Feed(id: "chuapp", name: "触乐", url: "https://www.chuapp.com/feed", channels: ["game"], requireAIKeyword: false)
+        // AI：官方厂商源 + 行业媒体 + Bing 新闻检索补齐 Anthropic / DeepSeek 中文报道
+        Feed(id: "openai-news", name: "OpenAI 官方", url: "https://openai.com/news/rss.xml", channels: ["ai"], section: "openai", requireAIKeyword: false),
+        Feed(id: "bing-openai", name: "OpenAI 新闻", url: "https://www.bing.com/news/search?q=OpenAI&format=rss&setlang=zh-cn", channels: ["ai"], section: "openai", requireAIKeyword: false),
+        Feed(id: "bing-claude", name: "Claude 新闻", url: "https://www.bing.com/news/search?q=Anthropic+Claude&format=rss&setlang=zh-cn", channels: ["ai"], section: "claude", requireAIKeyword: false),
+        Feed(id: "bing-deepseek", name: "DeepSeek 新闻", url: "https://www.bing.com/news/search?q=DeepSeek&format=rss&setlang=zh-cn", channels: ["ai"], section: "deepseek", requireAIKeyword: false),
+        Feed(id: "deepmind", name: "Google DeepMind", url: "https://deepmind.google/blog/rss.xml", channels: ["ai"], section: "google", requireAIKeyword: false),
+        Feed(id: "huggingface", name: "Hugging Face", url: "https://huggingface.co/blog/feed.xml", channels: ["ai"], section: "media", requireAIKeyword: false),
+        Feed(id: "techcrunch-ai", name: "TechCrunch AI", url: "https://techcrunch.com/category/artificial-intelligence/feed/", channels: ["ai"], section: "media", requireAIKeyword: false),
+        Feed(id: "verge-ai", name: "The Verge AI", url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", channels: ["ai"], section: "media", requireAIKeyword: false),
+        Feed(id: "jiqizhixin", name: "机器之心", url: "https://www.jiqizhixin.com/rss", channels: ["ai"], section: "media", requireAIKeyword: false),
+        Feed(id: "qbitai", name: "量子位", url: "https://www.qbitai.com/feed", channels: ["ai"], section: "media", requireAIKeyword: false),
+        Feed(id: "ithome", name: "IT之家", url: "https://www.ithome.com/rss/", channels: ["ai", "headline"], section: "tech", requireAIKeyword: true),
+        Feed(id: "36kr", name: "36氪", url: "https://36kr.com/feed", channels: ["ai", "headline"], section: "tech", requireAIKeyword: true),
+
+        // 时事：人民网按频道拆分，新浪、中新网补齐国内与国际
+        Feed(id: "people-politics", name: "人民网 · 国内", url: "https://www.people.com.cn/rss/politics.xml", channels: ["headline"], section: "domestic", requireAIKeyword: false),
+        Feed(id: "people-world", name: "人民网 · 国际", url: "https://www.people.com.cn/rss/world.xml", channels: ["headline"], section: "world", requireAIKeyword: false),
+        Feed(id: "people-military", name: "人民网 · 军事", url: "https://www.people.com.cn/rss/military.xml", channels: ["headline"], section: "military", requireAIKeyword: false),
+        Feed(id: "people-auto", name: "人民网 · 汽车", url: "https://www.people.com.cn/rss/auto.xml", channels: ["headline"], section: "auto", requireAIKeyword: false),
+        Feed(id: "people-it", name: "人民网 · 科技", url: "https://www.people.com.cn/rss/it.xml", channels: ["headline"], section: "tech", requireAIKeyword: false),
+        Feed(id: "sina-china", name: "新浪新闻", url: "https://rss.sina.com.cn/news/china/focus15.xml", channels: ["headline"], section: "domestic", requireAIKeyword: false),
+        Feed(id: "sina-world", name: "新浪国际", url: "https://rss.sina.com.cn/news/world/focus15.xml", channels: ["headline"], section: "world", requireAIKeyword: false),
+        Feed(id: "sina-tech", name: "新浪科技", url: "https://rss.sina.com.cn/tech/rollnews.xml", channels: ["headline"], section: "tech", requireAIKeyword: false),
+        Feed(id: "chinanews", name: "中国新闻网", url: "https://www.chinanews.com.cn/rss/scroll-news.xml", channels: ["headline"], section: "domestic", requireAIKeyword: false),
+        Feed(id: "bing-headline", name: "Bing 新闻", url: "https://www.bing.com/news/search?q=%E4%BB%8A%E6%97%A5%E8%A6%81%E9%97%BB&format=rss&setlang=zh-cn", channels: ["headline"], section: "domestic", requireAIKeyword: false),
+
+        // 游戏：国内外媒体分开，Steam 榜单走商店公开接口
+        Feed(id: "youxiputao", name: "游戏葡萄", url: "https://www.youxituoluo.com/feed", channels: ["game"], section: "cn", requireAIKeyword: false),
+        Feed(id: "youxichaguan", name: "游戏茶馆", url: "https://www.youxichaguan.com/feed", channels: ["game"], section: "cn", requireAIKeyword: false),
+        Feed(id: "chuapp", name: "触乐", url: "https://www.chuapp.com/feed", channels: ["game"], section: "cn", requireAIKeyword: false),
+        Feed(id: "ign", name: "IGN", url: "https://feeds.ign.com/ign/all", channels: ["game"], section: "global", requireAIKeyword: false),
+        Feed(id: "gamespot", name: "GameSpot", url: "https://www.gamespot.com/feeds/news", channels: ["game"], section: "global", requireAIKeyword: false)
     ]
 
     private static let aiPattern = "(?:^|[^a-z])(ai|a\\.i\\.|agi|agent|llm|gpt|chatgpt|claude|gemini|deepseek|openai|anthropic|nvidia|transformer|diffusion|multimodal|大模型|人工智能|机器学习|深度学习|神经网络|智能体|生成式|多模态|算力|芯片)(?:$|[^a-z])"
@@ -48,11 +71,16 @@ final class DirectContentClient: @unchecked Sendable {
 
     // MARK: - News
 
-    func news(channel: DiscoverChannel, limit: Int) async throws -> NewsFeedResponse {
+    func news(channel: DiscoverChannel, section: String = "all", limit: Int) async throws -> NewsFeedResponse {
         guard channel == .ai || channel == .headline || channel == .game else {
             throw DirectContentError.decode("该频道没有新闻列表")
         }
-        let feeds = Self.feeds.filter { $0.channels.contains(channel.rawValue) }
+        let feeds = Self.feeds.filter {
+            $0.channels.contains(channel.rawValue) && (section == "all" || $0.section == section)
+        }
+        guard !feeds.isEmpty else {
+            throw DirectContentError.notFound("这个分类暂时没有配置资讯源")
+        }
         let safeLimit = min(max(limit, 1), 40)
 
         var items: [NewsItem] = []
@@ -107,7 +135,8 @@ final class DirectContentClient: @unchecked Sendable {
                     link: item.link,
                     publishedAt: item.publishedAt,
                     channel: item.channel,
-                    rank: index + 1
+                    rank: index + 1,
+                    section: item.section
                 )
             }
 
@@ -154,7 +183,8 @@ final class DirectContentClient: @unchecked Sendable {
                 link: link,
                 publishedAt: Self.isoDate(published),
                 channel: channel.rawValue,
-                rank: nil
+                rank: nil,
+                section: feed.section
             ))
         }
         return items
@@ -314,6 +344,64 @@ final class DirectContentClient: @unchecked Sendable {
             throw DirectContentError.notFound("App Store 没有返回这个应用的详情")
         }
         return app
+    }
+
+    // MARK: - Steam
+
+    func steamFeatured() async throws -> SteamFeaturedResponse {
+        guard let url = URL(string: "https://store.steampowered.com/api/featuredcategories?cc=cn&l=schinese") else {
+            throw DirectContentError.decode("Steam 商店地址无效")
+        }
+        var request = URLRequest(url: url)
+        request.setValue("application/json", forHTTPHeaderField: "accept")
+        request.setValue("WhaleAgent/0.7", forHTTPHeaderField: "user-agent")
+        let (data, response) = try await session.data(for: request)
+        try Self.check(response)
+        guard let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw DirectContentError.decode("Steam 商店返回了无法识别的数据")
+        }
+
+        func items(_ key: String) -> [SteamItem] {
+            guard let block = payload[key] as? [String: Any],
+                  let list = block["items"] as? [[String: Any]] else { return [] }
+            var seen = Set<Int>()
+            return list.compactMap { entry -> SteamItem? in
+                guard let id = entry["id"] as? Int,
+                      let name = (entry["name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !name.isEmpty, !seen.contains(id) else { return nil }
+                seen.insert(id)
+                let rawImage = (entry["header_image"] as? String)
+                    ?? (entry["large_capsule_image"] as? String)
+                    ?? (entry["small_capsule_image"] as? String)
+                    ?? ""
+                return SteamItem(
+                    id: id,
+                    name: name,
+                    discounted: entry["discounted"] as? Bool ?? false,
+                    discountPercent: entry["discount_percent"] as? Int ?? 0,
+                    originalPrice: entry["original_price"] as? Int,
+                    finalPrice: entry["final_price"] as? Int,
+                    currency: entry["currency"] as? String ?? "CNY",
+                    headerImage: rawImage.replacingOccurrences(of: "http://", with: "https://")
+                )
+            }
+        }
+
+        let top = items("top_sellers")
+        let specials = items("specials")
+        let coming = items("coming_soon")
+        guard !top.isEmpty || !specials.isEmpty || !coming.isEmpty else {
+            throw DirectContentError.notFound("Steam 商店没有返回榜单条目")
+        }
+        return SteamFeaturedResponse(
+            updatedAt: Self.isoNow(),
+            source: "Steam 商店中国区公开接口",
+            note: "榜单与价格随 Steam 商店实时变化；人民币价格按商店返回的分单位换算。",
+            topSellers: top,
+            specials: specials,
+            comingSoon: coming,
+            newReleases: items("new_releases")
+        )
     }
 
     // MARK: - Weibo hot search

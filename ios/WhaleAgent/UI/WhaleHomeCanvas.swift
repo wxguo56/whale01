@@ -12,6 +12,7 @@ struct WhaleHomeCanvas: View {
     let onOpenDiscover: (DiscoverChannel) -> Void
     let onOpenConversation: () -> Void
     @State private var weatherDays: [WeatherDaySummary] = []
+    @State private var weather: WeatherSnapshot?
     @State private var weatherLocation = ""
     @State private var weatherLoading = false
     @State private var weatherError: String?
@@ -346,17 +347,20 @@ struct WhaleHomeCanvas: View {
                             .background(WhaleTheme.coral.opacity(0.09), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
 
                         VStack(alignment: .leading, spacing: 4) {
-                            HStack(spacing: 8) {
-                                Text(today.summary)
-                                    .font(.system(size: 21, weight: .bold, design: .rounded))
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Text(weather?.current?.summary ?? today.summary)
+                                    .font(.system(size: 17, weight: .bold, design: .rounded))
                                     .foregroundStyle(WhaleTheme.ink)
-                                Text(today.temperatureText)
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                Spacer(minLength: 0)
+                                Text(currentTemperatureText)
+                                    .font(.system(size: 26, weight: .bold, design: .rounded))
                                     .foregroundStyle(WhaleTheme.ink)
                             }
                             HStack(spacing: 5) {
                                 Text(weatherLocation.isEmpty ? "当前位置" : weatherLocation)
                                     .lineLimit(1)
+                                Text("·")
+                                Text(today.temperatureText)
                                 if let rain = today.precipitationText {
                                     Text("·")
                                     Text(rain)
@@ -391,6 +395,27 @@ struct WhaleHomeCanvas: View {
                 .accessibilityLabel("天气详情")
 
                 if weatherExpanded {
+                if let hours = weather?.hours, !hours.isEmpty {
+                    Rectangle()
+                        .fill(WhaleTheme.line)
+                        .frame(height: 0.5)
+                    hourlyStrip(hours)
+                }
+
+                if let current = weather?.current, !weatherDays.isEmpty {
+                    Rectangle()
+                        .fill(WhaleTheme.line)
+                        .frame(height: 0.5)
+                    metricsGrid(current, today: today)
+                }
+
+                if let sun = weather?.sun {
+                    Rectangle()
+                        .fill(WhaleTheme.line)
+                        .frame(height: 0.5)
+                    sunRow(sun)
+                }
+
                 if !today.advice.isEmpty {
                     Text(today.advice)
                         .font(.system(size: 11))
@@ -404,7 +429,7 @@ struct WhaleHomeCanvas: View {
                         .frame(height: 0.5)
 
                     VStack(spacing: 9) {
-                        ForEach(Array(weatherDays.dropFirst().prefix(3))) { day in
+                        ForEach(Array(weatherDays.prefix(7))) { day in
                             HStack(spacing: 9) {
                                 Text(day.dayLabel)
                                     .font(.system(size: 11, weight: .medium))
@@ -468,6 +493,110 @@ struct WhaleHomeCanvas: View {
         .whaleCard(padding: 16)
     }
 
+    private var currentTemperatureText: String {
+        if let value = weather?.current?.temperatureC {
+            return "\(Int(value.rounded()))°"
+        }
+        return weatherDays.first?.temperatureText ?? "—"
+    }
+
+    private func hourlyStrip(_ hours: [WeatherSnapshot.Hour]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("逐小时预报")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(WhaleTheme.muted)
+            ScrollView(.horizontal) {
+                HStack(spacing: 16) {
+                    ForEach(hours) { hour in
+                        VStack(spacing: 5) {
+                            Text(hour.hourLabel)
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(WhaleTheme.muted)
+                            Image(systemName: hour.icon)
+                                .font(.system(size: 14, weight: .medium))
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(hour.isDay ? WhaleTheme.coral : WhaleTheme.moon, WhaleTheme.moon.opacity(0.5))
+                            Text(hour.temperatureC.map { "\(Int($0.rounded()))°" } ?? "—")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(WhaleTheme.ink)
+                            Text(hour.precipitationChance.map { "\(Int($0.rounded()))%" } ?? " ")
+                                .font(.system(size: 8, weight: .medium))
+                                .foregroundStyle(WhaleTheme.moon)
+                        }
+                        .frame(width: 34)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    private func metricsGrid(_ current: WeatherSnapshot.Current, today: WeatherDaySummary) -> some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+            metricCell("体感", current.apparentC.map { "\(Int($0.rounded()))°" } ?? "—", "thermometer.medium")
+            metricCell("湿度", current.humidity.map { "\(Int($0.rounded()))%" } ?? "—", "humidity.fill")
+            metricCell("风速", current.windKph.map { String(format: "%.0f km/h", $0) } ?? "—", "wind")
+            metricCell("降水概率", today.precipitationText?.replacingOccurrences(of: "降水 ", with: "") ?? "—", "drop.fill")
+            metricCell("紫外线", today.uvIndexText ?? "—", "sun.max.fill")
+            metricCell("空气质量", weather?.air.map { "\($0.aqiText) \($0.levelText)" } ?? "—", "aqi.medium")
+        }
+    }
+
+    private func metricCell(_ label: String, _ value: String, _ icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 9, weight: .semibold))
+                Text(label)
+                    .font(.system(size: 9, weight: .medium))
+            }
+            .foregroundStyle(WhaleTheme.muted)
+            Text(value)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(WhaleTheme.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(9)
+        .background(WhaleTheme.soft.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func sunRow(_ sun: WeatherSnapshot.Sun) -> some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "sunrise.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(WhaleTheme.coral)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("日出")
+                        .font(.system(size: 9))
+                        .foregroundStyle(WhaleTheme.muted)
+                    Text(sun.sunriseText)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(WhaleTheme.ink)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 6) {
+                Image(systemName: "sunset.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(WhaleTheme.moon)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("日落")
+                        .font(.system(size: 9))
+                        .foregroundStyle(WhaleTheme.muted)
+                    Text(sun.sunsetText)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(WhaleTheme.ink)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
     private func loadWeatherIfNeeded() async {
         guard locationStatus == "granted", weatherDays.isEmpty, !weatherLoading else { return }
         await loadWeather(force: false)
@@ -483,7 +612,7 @@ struct WhaleHomeCanvas: View {
 
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: Date())
-        let end = calendar.date(byAdding: .day, value: 3, to: start) ?? start.addingTimeInterval(259_200)
+        let end = calendar.date(byAdding: .day, value: 6, to: start) ?? start.addingTimeInterval(518_400)
         do {
             let data = try await WeatherExecutor().query(arguments: [
                 "startAt": .string(ToolDate.iso(start)),
@@ -496,6 +625,7 @@ struct WhaleHomeCanvas: View {
                 return
             }
             weatherDays = days
+            weather = WeatherSnapshot.from(data)
             weatherLocation = data.objectValue?.optionalString("locationName") ?? "当前位置"
         } catch {
             weatherError = error.localizedDescription

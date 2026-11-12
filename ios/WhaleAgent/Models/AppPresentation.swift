@@ -158,6 +158,7 @@ struct WeatherDaySummary: Identifiable, Equatable, Codable {
     let minimumC: Double?
     let maximumC: Double?
     let precipitationChance: Double?
+    let uvIndexMax: Double?
     let advice: String
 
     var id: String { date }
@@ -174,6 +175,7 @@ struct WeatherDaySummary: Identifiable, Equatable, Codable {
         self.minimumC = temperatures?.optionalDouble("min")
         self.maximumC = temperatures?.optionalDouble("max")
         self.precipitationChance = object.optionalDouble("precipitationChance")
+        self.uvIndexMax = object.optionalDouble("uvIndexMax")
         self.advice = object.optionalString("advice") ?? ""
     }
 
@@ -203,6 +205,11 @@ struct WeatherDaySummary: Identifiable, Equatable, Codable {
         return "降水 \(Int(precipitationChance.rounded()))%"
     }
 
+    var uvIndexText: String? {
+        guard let uvIndexMax else { return nil }
+        return String(format: "%.0f", uvIndexMax)
+    }
+
     var dayLabel: String {
         let parser = DateFormatter()
         parser.locale = Locale(identifier: "en_US_POSIX")
@@ -215,6 +222,17 @@ struct WeatherDaySummary: Identifiable, Equatable, Codable {
     }
 
     var icon: String {
+        Self.iconName(for: condition, isDay: true)
+    }
+
+    static func iconName(for condition: String, isDay: Bool) -> String {
+        if !isDay {
+            switch condition {
+            case "clear": return "moon.stars.fill"
+            case "partlyCloudy": return "cloud.moon.fill"
+            default: break
+            }
+        }
         switch condition {
         case "clear": return "sun.max.fill"
         case "partlyCloudy": return "cloud.sun.fill"
@@ -230,6 +248,145 @@ struct WeatherDaySummary: Identifiable, Equatable, Codable {
 
     private static func degrees(_ value: Double) -> String {
         String(format: "%.0f", value)
+    }
+}
+
+struct WeatherSnapshot: Equatable {
+    struct Current: Equatable {
+        let temperatureC: Double?
+        let apparentC: Double?
+        let humidity: Double?
+        let precipitationMM: Double?
+        let windKph: Double?
+        let condition: String
+        let summary: String
+        let isDay: Bool
+    }
+
+    struct Hour: Identifiable, Equatable {
+        let time: String
+        let temperatureC: Double?
+        let apparentC: Double?
+        let precipitationChance: Double?
+        let condition: String
+        let summary: String
+        let isDay: Bool
+
+        var id: String { time }
+
+        var hourLabel: String {
+            guard let date = Self.parser.date(from: time) else { return time }
+            return date.formatted(.dateTime.hour())
+        }
+
+        var icon: String {
+            WeatherDaySummary.iconName(for: condition, isDay: isDay)
+        }
+
+        private static let parser: DateFormatter = {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
+            return formatter
+        }()
+    }
+
+    struct Sun: Equatable {
+        let sunrise: String
+        let sunset: String
+
+        var sunriseText: String { Self.clock(sunrise) }
+        var sunsetText: String { Self.clock(sunset) }
+
+        private static func clock(_ value: String) -> String {
+            let parts = value.split(separator: "T")
+            guard parts.count == 2 else { return value }
+            return String(parts[1].prefix(5))
+        }
+    }
+
+    struct Air: Equatable {
+        let usAqi: Double?
+        let pm25: Double?
+        let pm10: Double?
+
+        var aqiText: String {
+            guard let usAqi else { return "—" }
+            return String(format: "%.0f", usAqi)
+        }
+
+        var levelText: String {
+            guard let usAqi else { return "暂无空气数据" }
+            switch usAqi {
+            case ..<51: return "优"
+            case ..<101: return "良"
+            case ..<151: return "轻度污染"
+            case ..<201: return "中度污染"
+            case ..<301: return "重度污染"
+            default: return "严重污染"
+            }
+        }
+    }
+
+    let locationName: String
+    let current: Current?
+    let hours: [Hour]
+    let sun: Sun?
+    let air: Air?
+    let days: [WeatherDaySummary]
+
+    static func from(_ data: JSONValue?) -> WeatherSnapshot? {
+        guard let object = data?.objectValue else { return nil }
+        let days = WeatherDaySummary.list(from: data)
+        guard !days.isEmpty else { return nil }
+
+        var current: Current?
+        if let item = object.optionalObject("current") {
+            current = Current(
+                temperatureC: item.optionalDouble("temperatureC"),
+                apparentC: item.optionalDouble("apparentC"),
+                humidity: item.optionalDouble("humidity"),
+                precipitationMM: item.optionalDouble("precipitationMM"),
+                windKph: item.optionalDouble("windKph"),
+                condition: item.optionalString("condition") ?? days[0].condition,
+                summary: item.optionalString("summary") ?? days[0].summary,
+                isDay: item.optionalBool("isDay") ?? true
+            )
+        }
+
+        let hours = (object["hourly"]?.arrayValue ?? []).compactMap { value -> Hour? in
+            guard let row = value.objectValue, let time = row.optionalString("time") else { return nil }
+            return Hour(
+                time: time,
+                temperatureC: row.optionalDouble("temperatureC"),
+                apparentC: row.optionalDouble("apparentC"),
+                precipitationChance: row.optionalDouble("precipitationChance"),
+                condition: row.optionalString("condition") ?? "unknown",
+                summary: row.optionalString("summary") ?? "",
+                isDay: row.optionalBool("isDay") ?? true
+            )
+        }
+
+        var sun: Sun?
+        if let item = object.optionalObject("sun"),
+           let sunrise = item.optionalString("sunrise"),
+           let sunset = item.optionalString("sunset") {
+            sun = Sun(sunrise: sunrise, sunset: sunset)
+        }
+
+        var air: Air?
+        if let item = object.optionalObject("airQuality") {
+            air = Air(usAqi: item.optionalDouble("usAqi"), pm25: item.optionalDouble("pm25"), pm10: item.optionalDouble("pm10"))
+        }
+
+        return WeatherSnapshot(
+            locationName: object.optionalString("locationName") ?? "当前位置",
+            current: current,
+            hours: hours,
+            sun: sun,
+            air: air,
+            days: days
+        )
     }
 }
 
