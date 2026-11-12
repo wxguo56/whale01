@@ -317,6 +317,20 @@ struct AppStoreAppDetail: Decodable, Identifiable, Hashable {
         NewsText.plain(summaryText ?? "")
     }
 
+    var categoryText: String {
+        let raw = primaryGenreName ?? genres?.first ?? ""
+        switch raw {
+        case "", "Games": return "游戏"
+        default: return raw
+        }
+    }
+
+    var priceText: String {
+        if let formattedPrice, !formattedPrice.isEmpty { return formattedPrice }
+        guard let price else { return "—" }
+        return price == 0 ? "免费" : String(format: "¥%.2f", price)
+    }
+
     var sizeText: String {
         guard let fileSizeBytes, let bytes = Double(fileSizeBytes), bytes > 0 else { return "—" }
         if bytes >= 1_073_741_824 { return String(format: "%.2f GB", bytes / 1_073_741_824) }

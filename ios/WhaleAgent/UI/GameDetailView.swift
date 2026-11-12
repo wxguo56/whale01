@@ -120,9 +120,9 @@ struct GameDetailView: View {
                         .foregroundStyle(WhaleTheme.muted)
                         .lineLimit(1)
                     HStack(spacing: 6) {
-                        chip(model.detail?.primaryGenreName ?? item.category)
-                        if let price = model.detail?.formattedPrice {
-                            chip(price)
+                        chip(model.detail?.categoryText ?? item.category)
+                        if let detail = model.detail {
+                            chip(detail.priceText)
                         }
                         chip(board.title)
                     }
@@ -191,8 +191,8 @@ struct GameDetailView: View {
                 .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(WhaleTheme.ink)
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                stat("类别", detail.primaryGenreName ?? item.category)
-                stat("价格", detail.formattedPrice ?? "—")
+                stat("类别", detail.categoryText)
+                stat("价格", detail.priceText)
                 stat("大小", detail.sizeText)
                 stat("版本", detail.version ?? "—")
                 stat("评分", detail.ratingText)
