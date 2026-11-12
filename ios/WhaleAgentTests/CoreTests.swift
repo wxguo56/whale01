@@ -27,7 +27,7 @@ final class CoreTests: XCTestCase {
     func testDiscoverNewsSectionsCoverTopicsAndCategories() {
         XCTAssertEqual(
             DiscoverChannel.ai.newsSections.map(\.title),
-            ["全部", "游戏应用", "程序开发", "视频生成", "游戏科技", "厂商动态"]
+            ["全部", "游戏应用", "程序开发", "游戏科技", "厂商动态"]
         )
         XCTAssertTrue(DiscoverChannel.headline.newsSections.contains { $0.id == "military" })
         XCTAssertTrue(DiscoverChannel.headline.newsSections.contains { $0.id == "auto" })

@@ -80,7 +80,8 @@ final class DiscoverModel: ObservableObject {
         channel = initialChannel
         watchlist = store.symbols
         let saved = UserDefaults.standard
-        aiSection = saved.string(forKey: Self.aiSectionKey) ?? "all"
+        let savedAISection = saved.string(forKey: Self.aiSectionKey) ?? "all"
+        aiSection = DiscoverChannel.ai.newsSections.contains { $0.id == savedAISection } ? savedAISection : "all"
         headlineSection = saved.string(forKey: Self.headlineSectionKey) ?? "all"
         gameNewsSection = saved.string(forKey: Self.gameNewsSectionKey) ?? "all"
         paperCategory = AIPaperCategory(rawValue: saved.string(forKey: Self.paperCategoryKey) ?? "") ?? .ai
@@ -96,7 +97,14 @@ final class DiscoverModel: ObservableObject {
     }
 
     var aiNews: [NewsItem] {
-        newsItems.filter { DiscoverChannel.ai.matches(section: aiSection, itemSection: $0.section) }
+        newsItems.filter { item in
+            guard DiscoverChannel.ai.matches(section: aiSection, itemSection: item.section) else { return false }
+            // 旧缓存可能残留英文标题或只有标题的条目，展示层再兜底一次。
+            guard item.displaySummary.count >= 10 else { return false }
+            return item.displayTitle.unicodeScalars.contains { scalar in
+                (0x4E00...0x9FFF).contains(Int(scalar.value))
+            }
+        }
     }
 
     var headlineNews: [NewsItem] {
@@ -143,11 +151,13 @@ final class DiscoverModel: ObservableObject {
     }
 
     private func applyNewsSection(_ section: String, for channel: DiscoverChannel) {
+        // 旧版本可能保存过已下线的标签（例如“视频生成”），统一回落到“全部”。
+        let validSection = channel.newsSections.contains { $0.id == section } ? section : "all"
         withAnimation(.easeInOut(duration: 0.18)) {
             switch channel {
-            case .ai: aiSection = section
-            case .headline: headlineSection = section
-            case .game: gameNewsSection = section
+            case .ai: aiSection = validSection
+            case .headline: headlineSection = validSection
+            case .game: gameNewsSection = validSection
             default: return
             }
         }
@@ -507,7 +517,7 @@ final class DiscoverModel: ObservableObject {
     }
 
     private func newsDiskKey(_ channel: DiscoverChannel) -> String {
-        channel == .ai ? "news-ai-topics" : "news-\(channel.rawValue)"
+        channel == .ai ? "news-ai-topics-v3" : "news-\(channel.rawValue)"
     }
 
     private func apply(_ response: NewsFeedResponse, channel: DiscoverChannel) {

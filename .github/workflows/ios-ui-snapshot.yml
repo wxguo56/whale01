@@ -66,19 +66,23 @@ jobs:
           xcrun simctl io "$DEVICE_ID" screenshot snapshots/game-detail.png
           xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
           SIMCTL_CHILD_WHALE_DEMO_CHANNEL=ai xcrun simctl launch "$DEVICE_ID" com.whale01.agent
-          sleep 14
+          sleep 22
           xcrun simctl io "$DEVICE_ID" screenshot snapshots/ai-channel.png
           xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
-          SIMCTL_CHILD_WHALE_DEMO_CHANNEL=ai SIMCTL_CHILD_WHALE_DEMO_AI_SECTION=video xcrun simctl launch "$DEVICE_ID" com.whale01.agent
-          sleep 14
-          xcrun simctl io "$DEVICE_ID" screenshot snapshots/ai-video-tab.png
+          SIMCTL_CHILD_WHALE_DEMO_CHANNEL=ai SIMCTL_CHILD_WHALE_DEMO_AI_SECTION=coding xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 22
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/ai-coding-tab.png
           xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
           SIMCTL_CHILD_WHALE_DEMO_CHANNEL=ai SIMCTL_CHILD_WHALE_DEMO_AI_SECTION=game-ai xcrun simctl launch "$DEVICE_ID" com.whale01.agent
-          sleep 14
+          sleep 22
           xcrun simctl io "$DEVICE_ID" screenshot snapshots/ai-game-tab.png
           xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+          SIMCTL_CHILD_WHALE_DEMO_CHANNEL=ai SIMCTL_CHILD_WHALE_DEMO_AI_SECTION=gametech xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 22
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/ai-gametech-tab.png
+          xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
           SIMCTL_CHILD_WHALE_DEMO_CHANNEL=headline xcrun simctl launch "$DEVICE_ID" com.whale01.agent
-          sleep 14
+          sleep 18
           xcrun simctl io "$DEVICE_ID" screenshot snapshots/headline-channel.png
           xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
           SIMCTL_CHILD_WHALE_DEMO_CHANNEL=game SIMCTL_CHILD_WHALE_DEMO_GAME_SECTION=steamTop xcrun simctl launch "$DEVICE_ID" com.whale01.agent

@@ -8,6 +8,8 @@ final class DirectContentClient: @unchecked Sendable {
     static let shared = DirectContentClient()
 
     private let session: URLSession
+    private var feedCache: [String: (data: Data, at: Date)] = [:]
+    private let feedCacheLock = NSLock()
 
     private struct Feed {
         let id: String
@@ -17,6 +19,7 @@ final class DirectContentClient: @unchecked Sendable {
         let section: String
         let requireAIKeyword: Bool
         var matchPattern: String? = nil
+        var allMatchPatterns: [String] = []
     }
 
     struct MarketSymbol {
@@ -26,29 +29,30 @@ final class DirectContentClient: @unchecked Sendable {
     }
 
     private static let feeds: [Feed] = [
-        // AI：只做应用向资讯（游戏应用 / 编程 / 视频生成 / 游戏科技），不拉论文。
-        // 主题源用 Google News RSS（Bing RSS 已失效返回 HTML），游戏媒体再按 AI 关键词过滤。
-        Feed(id: "openai-news", name: "OpenAI 官方", url: "https://openai.com/news/rss.xml", channels: ["ai"], section: "vendor", requireAIKeyword: false),
-        Feed(id: "deepmind", name: "Google DeepMind", url: "https://deepmind.google/blog/rss.xml", channels: ["ai"], section: "vendor", requireAIKeyword: false),
-        Feed(id: "gnews-openai", name: "OpenAI 动态", url: "https://news.google.com/rss/search?q=OpenAI&hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["ai"], section: "vendor", requireAIKeyword: false),
-        Feed(id: "gnews-anthropic", name: "Anthropic 动态", url: "https://news.google.com/rss/search?q=Anthropic%20Claude&hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["ai"], section: "vendor", requireAIKeyword: false),
-        Feed(id: "gnews-deepseek", name: "DeepSeek 动态", url: "https://news.google.com/rss/search?q=DeepSeek&hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["ai"], section: "vendor", requireAIKeyword: false),
-        Feed(id: "gnews-ai-game", name: "AI 游戏开发", url: "https://news.google.com/rss/search?q=AI%20%E6%B8%B8%E6%88%8F%20%E5%BC%80%E5%8F%91&hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["ai"], section: "game-ai", requireAIKeyword: false, matchPattern: "(游戏|game|npc|玩家|开发|工作室|引擎)"),
-        Feed(id: "gnews-ai-npc", name: "AI NPC", url: "https://news.google.com/rss/search?q=AI%20NPC%20%E6%B8%B8%E6%88%8F&hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["ai"], section: "game-ai", requireAIKeyword: false, matchPattern: "(游戏|game|npc|玩家|开发|工作室|引擎)"),
-        Feed(id: "youxiputao-ai", name: "游戏葡萄", url: "https://www.youxituoluo.com/feed", channels: ["ai"], section: "game-ai", requireAIKeyword: true),
-        Feed(id: "youxichaguan-ai", name: "游戏茶馆", url: "https://www.youxichaguan.com/feed", channels: ["ai"], section: "game-ai", requireAIKeyword: true),
-        Feed(id: "gnews-ai-coding", name: "AI 编程", url: "https://news.google.com/rss/search?q=AI%20%E7%BC%96%E7%A8%8B%E5%8A%A9%E6%89%8B&hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["ai"], section: "coding", requireAIKeyword: false, matchPattern: "(编程|coding|code|程序员|开发|developer|agent|ide|copilot|工具)"),
-        Feed(id: "gnews-ai-devtool", name: "AI 开发工具", url: "https://news.google.com/rss/search?q=AI%20coding%20tools&hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["ai"], section: "coding", requireAIKeyword: false, matchPattern: "(coding|code|developer|programming|agent|ide|copilot|开发|编程|工具)"),
-        Feed(id: "techcrunch-ai-coding", name: "TechCrunch AI", url: "https://techcrunch.com/category/artificial-intelligence/feed/", channels: ["ai"], section: "coding", requireAIKeyword: false, matchPattern: "(cod(e|ing)|developer|programming|agent|ide|copilot|编程|开发|程序员)"),
-        Feed(id: "gnews-ai-video", name: "AI 视频生成", url: "https://news.google.com/rss/search?q=AI%20%E8%A7%86%E9%A2%91%E7%94%9F%E6%88%90&hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["ai"], section: "video", requireAIKeyword: false, matchPattern: "(视频|video|生成|sora|veo|kling|可灵|即梦|seedance|runway)"),
-        Feed(id: "gnews-ai-video-en", name: "AI Video", url: "https://news.google.com/rss/search?q=AI%20video%20generation&hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["ai"], section: "video", requireAIKeyword: false, matchPattern: "(video|generation|sora|veo|kling|runway|film|animation|视频)"),
-        Feed(id: "gnews-gdc", name: "GDC 2026", url: "https://news.google.com/rss/search?q=GDC%202026&hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["ai"], section: "gametech", requireAIKeyword: false, matchPattern: "(gdc|游戏|game|开发者|引擎|渲染|技术)"),
-        Feed(id: "gnews-game-tech", name: "游戏技术大会", url: "https://news.google.com/rss/search?q=%E6%B8%B8%E6%88%8F%E5%BC%80%E5%8F%91%E8%80%85%E5%A4%A7%E4%BC%9A%20%E6%96%B0%E6%8A%80%E6%9C%AF&hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["ai"], section: "gametech", requireAIKeyword: false, matchPattern: "(gdc|游戏|game|开发者|引擎|渲染|技术)"),
-        Feed(id: "gamedeveloper", name: "Game Developer", url: "https://www.gamedeveloper.com/rss.xml", channels: ["ai"], section: "gametech", requireAIKeyword: false, matchPattern: "(ai|gdc|engine|unreal|unity|render|lighting|shader|procedural|tool|技术|引擎|渲染|大会|开发者)"),
-        Feed(id: "eightyl", name: "80 Level", url: "https://80.lv/feed/", channels: ["ai"], section: "gametech", requireAIKeyword: false, matchPattern: "(ai|gdc|engine|unreal|unity|render|lighting|shader|procedural|tool|houdini|技术|引擎|渲染|大会|开发者)"),
-        Feed(id: "techcrunch-ai", name: "TechCrunch AI", url: "https://techcrunch.com/category/artificial-intelligence/feed/", channels: ["ai"], section: "media", requireAIKeyword: false),
-        Feed(id: "verge-ai", name: "The Verge AI", url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", channels: ["ai"], section: "media", requireAIKeyword: false),
-        Feed(id: "qbitai", name: "量子位", url: "https://www.qbitai.com/feed", channels: ["ai"], section: "media", requireAIKeyword: false),
+        // AI：全中文应用向资讯，只用带正文摘要的 RSS，禁止标题党；不拉论文与英文源。
+        Feed(id: "mydrivers-ai", name: "快科技", url: "https://rss.mydrivers.com/rss.aspx?Tid=1", channels: ["ai"], section: "vendor", requireAIKeyword: true),
+        Feed(id: "ithome-ai", name: "IT之家", url: "https://www.ithome.com/rss/", channels: ["ai"], section: "vendor", requireAIKeyword: true),
+        Feed(id: "qbitai", name: "量子位", url: "https://www.qbitai.com/feed", channels: ["ai"], section: "vendor", requireAIKeyword: false),
+        Feed(id: "ifanr-ai", name: "爱范儿", url: "https://www.ifanr.com/feed", channels: ["ai"], section: "vendor", requireAIKeyword: true),
+        Feed(id: "putao-ai", name: "游戏葡萄", url: "https://www.youxituoluo.com/feed", channels: ["ai"], section: "game-ai", requireAIKeyword: true),
+        Feed(id: "chaguan-ai", name: "游戏茶馆", url: "https://www.youxichaguan.com/feed", channels: ["ai"], section: "game-ai", requireAIKeyword: true),
+        Feed(id: "chuapp-ai", name: "触乐", url: "https://www.chuapp.com/feed", channels: ["ai"], section: "game-ai", requireAIKeyword: true),
+        Feed(id: "yystv-ai", name: "游研社", url: "https://www.yystv.cn/rss/feed", channels: ["ai"], section: "game-ai", requireAIKeyword: true),
+        Feed(id: "ithome-game-ai", name: "IT之家 · 游戏", url: "https://www.ithome.com/rss/", channels: ["ai"], section: "game-ai", requireAIKeyword: true, matchPattern: "(游戏|玩家|电竞|手游|主机)"),
+        Feed(id: "mydrivers-game-ai", name: "快科技 · 游戏", url: "https://rss.mydrivers.com/rss.aspx?Tid=1", channels: ["ai"], section: "game-ai", requireAIKeyword: true, matchPattern: "(游戏|玩家|电竞|手游|主机)"),
+        Feed(id: "infoq-code", name: "InfoQ", url: "https://www.infoq.cn/feed", channels: ["ai"], section: "coding", requireAIKeyword: true, matchPattern: "(编程|代码|程序员|开发者|开发工具|copilot|ide|api|智能体|agent|大模型|开源|框架|sdk)"),
+        Feed(id: "oschina-code", name: "开源中国", url: "https://www.oschina.net/news/rss", channels: ["ai"], section: "coding", requireAIKeyword: true, matchPattern: "(编程|代码|程序员|开发者|开发工具|copilot|ide|api|智能体|agent|大模型|开源|框架|sdk)"),
+        Feed(id: "juejin-code", name: "掘金", url: "https://juejin.cn/rss", channels: ["ai"], section: "coding", requireAIKeyword: true, matchPattern: "(编程|代码|程序员|开发者|开发工具|copilot|ide|api|智能体|agent|大模型|开源|框架|sdk)"),
+        Feed(id: "ithome-code", name: "IT之家 · 开发", url: "https://www.ithome.com/rss/", channels: ["ai"], section: "coding", requireAIKeyword: true, matchPattern: "(编程|代码|程序员|开发者|开发工具|copilot|ide|api|智能体|agent|大模型|开源|框架|sdk)"),
+        Feed(id: "qbitai-code", name: "量子位 · 开发", url: "https://www.qbitai.com/feed", channels: ["ai"], section: "coding", requireAIKeyword: true, matchPattern: "(编程|代码|程序员|开发者|开发工具|copilot|ide|api|智能体|agent|大模型|开源|框架|sdk)"),
+        Feed(id: "ifanr-code", name: "爱范儿 · 开发", url: "https://www.ifanr.com/feed", channels: ["ai"], section: "coding", requireAIKeyword: true, matchPattern: "(编程|代码|程序员|开发者|开发工具|copilot|ide|api|智能体|agent|大模型|开源|框架|sdk)"),
+        Feed(id: "mydrivers-code", name: "快科技 · 开发", url: "https://rss.mydrivers.com/rss.aspx?Tid=1", channels: ["ai"], section: "coding", requireAIKeyword: true, matchPattern: "(编程|代码|程序员|开发者|开发工具|copilot|ide|api|智能体|agent|大模型|开源|框架|sdk)"),
+        Feed(id: "putao-tech", name: "游戏葡萄 · 技术", url: "https://www.youxituoluo.com/feed", channels: ["ai"], section: "gametech", requireAIKeyword: false, matchPattern: "(gdc|开发者|引擎|渲染|技术|大会|ai|画质|光追|性能|云游戏)"),
+        Feed(id: "chaguan-tech", name: "游戏茶馆 · 技术", url: "https://www.youxichaguan.com/feed", channels: ["ai"], section: "gametech", requireAIKeyword: false, matchPattern: "(gdc|开发者|引擎|渲染|技术|大会|ai|画质|光追|性能|云游戏)"),
+        Feed(id: "chuapp-tech", name: "触乐 · 技术", url: "https://www.chuapp.com/feed", channels: ["ai"], section: "gametech", requireAIKeyword: false, matchPattern: "(gdc|开发者|引擎|渲染|技术|大会|ai|画质|光追|性能|云游戏)"),
+        Feed(id: "yystv-tech", name: "游研社 · 技术", url: "https://www.yystv.cn/rss/feed", channels: ["ai"], section: "gametech", requireAIKeyword: false, matchPattern: "(gdc|开发者|引擎|渲染|技术|大会|ai|画质|光追|性能|云游戏)"),
+        Feed(id: "ithome-gametech", name: "IT之家 · 游戏技术", url: "https://www.ithome.com/rss/", channels: ["ai"], section: "gametech", requireAIKeyword: false, allMatchPatterns: ["(游戏|玩家|电竞|主机|掌机|显卡|gpu|steam)", "(技术|引擎|渲染|gdc|ai|性能|画质|光追|云游戏|开发者)"]),
+        Feed(id: "mydrivers-gametech", name: "快科技 · 游戏技术", url: "https://rss.mydrivers.com/rss.aspx?Tid=1", channels: ["ai"], section: "gametech", requireAIKeyword: false, allMatchPatterns: ["(游戏|玩家|电竞|主机|掌机|显卡|gpu|steam)", "(技术|引擎|渲染|gdc|ai|性能|画质|光追|云游戏|开发者)"]),
         Feed(id: "ithome", name: "IT之家", url: "https://www.ithome.com/rss/", channels: ["ai", "headline"], section: "tech", requireAIKeyword: true),
         Feed(id: "36kr", name: "36氪", url: "https://36kr.com/feed", channels: ["ai", "headline"], section: "tech", requireAIKeyword: true),
 
@@ -132,9 +136,13 @@ final class DirectContentClient: @unchecked Sendable {
         var seenTitles = Set<String>()
         var rankedItems = items
             .filter { item in
-                let titleKey = item.title.replacingOccurrences(of: "\\s+", with: "", options: .regularExpression).lowercased()
-                if seenLinks.contains(item.link) || seenTitles.contains(titleKey) { return false }
-                seenLinks.insert(item.link)
+                // 分标签去重：同一篇稿子可以同时属于“游戏科技”和“厂商动态”，
+                // 但每个标签内部不能重复；“全部”仍按链接全局去重。
+                let scope = section == "all" ? "" : (item.section ?? "") + "|"
+                let titleKey = scope + item.title.replacingOccurrences(of: "\\s+", with: "", options: .regularExpression).lowercased()
+                let linkKey = scope + item.link
+                if seenLinks.contains(linkKey) || seenTitles.contains(titleKey) { return false }
+                seenLinks.insert(linkKey)
                 seenTitles.insert(titleKey)
                 return true
             }
@@ -145,7 +153,7 @@ final class DirectContentClient: @unchecked Sendable {
             // 这里在最新 40 条之外，为每个主题再补 12 条，保证每个分类都有内容。
             var selected = Array(rankedItems.prefix(safeLimit))
             let selectedIDs = Set(selected.map(\.id))
-            let sections = ["game-ai", "coding", "video", "gametech", "vendor", "media", "tech"]
+            let sections = ["game-ai", "coding", "gametech", "vendor", "media", "tech"]
             for sectionID in sections {
                 let extra = rankedItems
                     .filter { $0.section == sectionID && !selectedIDs.contains($0.id) }
@@ -187,8 +195,15 @@ final class DirectContentClient: @unchecked Sendable {
         var request = URLRequest(url: url)
         request.setValue("application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5", forHTTPHeaderField: "accept")
         request.setValue("WhaleAgent/0.5", forHTTPHeaderField: "user-agent")
-        let (data, response) = try await session.data(for: request)
-        try Self.check(response)
+        let data: Data
+        if let cached = cachedFeedData(for: feed.url) {
+            data = cached
+        } else {
+            let (fresh, response) = try await session.data(for: request)
+            try Self.check(response)
+            storeFeedData(fresh, for: feed.url)
+            data = fresh
+        }
         guard let xml = String(data: data, encoding: .utf8) else {
             throw DirectContentError.decode("\(feed.name) 返回了无法识别的编码")
         }
@@ -197,7 +212,7 @@ final class DirectContentClient: @unchecked Sendable {
         if blocks.isEmpty { blocks = Self.blocks(in: xml, tag: "entry") }
 
         var items: [NewsItem] = []
-        for block in blocks.prefix(30) {
+        for block in blocks.prefix(60) {
             var title = Self.cleanText(Self.tag("title", in: block))
             let link = Self.cleanLink(Self.pickLink(block))
             guard !title.isEmpty, !link.isEmpty else { continue }
@@ -207,7 +222,14 @@ final class DirectContentClient: @unchecked Sendable {
                 title = String(title.dropLast(outlet.count + 3)).trimmingCharacters(in: .whitespaces)
             }
             let isAggregator = feed.url.contains("news.google.com")
-            let summary = isAggregator ? "" : String(Self.cleanText(Self.firstTag(["description", "summary", "content:encoded", "content"], in: block)).prefix(220))
+            // 有些源 description 只有几个字，但 content:encoded 是完整正文；
+            // 取最长的一段，避免把“标题党短句”当摘要展示。
+            let summaryCandidates = ["description", "summary", "content:encoded", "content"].map {
+                Self.cleanText(Self.tag($0, in: block))
+            }
+            let longestSummary = summaryCandidates.max { $0.count < $1.count } ?? ""
+            var summary = isAggregator ? "" : longestSummary
+            if summary.count > 220 { summary = String(summary.prefix(220)) }
             let haystack = title + "\n" + summary
             if channel == .ai,
                outlet.lowercased().contains("arxiv") || outlet.lowercased().contains("alphaxiv") {
@@ -223,9 +245,22 @@ final class DirectContentClient: @unchecked Sendable {
                haystack.range(of: Self.spamPattern, options: [.regularExpression, .caseInsensitive]) != nil {
                 continue
             }
+            // AI 频道只保留中文标题且带真实正文摘要的条目：
+            // 用户明确要求“不要只给标题的卡片”，宁缺毋滥。
+            if channel == .ai {
+                let trimmedSummary = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmedSummary.count < 10 { continue }
+                if !Self.containsCJK(title) { continue }
+            }
             if let pattern = feed.matchPattern,
                haystack.range(of: pattern, options: [.regularExpression, .caseInsensitive]) == nil {
                 continue
+            }
+            if !feed.allMatchPatterns.isEmpty {
+                let matched = feed.allMatchPatterns.allSatisfy { pattern in
+                    haystack.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
+                }
+                if !matched { continue }
             }
             if feed.requireAIKeyword, channel == .ai,
                haystack.range(of: Self.aiPattern, options: [.regularExpression, .caseInsensitive]) == nil {
@@ -245,6 +280,19 @@ final class DirectContentClient: @unchecked Sendable {
             ))
         }
         return items
+    }
+
+    private func cachedFeedData(for url: String) -> Data? {
+        feedCacheLock.lock()
+        defer { feedCacheLock.unlock() }
+        guard let entry = feedCache[url], Date().timeIntervalSince(entry.at) < 300 else { return nil }
+        return entry.data
+    }
+
+    private func storeFeedData(_ data: Data, for url: String) {
+        feedCacheLock.lock()
+        feedCache[url] = (data, Date())
+        feedCacheLock.unlock()
     }
 
     // MARK: - Game rank
@@ -957,6 +1005,12 @@ final class DirectContentClient: @unchecked Sendable {
         let text = cleanText(value)
         guard text.lowercased().hasPrefix("http://") || text.lowercased().hasPrefix("https://") else { return "" }
         return text
+    }
+
+    private static func containsCJK(_ text: String) -> Bool {
+        text.unicodeScalars.contains { scalar in
+            (0x4E00...0x9FFF).contains(Int(scalar.value))
+        }
     }
 
     private static func cleanText(_ value: String) -> String {
