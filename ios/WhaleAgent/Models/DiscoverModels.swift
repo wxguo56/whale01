@@ -153,7 +153,7 @@ enum DiscoverLoadState: Equatable {
     case failed(String)
 }
 
-struct NewsFeedResponse: Decodable {
+struct NewsFeedResponse: Codable {
     let channel: String
     let updatedAt: String
     let sources: [String]?
@@ -161,7 +161,7 @@ struct NewsFeedResponse: Decodable {
     let items: [NewsItem]
 }
 
-struct NewsItem: Decodable, Identifiable, Hashable {
+struct NewsItem: Codable, Identifiable, Hashable {
     let id: String
     let title: String
     let summary: String
@@ -219,7 +219,7 @@ extension DiscoverChannel {
     }
 }
 
-struct SteamFeaturedResponse: Decodable {
+struct SteamFeaturedResponse: Codable {
     let updatedAt: String
     let source: String
     let note: String
@@ -237,7 +237,7 @@ struct SteamFeaturedResponse: Decodable {
     }
 }
 
-struct SteamItem: Decodable, Identifiable, Hashable {
+struct SteamItem: Codable, Identifiable, Hashable {
     let id: Int
     let name: String
     let discounted: Bool
@@ -274,14 +274,14 @@ struct SteamItem: Decodable, Identifiable, Hashable {
     }
 }
 
-struct WeiboHotResponse: Decodable {
+struct WeiboHotResponse: Codable {
     let updatedAt: String
     let source: String
     let note: String
     let items: [WeiboHotItem]
 }
 
-struct WeiboHotItem: Decodable, Identifiable, Hashable {
+struct WeiboHotItem: Codable, Identifiable, Hashable {
     let rank: Int
     let id: String
     let word: String
@@ -305,7 +305,7 @@ struct WeiboHotItem: Decodable, Identifiable, Hashable {
     }
 }
 
-struct AIPaperFeedResponse: Decodable {
+struct AIPaperFeedResponse: Codable {
     let category: String
     let categoryName: String
     let updatedAt: String
@@ -313,7 +313,7 @@ struct AIPaperFeedResponse: Decodable {
     let papers: [AIPaper]
 }
 
-struct AIPaper: Decodable, Identifiable, Hashable {
+struct AIPaper: Codable, Identifiable, Hashable {
     let id: String
     let title: String
     let summary: String
@@ -372,7 +372,7 @@ enum NewsText {
     }
 }
 
-struct GameRankResponse: Decodable {
+struct GameRankResponse: Codable {
     let board: String
     let boardName: String
     let updatedAt: String
@@ -381,7 +381,7 @@ struct GameRankResponse: Decodable {
     let items: [GameRankItem]
 }
 
-struct GameRankItem: Decodable, Identifiable, Hashable {
+struct GameRankItem: Codable, Identifiable, Hashable {
     let rank: Int
     let id: String
     let name: String

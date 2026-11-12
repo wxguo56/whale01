@@ -85,6 +85,7 @@ final class DiscoverModel: ObservableObject {
         gameNewsSection = saved.string(forKey: Self.gameNewsSectionKey) ?? "all"
         paperCategory = AIPaperCategory(rawValue: saved.string(forKey: Self.paperCategoryKey) ?? "") ?? .ai
         gameSection = GameSection(rawValue: saved.string(forKey: Self.gameSectionKey) ?? "") ?? .news
+        hydrateFromDisk()
         watchlistCancellable = store.$symbols.sink { [weak self] symbols in
             guard let self, symbols != self.watchlist else { return }
             self.watchlist = symbols
@@ -209,6 +210,7 @@ final class DiscoverModel: ObservableObject {
         do {
             let response = try await client.steamFeatured()
             steamCache = (response, Date())
+            DiscoverDiskCache.save(response, key: "steam")
             steam = response
             steamState = .loaded
         } catch {
@@ -255,6 +257,7 @@ final class DiscoverModel: ObservableObject {
             let response = try await client.aiPapers(category: category, limit: 6)
             guard requestToken == token, channel == .ai, paperCategory == category else { return }
             paperCache[category] = (response, Date())
+            DiscoverDiskCache.save(response, key: "papers-\(category.rawValue)")
             apply(response)
             papersState = .loaded
         } catch {
@@ -286,6 +289,7 @@ final class DiscoverModel: ObservableObject {
             let response = try await client.weiboHot(limit: 50)
             guard requestToken == token, channel == .weibo else { return }
             hotCache = (response, Date())
+            DiscoverDiskCache.save(response, key: "weibo")
             apply(response)
             hotState = .loaded
         } catch {
@@ -319,6 +323,7 @@ final class DiscoverModel: ObservableObject {
             let response = try await client.gameRank(board: board, limit: 50)
             guard requestToken == token, channel == .game, gameSection.board == board else { return }
             rankCache[board] = (response, Date())
+            DiscoverDiskCache.save(response, key: "rank-\(board.rawValue)")
             apply(response, board: board)
             rankState = .loaded
         } catch {
@@ -352,6 +357,7 @@ final class DiscoverModel: ObservableObject {
             let response = try await client.news(channel: channel, limit: 40)
             guard requestToken == token, self.channel == channel else { return }
             newsCache[channel] = (response, Date())
+            DiscoverDiskCache.save(response, key: "news-\(channel.rawValue)")
             apply(response, channel: channel)
             newsState = .loaded
         } catch {
@@ -452,6 +458,62 @@ final class DiscoverModel: ObservableObject {
         } catch {
             searchResults = []
             searchState = .failed(message(error))
+        }
+    }
+
+    private func hydrateFromDisk() {
+        for item in [DiscoverChannel.ai, .headline, .game] {
+            guard let cached = DiscoverDiskCache.load(NewsFeedResponse.self, key: "news-\(item.rawValue)") else { continue }
+            newsCache[item] = (cached, .distantPast)
+        }
+        for board in GameRankBoard.allCases {
+            guard let cached = DiscoverDiskCache.load(GameRankResponse.self, key: "rank-\(board.rawValue)") else { continue }
+            rankCache[board] = (cached, .distantPast)
+        }
+        for category in AIPaperCategory.allCases {
+            guard let cached = DiscoverDiskCache.load(AIPaperFeedResponse.self, key: "papers-\(category.rawValue)") else { continue }
+            paperCache[category] = (cached, .distantPast)
+        }
+        if let cached = DiscoverDiskCache.load(WeiboHotResponse.self, key: "weibo") {
+            hotCache = (cached, .distantPast)
+        }
+        if let cached = DiscoverDiskCache.load(SteamFeaturedResponse.self, key: "steam") {
+            steamCache = (cached, .distantPast)
+        }
+
+        switch channel {
+        case .ai:
+            if let cached = newsCache[.ai] {
+                apply(cached.response, channel: .ai)
+                newsState = .loaded
+            }
+            if let cached = paperCache[paperCategory] {
+                apply(cached.response)
+                papersState = .loaded
+            }
+        case .headline:
+            if let cached = newsCache[.headline] {
+                apply(cached.response, channel: .headline)
+                newsState = .loaded
+            }
+        case .game:
+            if let board = gameSection.board, let cached = rankCache[board] {
+                apply(cached.response, board: board)
+                rankState = .loaded
+            } else if gameSection.steamKind != nil, let cached = steamCache {
+                steam = cached.response
+                steamState = .loaded
+            } else if let cached = newsCache[.game] {
+                apply(cached.response, channel: .game)
+                newsState = .loaded
+            }
+        case .weibo:
+            if let cached = hotCache {
+                apply(cached.response)
+                hotState = .loaded
+            }
+        case .market, .music:
+            break
         }
     }
 
