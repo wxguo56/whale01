@@ -378,11 +378,32 @@ struct GameChannelPage: View {
                 }
             }
             .horizontalTabSwipe(
-                onPrevious: { Task { await model.stepGameSection(by: -1) } },
-                onNext: { Task { await model.stepGameSection(by: 1) } }
+                onPrevious: swipePrevious,
+                onNext: swipeNext
             )
         }
         .task { await model.loadInitial() }
+    }
+
+    private func swipePrevious() {
+        if model.gameSection == .news,
+           let index = DiscoverChannel.game.newsSections.firstIndex(where: { $0.id == model.gameNewsSection }),
+           index > 0 {
+            model.stepNewsSection(.game, by: -1)
+        } else {
+            Task { await model.stepGameSection(by: -1) }
+        }
+    }
+
+    private func swipeNext() {
+        let sections = DiscoverChannel.game.newsSections
+        if model.gameSection == .news,
+           let index = sections.firstIndex(where: { $0.id == model.gameNewsSection }),
+           index < sections.count - 1 {
+            model.stepNewsSection(.game, by: 1)
+        } else {
+            Task { await model.stepGameSection(by: 1) }
+        }
     }
 
     private var newsContent: some View {

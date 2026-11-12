@@ -352,6 +352,7 @@ struct WhaleHomeCanvas: View {
                                     .font(.system(size: 20, weight: .bold, design: .rounded))
                                     .foregroundStyle(WhaleTheme.ink)
                                     .lineLimit(1)
+                                    .minimumScaleFactor(0.75)
                                 Spacer(minLength: 0)
                                 Text(currentTemperatureText)
                                     .font(.system(size: 34, weight: .bold, design: .rounded))
