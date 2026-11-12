@@ -52,10 +52,17 @@ jobs:
           xcrun simctl boot "$DEVICE_ID" || true
           xcrun simctl bootstatus "$DEVICE_ID" -b
           xcrun simctl install "$DEVICE_ID" ios/build/Build/Products/Debug-iphonesimulator/WhaleAgent.app
+          for service in reminders calendar photos microphone location contacts; do
+            xcrun simctl privacy "$DEVICE_ID" grant "$service" com.whale01.agent || true
+          done
           SIMCTL_CHILD_WHALE_DEMO_DISCOVER=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
           sleep 8
           mkdir -p snapshots
           xcrun simctl io "$DEVICE_ID" screenshot snapshots/discover.png
+          xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+          SIMCTL_CHILD_WHALE_DEMO_GAME=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 14
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/game-detail.png
           xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
 
       - name: Upload screenshots

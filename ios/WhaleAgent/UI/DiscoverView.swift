@@ -27,6 +27,18 @@ struct DiscoverView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
             .toolbar(.hidden, for: .navigationBar)
+            .task {
+#if DEBUG
+                guard ProcessInfo.processInfo.environment["WHALE_DEMO_GAME"] == "1",
+                      let gameModel = models[.game] else { return }
+                channel = .game
+                gameModel.gameSection = .grossing
+                await gameModel.selectGameSection(.grossing)
+                if let first = gameModel.rankItems.first {
+                    path.append(DiscoverRoute.game(first, .grossing))
+                }
+#endif
+            }
             .navigationDestination(for: DiscoverRoute.self) { route in
                 if let model = models[channel] {
                     switch route {

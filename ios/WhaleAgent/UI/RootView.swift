@@ -102,6 +102,10 @@ struct RootView: View {
                 discoverChannel = .ai
                 showDiscover = true
             }
+            if ProcessInfo.processInfo.environment["WHALE_DEMO_GAME"] == "1" {
+                discoverChannel = .game
+                showDiscover = true
+            }
 #endif
             await model.health()
             await model.reconcileUnknownWrites()
