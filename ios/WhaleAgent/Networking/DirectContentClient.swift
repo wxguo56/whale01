@@ -130,7 +130,7 @@ final class DirectContentClient: @unchecked Sendable {
 
         var seenLinks = Set<String>()
         var seenTitles = Set<String>()
-        let unique = items
+        var rankedItems = items
             .filter { item in
                 let titleKey = item.title.replacingOccurrences(of: "\\s+", with: "", options: .regularExpression).lowercased()
                 if seenLinks.contains(item.link) || seenTitles.contains(titleKey) { return false }
@@ -139,7 +139,25 @@ final class DirectContentClient: @unchecked Sendable {
                 return true
             }
             .sorted { $0.publishedAt > $1.publishedAt }
-            .prefix(safeLimit)
+
+        if channel == .ai, section == "all" {
+            // 厂商新闻更新最快，若只按时间取前 40 条，其它标签页会被挤空。
+            // 这里在最新 40 条之外，为每个主题再补 12 条，保证每个分类都有内容。
+            var selected = Array(rankedItems.prefix(safeLimit))
+            let selectedIDs = Set(selected.map(\.id))
+            let sections = ["game-ai", "coding", "video", "gametech", "vendor", "media", "tech"]
+            for sectionID in sections {
+                let extra = rankedItems
+                    .filter { $0.section == sectionID && !selectedIDs.contains($0.id) }
+                    .prefix(12)
+                selected.append(contentsOf: extra)
+            }
+            rankedItems = selected.sorted { $0.publishedAt > $1.publishedAt }
+        } else {
+            rankedItems = Array(rankedItems.prefix(safeLimit))
+        }
+
+        let unique = rankedItems
             .enumerated()
             .map { index, item in
                 NewsItem(
