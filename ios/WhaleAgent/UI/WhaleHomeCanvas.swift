@@ -15,6 +15,7 @@ struct WhaleHomeCanvas: View {
     @State private var weatherLocation = ""
     @State private var weatherLoading = false
     @State private var weatherError: String?
+    @State private var weatherExpanded = false
 
     var body: some View {
         ScrollView {
@@ -283,37 +284,6 @@ struct WhaleHomeCanvas: View {
 
     private var weatherCard: some View {
         VStack(alignment: .leading, spacing: 13) {
-            HStack(spacing: 8) {
-                Image(systemName: "cloud.sun.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.coral)
-                Text("天气详情")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.ink)
-                Spacer(minLength: 6)
-                if !weatherLocation.isEmpty {
-                    Text(weatherLocation)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(WhaleTheme.muted)
-                        .lineLimit(1)
-                }
-                if weatherLoading {
-                    ProgressView()
-                        .controlSize(.mini)
-                        .tint(WhaleTheme.accent)
-                } else if locationStatus == "granted", !weatherDays.isEmpty {
-                    Button {
-                        Task { await loadWeather(force: true) }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(WhaleTheme.muted)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("刷新天气")
-                }
-            }
-
             if locationStatus != "granted" {
                 HStack(alignment: .center, spacing: 12) {
                     Image(systemName: "location.circle.fill")
@@ -364,39 +334,63 @@ struct WhaleHomeCanvas: View {
                     .buttonStyle(.plain)
                 }
             } else if let today = weatherDays.first {
-                HStack(alignment: .center, spacing: 14) {
-                    Image(systemName: today.icon)
-                        .symbolRenderingMode(.palette)
-                        .foregroundStyle(WhaleTheme.coral, WhaleTheme.moon)
-                        .font(.system(size: 35, weight: .medium))
-                        .frame(width: 54, height: 54)
-                        .background(WhaleTheme.coral.opacity(0.09), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+                Button {
+                    withAnimation(.snappy(duration: 0.2)) { weatherExpanded.toggle() }
+                } label: {
+                    HStack(alignment: .center, spacing: 12) {
+                        Image(systemName: today.icon)
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(WhaleTheme.coral, WhaleTheme.moon)
+                            .font(.system(size: 28, weight: .medium))
+                            .frame(width: 46, height: 46)
+                            .background(WhaleTheme.coral.opacity(0.09), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(today.dayLabel)
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .tracking(0.7)
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 8) {
+                                Text(today.summary)
+                                    .font(.system(size: 21, weight: .bold, design: .rounded))
+                                    .foregroundStyle(WhaleTheme.ink)
+                                Text(today.temperatureText)
+                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(WhaleTheme.ink)
+                            }
+                            HStack(spacing: 5) {
+                                Text(weatherLocation.isEmpty ? "当前位置" : weatherLocation)
+                                    .lineLimit(1)
+                                if let rain = today.precipitationText {
+                                    Text("·")
+                                    Text(rain)
+                                }
+                                Text("·")
+                                Text(today.dayLabel)
+                            }
+                            .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(WhaleTheme.muted)
-                        Text(today.summary)
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .foregroundStyle(WhaleTheme.ink)
-                        HStack(spacing: 8) {
-                            Text(today.temperatureText)
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .foregroundStyle(WhaleTheme.ink)
-                            if let rain = today.precipitationText {
-                                Text(rain)
-                                    .font(.system(size: 10, weight: .medium))
-                                    .foregroundStyle(WhaleTheme.moon)
-                                    .padding(.horizontal, 7)
-                                    .padding(.vertical, 3)
-                                    .background(WhaleTheme.moon.opacity(0.1), in: Capsule())
+                        }
+
+                        Spacer(minLength: 4)
+
+                        if weatherLoading {
+                            ProgressView()
+                                .controlSize(.mini)
+                                .tint(WhaleTheme.accent)
+                        } else {
+                            VStack(alignment: .trailing, spacing: 5) {
+                                Text(weatherExpanded ? "收起" : (weatherDays.count > 1 ? "\(weatherDays.count)日预报" : "详情"))
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(WhaleTheme.muted)
+                                Image(systemName: weatherExpanded ? "chevron.up" : "chevron.down")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(WhaleTheme.muted.opacity(0.8))
                             }
                         }
                     }
-                    Spacer(minLength: 0)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("天气详情")
 
+                if weatherExpanded {
                 if !today.advice.isEmpty {
                     Text(today.advice)
                         .font(.system(size: 11))
@@ -440,10 +434,23 @@ struct WhaleHomeCanvas: View {
                 }
 
                 HStack(spacing: 5) {
-                    Spacer()
                     Text("Open-Meteo · 真实预报")
                         .font(.system(size: 9, weight: .medium))
                         .foregroundStyle(WhaleTheme.muted.opacity(0.75))
+                    Spacer()
+                    Button {
+                        Task { await loadWeather(force: true) }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.clockwise")
+                            Text("刷新")
+                        }
+                    }
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.accent)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("刷新天气")
+                }
                 }
             } else {
                 HStack(spacing: 10) {
