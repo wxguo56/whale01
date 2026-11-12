@@ -23,6 +23,7 @@ struct DiscoverView: View {
                         topChrome
                         pager(width: proxy.size.width)
                     }
+                    .frame(width: proxy.size.width)
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
@@ -55,6 +56,7 @@ struct DiscoverView: View {
         .scrollTargetBehavior(.paging)
         .scrollPosition(id: channelScroll)
         .scrollIndicators(.hidden)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var channelScroll: Binding<DiscoverChannel?> {

@@ -6,25 +6,21 @@ struct DiscoverSegment: View {
     @Namespace private var animation
 
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 6) {
-                ForEach(DiscoverChannel.allCases) { channel in
-                    Button {
-                        if let onSelect {
-                            onSelect(channel)
-                        } else {
-                            withAnimation(.snappy(duration: 0.24)) { selection = channel }
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: channel.icon)
-                                .font(.system(size: 12, weight: .semibold))
-                            Text(channel.title)
-                                .font(.system(size: 14, weight: .semibold))
-                                .lineLimit(1)
-                        }
+        HStack(spacing: 3) {
+            ForEach(DiscoverChannel.allCases) { channel in
+                Button {
+                    if let onSelect {
+                        onSelect(channel)
+                    } else {
+                        withAnimation(.snappy(duration: 0.24)) { selection = channel }
+                    }
+                } label: {
+                    Text(channel.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                         .foregroundStyle(selection == channel ? WhaleTheme.ink : WhaleTheme.muted)
-                        .padding(.horizontal, 10)
+                        .frame(maxWidth: .infinity)
                         .frame(height: 38)
                         .background {
                             if selection == channel {
@@ -34,13 +30,11 @@ struct DiscoverSegment: View {
                                     .overlay { Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8) }
                             }
                         }
-                    }
-                    .buttonStyle(.plain)
                 }
+                .buttonStyle(.plain)
             }
-            .padding(4)
         }
-        .scrollIndicators(.hidden)
+        .padding(4)
         .background(WhaleTheme.field.opacity(0.78), in: Capsule())
     }
 }
