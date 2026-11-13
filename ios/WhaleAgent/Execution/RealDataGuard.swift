@@ -41,7 +41,7 @@ enum RealDataGuard {
         if containsAny(compact, ["我在哪", "我现在在哪", "当前位置", "这是哪里", "这里是哪", "我的位置"]) {
             return .currentLocation
         }
-        if containsAny(compact, ["天气", "下雨", "带伞", "气温", "冷不冷", "热不热"]) {
+        if containsAny(compact, ["天气", "下雨", "带伞", "气温", "多少度", "温度", "冷不冷", "热不热"]) {
             return .weather
         }
         if containsAny(compact, ["导航", "带我去", "怎么走", "路线", "带我过去", "送我过去"]) {
@@ -51,13 +51,18 @@ enum RealDataGuard {
             return .nearbyPlaces
         }
         if containsAny(compact, ["新闻", "热搜", "资讯"]), containsAny(compact, ["今天", "最新", "现在", "查", "看看", "有什么"]) { return .news }
-        if containsAny(compact, ["股票", "股价", "行情", "茅台", "上证", "深证"]), containsAny(compact, ["现在", "今天", "多少", "查", "行情", "涨", "跌"]) { return .stock }
+        if containsAny(compact, ["股票", "股价", "行情", "茅台", "上证", "深证"]) || compact.range(of: "(sh|sz|bj)?[0-9]{6}", options: .regularExpression) != nil {
+            if containsAny(compact, ["现在", "今天", "多少", "查", "行情", "涨", "跌"]) { return .stock }
+        }
         if containsAny(compact, ["人均", "套餐价格", "菜单价", "餐厅价格"]) { return .merchantPrice }
+        if containsAny(compact, ["餐厅", "咖啡", "火锅", "海底捞", "烧烤", "门店"]), containsAny(compact, ["价格", "多少钱", "收费"]) { return .merchantPrice }
         return nil
     }
 
     static func isDiscussion(_ text: String) -> Bool {
         let compact = text.replacingOccurrences(of: " ", with: "")
+        if containsAny(compact, ["不查", "不看", "不想查", "不想看", "不要看", "别看", "不用看", "不用导航", "不需要查", "不需要看", "不需要定位", "不定位", "这个表达", "这句话", "怎么翻译", "如何翻译", "什么是天气", "天气的定义", "预报的原理"]) { return true }
+        if (compact.hasPrefix("“") && compact.hasSuffix("”")) || (compact.hasPrefix("\"") && compact.hasSuffix("\"")) { return true }
         return containsAny(compact, ["不要查", "不用查", "别查", "不要导航", "不需要导航", "不要定位", "别定位", "不用定位", "别打开", "不要执行", "不要获取", "别搜索", "不要搜索", "先别", "暂时别", "取消查询", "停止查询", "这个词", "什么意思", "怎么解释", "是什么原理", "怎么实现", "能不能查", "可以查吗", "能查吗", "假如", "假设", "如果我要", "如果我说"])
     }
 

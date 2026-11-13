@@ -4,6 +4,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--branch', default='codex/whale-reliability')
 parser.add_argument('--run', type=int)
 parser.add_argument('--dispatch')
+parser.add_argument('--logs', action='store_true')
 args = parser.parse_args()
 env = {**os.environ, 'GIT_TERMINAL_PROMPT': '0'}
 credential = subprocess.run(['git', 'credential', 'fill'], input='protocol=https\nhost=github.com\n\n', text=True, capture_output=True, env=env, timeout=30)
@@ -41,10 +42,13 @@ elif args.run:
     print(json.dumps({k: run.get(k) for k in ['id','name','status','conclusion','head_sha','html_url']}, ensure_ascii=False))
     for job in jobs['jobs']:
         print(json.dumps({'job':job['name'],'status':job['status'],'conclusion':job['conclusion'], 'steps':[{k:step.get(k) for k in ['name','status','conclusion']} for step in job['steps']]}, ensure_ascii=False))
-        if job['conclusion'] == 'failure':
-            log = download('/actions/jobs/' + str(job['id']) + '/logs').decode('utf-8', errors='replace')
-            errors = [line for line in log.splitlines() if re.search(r'error:|Test Case .*failed|fatal error|XCTAssert|failed -', line)]
-            print('\n'.join(errors[-40:]))
+        if job['conclusion'] == 'failure' or args.logs:
+            try: log = download('/actions/jobs/' + str(job['id']) + '/logs').decode('utf-8', errors='replace')
+            except urllib.error.HTTPError as error:
+                print('Logs unavailable: HTTP ' + str(error.code))
+                continue
+            errors = [line for line in log.splitlines() if re.search(r'error:|Test Case .*failed|fatal error|XCTAssert|failed -|Executed [0-9]+ tests|Test Suite .*passed|Testing started|Test Case .*passed', line)]
+            print('\n'.join(errors[-60:]))
 else:
     from urllib.parse import quote
     data = request('/actions/runs?branch=' + quote(args.branch, safe='') + '&per_page=8')

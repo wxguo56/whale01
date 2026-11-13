@@ -3,10 +3,11 @@ import XCTest
 
 final class ReliabilityTests: XCTestCase {
     func testDiscussionDoesNotBecomeWeatherExecution() {
-        for text in ["不要查天气", "天气这个词怎么解释", "假如我要导航回家", "你能不能查天气"] {
+        for text in ["不要查天气", "天气这个词怎么解释", "假如我要导航回家", "你能不能查天气", "不用导航回家", "“查天气”", "查天气这句话怎么翻译"] {
             XCTAssertNil(RealDataGuard.intent(for: text), text)
         }
         XCTAssertEqual(RealDataGuard.intent(for: "不要查天气，查今天的股价"), .stock)
+        XCTAssertEqual(RealDataGuard.intent(for: "我不查天气，查今天600519的行情"), .stock)
     }
 
     func testQuestionCannotLaunderUnsupportedFacts() {
