@@ -61,6 +61,26 @@ struct DiscoverView: View {
                    let aiModel = models[.ai] {
                     await aiModel.selectNewsSection(raw, for: .ai)
                 }
+                if let raw = environment["WHALE_DEMO_HEADLINE_SECTION"],
+                   let headlineModel = models[.headline] {
+                    await headlineModel.selectNewsSection(raw, for: .headline)
+                }
+                if let raw = environment["WHALE_DEMO_HOT_BOARD"],
+                   let board = HotBoard(rawValue: raw),
+                   let hotModel = models[.weibo] {
+                    hotModel.hotBoard = board
+                    await hotModel.loadHot(force: true)
+                }
+                if environment["WHALE_DEMO_STOCK"] == "1", models[.market] != nil {
+                    let seed = StockSearchResult(
+                        symbol: "sh600519",
+                        code: "600519",
+                        name: "贵州茅台",
+                        market: "SH",
+                        type: "stock"
+                    )
+                    path.append(DiscoverRoute.search(seed))
+                }
 #endif
             }
             .navigationDestination(for: DiscoverRoute.self) { route in

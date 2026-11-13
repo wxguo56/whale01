@@ -85,6 +85,26 @@ jobs:
           sleep 18
           xcrun simctl io "$DEVICE_ID" screenshot snapshots/headline-channel.png
           xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+          SIMCTL_CHILD_WHALE_DEMO_CHANNEL=headline SIMCTL_CHILD_WHALE_DEMO_HEADLINE_SECTION=domestic xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 20
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/headline-domestic.png
+          xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+          SIMCTL_CHILD_WHALE_DEMO_CHANNEL=headline SIMCTL_CHILD_WHALE_DEMO_HEADLINE_SECTION=military xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 20
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/headline-military.png
+          xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+          SIMCTL_CHILD_WHALE_DEMO_CHANNEL=headline SIMCTL_CHILD_WHALE_DEMO_HEADLINE_SECTION=auto xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 20
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/headline-auto.png
+          xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+          SIMCTL_CHILD_WHALE_DEMO_CHANNEL=weibo SIMCTL_CHILD_WHALE_DEMO_HOT_BOARD=zhihu xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 20
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/weibo-zhihu.png
+          xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+          SIMCTL_CHILD_WHALE_DEMO_CHANNEL=market SIMCTL_CHILD_WHALE_DEMO_STOCK=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 24
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/stock-detail.png
+          xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
           SIMCTL_CHILD_WHALE_DEMO_CHANNEL=game SIMCTL_CHILD_WHALE_DEMO_GAME_SECTION=steamTop xcrun simctl launch "$DEVICE_ID" com.whale01.agent
           sleep 16
           xcrun simctl io "$DEVICE_ID" screenshot snapshots/steam-top.png
