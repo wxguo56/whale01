@@ -3,9 +3,8 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
-/// Bottom composer. It deliberately lives outside the horizontal pager: a
-/// focused text field inside a paging `ScrollView` can make UIKit scroll the
-/// whole pager to keep the field visible, which shows up as the chat jumping.
+/// Multi-line composer in the Assistant tab's safe-area inset. Drafts stay
+/// editable during a turn and survive tab switches without sending themselves.
 struct ConversationComposerBar: View {
     static let reservedHeight: CGFloat = 66
 

@@ -18,6 +18,10 @@ final class InteractionUITests: XCTestCase {
         capture.name = "discovery-after-tab-tap"; capture.lifetime = .keepAlways; add(capture)
         XCTAssertTrue(app.buttons["discover-channel-game"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["discover-channel-weibo"].exists)
+        app.buttons["discover-channel-game"].tap()
+        XCTAssertTrue(app.buttons["返回发现"].waitForExistence(timeout: 10))
+        app.buttons["返回发现"].tap()
+        XCTAssertTrue(app.buttons["discover-channel-game"].waitForExistence(timeout: 5))
         app.tabBars.buttons["助手"].tap()
         XCTAssertTrue(app.staticTexts["常用操作"].waitForExistence(timeout: 5))
     }

@@ -54,6 +54,8 @@ xcodebuild \
 
 推送与 PR 自动运行 `Push Quick Validation`：Ubuntu 执行受控的后端回归，macOS 编译 App、原生单元测试和 UI 测试目标，不启动模拟器。新提交会取消同一分支仍在运行的旧快速校验。
 
+快速校验与手动完整测试使用不同的并发分组，推送不会中断已经手动启动的完整测试。两种测试各自只保留同一分支最新一次运行。
+
 完整测试在 GitHub → Actions → `iOS Manual Interaction Tests` → `Run workflow` 中手动触发，选择待验分支。它启动 iPhone 模拟器，执行原生单元测试以及导航、草稿跨页/重启的 UI 测试；测试失败仍导出日志、xcresult 和截图。编译通过不能代替这些实际测试。
 
 在新工作流尚未合入默认分支时，也可以手动运行已有的 `Push Quick Validation`，选择 `scope=interaction`。该入口调用同一完整测试流程；默认 `scope=quick` 只做快速校验，push/PR 不会进入完整测试。

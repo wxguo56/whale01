@@ -4,9 +4,8 @@ import UIKit
 /// The single conversation surface. Sending, voice and results all stay on the
 /// home page; nothing is pushed and no voice sheet is presented.
 ///
-/// The composer is intentionally excluded from this view: it lives at the root
-/// above the horizontal pager, so focusing the text field cannot make the pager
-/// scroll or resize the message list.
+/// The composer lives in the Assistant tab's safe-area inset; the message
+/// surface owns its reading position independently of keyboard focus.
 struct ConversationSurface: View {
     @ObservedObject var model: AppModel
     let bottomInset: CGFloat

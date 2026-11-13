@@ -1,4 +1,5 @@
 name: Push Quick Validation
+run-name: "${{ github.event_name == 'workflow_dispatch' && inputs.scope == 'interaction' && 'Manual iOS interaction regression' || 'Push quick validation' }} · ${{ github.ref_name }}"
 
 on:
   workflow_dispatch:
@@ -29,7 +30,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: whale-quick-${{ github.ref }}
+  group: whale-validation-${{ inputs.scope || 'quick' }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
