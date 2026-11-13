@@ -63,7 +63,6 @@ struct WhaleHomeCanvas: View {
                 .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 24)
         }.scrollIndicators(.hidden).scrollDismissesKeyboard(.interactively)
             .background(WhaleTheme.background)
-            .background(ScrollOffsetMemory(key: "assistant-home"))
             .task { await loadWeatherIfNeeded(); await loadHomeTodos(); await model.refreshDashboard() }
             .onChange(of: model.permissionsSnapshot) { _, _ in Task { await loadWeatherIfNeeded(); await loadHomeTodos() } }
             .sheet(isPresented: $showWeatherDetail) {

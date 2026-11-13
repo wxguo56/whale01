@@ -44,6 +44,8 @@ struct ScrollOffsetMemory: UIViewRepresentable {
         let view = PassthroughView()
         view.backgroundColor = .clear
         view.isUserInteractionEnabled = false
+        view.isAccessibilityElement = false
+        view.accessibilityElementsHidden = true
         DispatchQueue.main.async {
             attach(from: view, coordinator: context.coordinator)
         }

@@ -98,6 +98,14 @@ jobs:
             -derivedDataPath build -resultBundlePath build/InteractionResults.xcresult \
             CODE_SIGNING_ALLOWED=NO test | tee interaction-test.log
 
+      - name: Export interaction screenshots
+        if: always()
+        working-directory: ios
+        run: |
+          if [ -d build/InteractionResults.xcresult ]; then
+            xcrun xcresulttool export attachments --path build/InteractionResults.xcresult --output-path build/interaction-attachments
+          fi
+
       - name: Upload test log
         if: always()
         uses: actions/upload-artifact@v4
@@ -107,5 +115,6 @@ jobs:
             ios/test.log
             ios/interaction-test.log
             ios/build/InteractionResults.xcresult
+            ios/build/interaction-attachments
             ios/build/TestResults.xcresult
           if-no-files-found: warn
