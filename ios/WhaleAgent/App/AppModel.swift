@@ -121,7 +121,9 @@ final class AppModel: ObservableObject {
     let speech = SpeechPlaybackController()
     private let remoteClient = AgentClient()
     private let localEngine = LocalAgentEngine()
+    private let transportOverride: AgentTransport?
     private var client: AgentTransport {
+        if let transportOverride { return transportOverride }
         if agentMode == "cloud" { return remoteClient }
         return localEngine
     }
@@ -145,7 +147,8 @@ final class AppModel: ObservableObject {
     private static let conversationKey = "whale.conversationId"
     private static let directModeMigrationKey = "whale.directModeMigrated.v046"
 
-    init() {
+    init(transport: AgentTransport? = nil) {
+        transportOverride = transport
         Self.migrateDirectModeIfNeeded()
         backendURL = BackendConfig.currentBaseURLString
         agentMode = UserDefaults.standard.string(forKey: "whale.agentMode") ?? "local"

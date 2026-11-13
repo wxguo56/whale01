@@ -2,6 +2,29 @@ import XCTest
 @testable import WhaleAgent
 
 final class InteractionHabitsTests: XCTestCase {
+    @MainActor
+    func testSendPreflightRejectsDuplicateClicksAndDoesNotAcceptBlockedDrafts() async throws {
+        let originalHistory = ChatHistoryStore.load()
+        defer { ChatHistoryStore.save(originalHistory) }
+        let transport = PausedDemoTransport()
+        let model = AppModel(transport: transport)
+        model.agentMode = "cloud"
+        var accepted = false
+        let first = Task { await model.send(text: "keep this draft", onAccepted: { accepted = true }) }
+        for _ in 0..<100 {
+            if await transport.healthCalls == 1 { break }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertTrue(model.isBusy)
+        await model.send(text: "duplicate click", onAccepted: { accepted = true })
+        let calls = await transport.healthCalls
+        XCTAssertEqual(calls, 1)
+        await transport.releaseHealth()
+        await first.value
+        XCTAssertFalse(accepted)
+        XCTAssertFalse(model.isBusy)
+        XCTAssertEqual(model.messages.filter { $0.role == .user }.count, originalHistory.filter { $0.role == .user }.count)
+    }
     private func defaults() -> (String, UserDefaults) {
         let suite = "whale.habits.\(UUID().uuidString)"
         return (suite, UserDefaults(suiteName: suite)!)
@@ -59,4 +82,20 @@ final class InteractionHabitsTests: XCTestCase {
         XCTAssertEqual(ToolPresentation.confirmationAction("create_calendar_event", conflictCount: 2), "仍安排这个时间")
         XCTAssertFalse(ToolPresentation.resultTitle(tool: "create_reminder", status: "execution_unknown").contains("已完成"))
     }
+}
+
+private actor PausedDemoTransport: AgentTransport {
+    private(set) var healthCalls = 0
+    private var continuation: CheckedContinuation<HealthResponse, Never>?
+    func health() async throws -> HealthResponse {
+        healthCalls += 1
+        return await withCheckedContinuation { continuation = $0 }
+    }
+    func releaseHealth() {
+        continuation?.resume(returning: HealthResponse(status: "ok", executionMode: "mock", modelMode: "mock", adapterConfigured: true, tools: 0, authRequired: false))
+        continuation = nil
+    }
+    func turnSnapshot(turnId: String) async throws -> AgentTurnResponse { throw URLError(.unsupportedURL) }
+    func startTurn(text: String, conversationId: String?, permissions: [String: String], deferExecution: Bool) async throws -> AgentTurnResponse { throw URLError(.unsupportedURL) }
+    func submitToolResults(turnId: String, results: [ToolResultPayload]) async throws -> AgentTurnResponse { throw URLError(.unsupportedURL) }
 }
