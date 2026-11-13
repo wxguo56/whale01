@@ -62,8 +62,11 @@ struct WhaleHomeCanvas: View {
         TimelineView(.periodic(from: Date(), by: 60)) { context in
             let quote = DailyQuote.text(at: context.date)
             HStack(alignment: .top, spacing: 11) {
-                WhaleCompanionView()
-                    .frame(width: 58, height: 48)
+                Button(action: onOpenConversation) {
+                    WhaleMarkView(size: 33)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("进入对话")
 
                 VStack(alignment: .leading, spacing: 7) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
