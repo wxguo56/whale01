@@ -23,7 +23,12 @@ enum TodoQuickParser {
 
     static func parseAdd(_ raw: String, now: Date = Date(), calendar: Calendar = .current) -> Added {
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.range(of: "^(修改|改成|改为|推迟|提前|取消|不要|别|删除|删掉|移除|标记完成|恢复)|^把.+(改|推迟|提前)|每(天|周|月|年)", options: .regularExpression) != nil {
+        for prefix in ["请", "帮我", "我想", "我要"] where text.hasPrefix(prefix) {
+            text = String(text.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            break
+        }
+        let explicitAdd = ["新增待办", "新建待办", "待办", "todo:", "todo："].contains { text.lowercased().hasPrefix($0) }
+        if !explicitAdd, text.range(of: "^(修改|改成|改为|推迟|提前|取消|不要|别|先别|不用|不需要|删除|删掉|移除|标记完成|恢复)|把.+(改|推迟|提前|删除|删掉|移除|完成|恢复|取消)|每(天|周|月|年)", options: .regularExpression) != nil {
             return Added(title: text, dueAt: nil, validationError: "这句话涉及修改、取消或重复提醒，请到对话里说明目标；这里没有新增待办。")
         }
         let prefixActions = ["提醒我", "帮我记一下", "帮我记着", "记一下", "新增待办", "新建待办", "待办", "todo:", "todo："]

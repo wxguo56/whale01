@@ -7,6 +7,7 @@ parser.add_argument('--dispatch')
 parser.add_argument('--logs', action='store_true')
 parser.add_argument('--download-artifact', type=int)
 parser.add_argument('--out')
+parser.add_argument('--artifacts', action='store_true')
 args = parser.parse_args()
 env = {**os.environ, 'GIT_TERMINAL_PROMPT': '0'}
 credential = subprocess.run(['git', 'credential', 'fill'], input='protocol=https\nhost=github.com\n\n', text=True, capture_output=True, env=env, timeout=30)
@@ -45,6 +46,10 @@ elif args.dispatch:
     print('Dispatched ' + args.dispatch + ' for ' + args.branch)
 elif args.run:
     run = request('/actions/runs/' + str(args.run))
+    if args.artifacts:
+        items = request('/actions/runs/' + str(args.run) + '/artifacts')['artifacts']
+        print(json.dumps([{k:item.get(k) for k in ['id','name','size_in_bytes','expired']} for item in items], ensure_ascii=False))
+        raise SystemExit(0)
     jobs = request('/actions/runs/' + str(args.run) + '/jobs')
     print(json.dumps({k: run.get(k) for k in ['id','name','status','conclusion','head_sha','html_url']}, ensure_ascii=False))
     for job in jobs['jobs']:

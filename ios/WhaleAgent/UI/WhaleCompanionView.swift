@@ -101,6 +101,7 @@ private final class CompanionAudio {
     private var finishTask: Task<Void, Never>?
     func play() {
         guard AudioSessionCoordinator.shared.owner == nil,
+              !AVAudioSession.sharedInstance().isOtherAudioPlaying,
               MPMusicPlayerController.systemMusicPlayer.playbackState != .playing,
               Date().timeIntervalSince(lastPlayed) >= 1.8,
               let url = Bundle.main.url(forResource: "whale-touch", withExtension: "wav") else { return }
