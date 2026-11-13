@@ -563,7 +563,7 @@ struct FundFlowChart: View {
         .chartXAxis {
             AxisMarks { _ in
                 AxisValueLabel()
-                    .whaleFont(size: 13)
+                    .font(.caption)
                     .foregroundStyle(WhaleTheme.muted)
             }
         }
@@ -571,7 +571,7 @@ struct FundFlowChart: View {
             AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { _ in
                 AxisGridLine().foregroundStyle(WhaleTheme.line.opacity(0.45))
                 AxisValueLabel()
-                    .whaleFont(size: 13, design: .monospaced)
+                    .font(.caption.monospaced())
                     .foregroundStyle(WhaleTheme.muted)
             }
         }
@@ -701,7 +701,7 @@ struct StockChart: View {
                 AxisMarks(position: .trailing, values: .automatic(desiredCount: 4)) { _ in
                     AxisGridLine().foregroundStyle(WhaleTheme.line.opacity(0.45))
                     AxisValueLabel()
-                        .whaleFont(size: 13, design: .monospaced)
+                        .font(.caption.monospaced())
                         .foregroundStyle(WhaleTheme.muted)
                 }
             }
