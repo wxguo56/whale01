@@ -92,7 +92,7 @@ struct TodoView: View {
 
     @AppStorage("whale.todo.filter") private var filter: TodoFilter = .pending
     @State private var items: [TodoReminder] = []
-    @State private var draft = ""
+    @AppStorage("whale.draft.todo") private var draft = ""
     @State private var isLoading = false
     @State private var isSubmitting = false
     @State private var busyIds: Set<String> = []

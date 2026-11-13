@@ -10,6 +10,7 @@ struct RootView: View {
     @State private var showSettings = false
     @State private var settingsDetailOpen = false
     @State private var showDiscover = false
+    @State private var composerDraft = ""
     @State private var discoverChannel: DiscoverChannel = .ai
     @State private var discoverReturnTitle = "助手"
     @AppStorage("whale.appearance") private var appearance = "system"
@@ -25,7 +26,7 @@ struct RootView: View {
                     ConversationTabView(model: model, bottomInset: 0,
                         onOpenRecords: { showRecords = true }, onOpenSettings: { showSettings = true },
                         onOpenMusic: { openDiscover(.music) }, onOpenTodo: { page = .records }, onOpenDiscover: openDiscover)
-                        .safeAreaInset(edge: .bottom, spacing: 0) { ConversationComposerBar(model: model) }
+                        .safeAreaInset(edge: .bottom, spacing: 0) { ConversationComposerBar(model: model, draft: $composerDraft) }
                 }
             }.tabItem { Label("助手", systemImage: "bubble.left.and.bubble.right") }.tag(AppTab.conversation)
             ZStack {

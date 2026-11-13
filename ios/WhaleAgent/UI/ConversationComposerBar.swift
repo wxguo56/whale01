@@ -12,7 +12,7 @@ struct ConversationComposerBar: View {
     @StateObject private var voice = VoiceInputController()
     @FocusState private var focused: Bool
 
-    @State private var draft = ""
+    @Binding var draft: String
     @State private var showPhotoPicker = false
     @State private var photoItem: PhotosPickerItem?
     @State private var showFileImporter = false
@@ -266,7 +266,7 @@ struct ConversationComposerBar: View {
         await model.send(text: text, onAccepted: {
             // Clear only after the message is accepted into persistent history.
             // Preflight rejection and newer edits must keep their draft intact.
-            guard draftContext == context, draft == original else { return }
+            guard draftContext == context, model.composerContextID == context, draft == original else { return }
             draft = ""
             if let context { drafts.save("", context: context) }
         })
