@@ -32,7 +32,7 @@ struct ChatView: View {
                 HStack(spacing: 8) {
                     AgentOrbView(state: activityState, size: 22)
                     Text("对话")
-                        .font(.system(size: 17, weight: .semibold))
+                        .whaleFont(size: 17, weight: .semibold)
                         .foregroundStyle(WhaleTheme.ink)
                 }
             }
@@ -200,7 +200,7 @@ struct ChatView: View {
                     Task { await voice.toggle() }
                 } label: {
                     Image(systemName: voice.isRecording ? "waveform" : "mic")
-                        .font(.system(size: 20, weight: .medium))
+                        .whaleFont(size: 20, weight: .medium)
                         .foregroundStyle(voice.isRecording ? WhaleTheme.danger : WhaleTheme.ink)
                         .frame(width: 44, height: 44)
                 }
@@ -228,7 +228,7 @@ struct ChatView: View {
                         inputFocused = false
                     } label: {
                         Image(systemName: "keyboard.chevron.compact.down")
-                            .font(.system(size: 20, weight: .semibold))
+                            .whaleFont(size: 20, weight: .semibold)
                             .foregroundStyle(.secondary)
                             .frame(width: 44, height: 44)
                     }
@@ -240,7 +240,7 @@ struct ChatView: View {
                     submitFromKeyboard()
                 } label: {
                     Image(systemName: "arrow.up")
-                        .font(.system(size: 18, weight: .bold))
+                        .whaleFont(size: 18, weight: .bold)
                         .foregroundStyle(.white)
                         .frame(width: 44, height: 44)
                         .background(WhaleTheme.accent, in: Circle())
@@ -304,12 +304,12 @@ struct MessageRow: View {
                 HStack {
                     Spacer(minLength: 52)
                     Text(message.text)
-                        .font(.system(size: 16, weight: .medium))
+                        .whaleFont(size: 16, weight: .medium)
                         .foregroundStyle(.white)
                         .textSelection(.enabled)
                         .padding(.horizontal, 15)
                         .padding(.vertical, 12)
-                        .background(WhaleTheme.heroGradient, in: UnevenRoundedRectangle(
+                        .background(WhaleTheme.accentDeep, in: UnevenRoundedRectangle(
                             topLeadingRadius: 19,
                             bottomLeadingRadius: 19,
                             bottomTrailingRadius: 6,
@@ -331,7 +331,7 @@ struct MessageRow: View {
                 VStack(alignment: .leading, spacing: 6) {
                     byline
                     Text(renderedMarkdown(message.text))
-                        .font(.system(size: 17))
+                        .whaleFont(size: 17)
                         .lineSpacing(4)
                         .foregroundStyle(WhaleTheme.ink)
                         .fixedSize(horizontal: false, vertical: true)
@@ -339,7 +339,7 @@ struct MessageRow: View {
                     HStack(alignment: .bottom, spacing: 10) {
                         if let detail = message.detail, !detail.isEmpty {
                             Text(detail)
-                                .font(.system(size: 13))
+                                .whaleFont(size: 13)
                                 .foregroundStyle(WhaleTheme.muted)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
@@ -349,7 +349,7 @@ struct MessageRow: View {
                             UIPasteboard.general.string = message.text
                         } label: {
                             Image(systemName: "doc.on.doc")
-                                .font(.system(size: 15, weight: .medium))
+                                .whaleFont(size: 15, weight: .medium)
                                 .foregroundStyle(WhaleTheme.muted)
                                 .frame(width: 44, height: 44)
                                 .background(WhaleTheme.card, in: Circle())
@@ -360,7 +360,7 @@ struct MessageRow: View {
 
                         Button(action: onToggleSpeech) {
                             Image(systemName: isSpeaking ? "stop.circle.fill" : "speaker.wave.2")
-                                .font(.system(size: 15, weight: .medium))
+                                .whaleFont(size: 15, weight: .medium)
                                 .foregroundStyle(isSpeaking ? WhaleTheme.accent : WhaleTheme.muted)
                                 .frame(width: 44, height: 44)
                                 .background(WhaleTheme.card, in: Circle())
@@ -383,12 +383,13 @@ struct MessageRow: View {
                             tool: message.tool
                         )
                     } else {
-                        Label(message.text, systemImage: "iphone.gen3")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(WhaleTheme.accent)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(WhaleTheme.accentSoft, in: Capsule())
+                        VStack(alignment: .leading, spacing: 6) {
+                            Label(message.text, systemImage: message.executionStatus == "success" ? "checkmark.circle" : message.executionStatus == nil ? "iphone" : "exclamationmark.circle")
+                                .font(.headline).foregroundStyle(WhaleTheme.accent)
+                            if let detail = message.detail, !detail.isEmpty {
+                                Text(detail).font(.body).foregroundStyle(WhaleTheme.ink).textSelection(.enabled)
+                            }
+                        }.frame(maxWidth: .infinity, alignment: .leading).whaleCard(padding: 14)
                     }
                 } else {
                     PlaceMapCard(places: message.places, statusText: message.detail ?? message.text)
@@ -408,11 +409,11 @@ struct MessageRow: View {
         HStack(spacing: 7) {
             WhaleMarkView(size: 22)
             Text("鲸鱼")
-                .font(.system(size: 12, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
                 .foregroundStyle(WhaleTheme.muted)
             if let tool = message.tool, !tool.isEmpty {
                 Text("· \(ToolPresentation.title(tool))")
-                    .font(.system(size: 10))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted.opacity(0.7))
             }
         }
@@ -435,14 +436,14 @@ struct WeatherResultCard: View {
         VStack(alignment: .leading, spacing: 13) {
             HStack(spacing: 7) {
                 Image(systemName: "cloud.sun.fill")
-                    .font(.system(size: 13, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .foregroundStyle(WhaleTheme.coral)
                 Text("逐日预报")
-                    .font(.system(size: 12, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                 Spacer()
                 Text("Open-Meteo")
-                    .font(.system(size: 9, weight: .medium))
+                    .whaleFont(size: 13, weight: .medium)
                     .foregroundStyle(WhaleTheme.muted)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
@@ -454,25 +455,25 @@ struct WeatherResultCard: View {
                     Image(systemName: today.icon)
                         .symbolRenderingMode(.palette)
                         .foregroundStyle(WhaleTheme.coral, WhaleTheme.moon)
-                        .font(.system(size: 37, weight: .medium))
+                        .whaleFont(size: 37, weight: .medium)
                         .frame(width: 54, height: 54)
                         .background(WhaleTheme.coral.opacity(0.09), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(today.dayLabel)
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .whaleFont(size: 13, weight: .bold, design: .rounded)
                             .tracking(0.7)
                             .foregroundStyle(WhaleTheme.muted)
                         Text(today.summary)
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .whaleFont(size: 22, weight: .bold, design: .rounded)
                             .foregroundStyle(WhaleTheme.ink)
                         HStack(spacing: 8) {
                             Text(today.temperatureText)
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .whaleFont(size: 13, weight: .semibold, design: .rounded)
                                 .foregroundStyle(WhaleTheme.ink)
                             if let rain = today.precipitationText {
                                 Text(rain)
-                                    .font(.system(size: 10, weight: .medium))
+                                    .whaleFont(size: 13, weight: .medium)
                                     .foregroundStyle(WhaleTheme.moon)
                                     .padding(.horizontal, 7)
                                     .padding(.vertical, 3)
@@ -485,7 +486,7 @@ struct WeatherResultCard: View {
 
                 if !today.advice.isEmpty {
                     Text(today.advice)
-                        .font(.system(size: 11))
+                        .whaleFont(size: 13)
                         .foregroundStyle(WhaleTheme.muted)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 1)
@@ -501,14 +502,14 @@ struct WeatherResultCard: View {
                     ForEach(Array(days.prefix(4))) { day in
                         VStack(spacing: 5) {
                             Text(day.dayLabel)
-                                .font(.system(size: 9, weight: .medium))
+                                .whaleFont(size: 13, weight: .medium)
                                 .foregroundStyle(WhaleTheme.muted)
                                 .lineLimit(1)
                             Image(systemName: day.icon)
-                                .font(.system(size: 15, weight: .medium))
+                                .whaleFont(size: 15, weight: .medium)
                                 .foregroundStyle(WhaleTheme.coral)
                             Text(day.temperatureText)
-                                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                .whaleFont(size: 13, weight: .semibold, design: .rounded)
                                 .foregroundStyle(WhaleTheme.ink)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.7)
@@ -531,11 +532,11 @@ struct PlaceMapCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Label("已标记 \(places.count) 个地点", systemImage: "mappin.and.ellipse")
-                    .font(.system(size: 13, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                 Spacer(minLength: 8)
                 Text(statusText)
-                    .font(.system(size: 11))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(1)
             }
@@ -563,7 +564,7 @@ struct PlaceMapCard: View {
             ForEach(Array(places.prefix(3))) { place in
                 HStack(spacing: 10) {
                     Image(systemName: place.id == places.first?.id ? "star.fill" : "mappin")
-                        .font(.system(size: 9, weight: .bold))
+                        .whaleFont(size: 13, weight: .bold)
                         .foregroundStyle(place.id == places.first?.id ? WhaleTheme.onAccent : WhaleTheme.muted)
                         .frame(width: 22, height: 22)
                         .background(
@@ -572,12 +573,12 @@ struct PlaceMapCard: View {
                         )
                     VStack(alignment: .leading, spacing: 2) {
                         Text(place.name)
-                            .font(.system(size: 14, weight: .semibold))
+                            .whaleFont(size: 14, weight: .semibold)
                             .foregroundStyle(WhaleTheme.ink)
                             .lineLimit(1)
                         if !place.address.isEmpty {
                             Text(place.address)
-                                .font(.system(size: 10))
+                                .whaleFont(size: 13)
                                 .foregroundStyle(WhaleTheme.muted)
                                 .lineLimit(1)
                         }
@@ -585,7 +586,7 @@ struct PlaceMapCard: View {
                     Spacer(minLength: 6)
                     if place.distanceMeters > 0 {
                         Text(place.distanceText)
-                            .font(.system(size: 10, weight: .medium))
+                            .whaleFont(size: 13, weight: .medium)
                             .foregroundStyle(WhaleTheme.muted)
                     }
                 }
@@ -594,12 +595,12 @@ struct PlaceMapCard: View {
 
             HStack(spacing: 7) {
                 Image(systemName: "map.fill")
-                    .font(.system(size: 11, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                 Text(places.count > 1 ? "在系统地图查看全部 \(places.count) 个地点" : "在系统地图查看路线")
-                    .font(.system(size: 11, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                 Spacer()
                 Image(systemName: "arrow.up.right")
-                    .font(.system(size: 10, weight: .bold))
+                    .whaleFont(size: 13, weight: .bold)
             }
             .foregroundStyle(WhaleTheme.accent)
             .frame(minHeight: 34)
@@ -672,19 +673,19 @@ struct ToolLinkCard: View {
             } label: {
                 HStack(spacing: 11) {
                     Image(systemName: icon)
-                        .font(.system(size: 16, weight: .semibold))
+                        .whaleFont(size: 16, weight: .semibold)
                         .foregroundStyle(WhaleTheme.accent)
                         .frame(width: 36, height: 36)
                         .background(WhaleTheme.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 11))
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title)
-                            .font(.system(size: 15, weight: .semibold))
+                            .whaleFont(size: 15, weight: .semibold)
                             .foregroundStyle(WhaleTheme.ink)
                             .lineLimit(2)
                         if let detail, !detail.isEmpty {
                             Text(detail)
-                                .font(.system(size: 12))
+                                .whaleFont(size: 13)
                                 .foregroundStyle(WhaleTheme.muted)
                                 .lineLimit(2)
                         }
@@ -693,7 +694,7 @@ struct ToolLinkCard: View {
                     Spacer(minLength: 8)
 
                     Image(systemName: "arrow.up.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .whaleFont(size: 13, weight: .semibold)
                         .foregroundStyle(WhaleTheme.accent)
                 }
                 .contentShape(Rectangle())
@@ -712,15 +713,15 @@ struct ToolLinkCard: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "link")
-                                .font(.system(size: 11, weight: .semibold))
+                                .whaleFont(size: 13, weight: .semibold)
                                 .foregroundStyle(WhaleTheme.muted)
                             Text(link.title)
-                                .font(.system(size: 13))
+                                .whaleFont(size: 13)
                                 .foregroundStyle(WhaleTheme.ink)
                                 .lineLimit(1)
                             Spacer(minLength: 6)
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 11, weight: .semibold))
+                                .whaleFont(size: 13, weight: .semibold)
                                 .foregroundStyle(WhaleTheme.muted)
                         }
                         .frame(minHeight: 36)
@@ -761,7 +762,7 @@ struct PendingActionCard: View {
         VStack(alignment: .leading, spacing: 13) {
             HStack(spacing: 11) {
                 Image(systemName: ToolPresentation.icon(item.tool))
-                    .font(.system(size: 17, weight: .semibold))
+                    .whaleFont(size: 17, weight: .semibold)
                     .foregroundStyle(WhaleTheme.accent)
                     .frame(width: 38, height: 38)
                     .background(WhaleTheme.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
@@ -788,7 +789,7 @@ struct PendingActionCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Button(action: onReview) {
-                Text("查看并确认")
+                Text(item.tool == "create_reminder" ? "添加提醒" : "查看操作信息")
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 11)

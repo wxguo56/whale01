@@ -16,239 +16,136 @@ struct WhaleHomeCanvas: View {
     @State private var weatherLocation = ""
     @State private var weatherLoading = false
     @State private var weatherError: String?
+    @AppStorage("whale.home.showQuote") private var showQuote = true
+    @AppStorage("whale.profile.nickname") private var nickname = ""
+    @State private var quoteExpanded = false
+    @State private var showWeatherDetail = false
+    @State private var showQuickActionEditor = false
+    @State private var quickActions = InteractionPreferences.quickActions()
+    @State private var homeTodos: [TodoReminder] = []
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var weatherExpanded = ProcessInfo.processInfo.environment["WHALE_DEMO_WEATHER"] == "1"
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                dailyQuote
-                if let task = model.taskRecords.first(where: { ["awaiting_confirmation", "awaiting_tool_results", "completed_with_limits"].contains($0.status) }) {
+            VStack(alignment: .leading, spacing: 18) {
+                Text(nickname.isEmpty ? "今天想做点什么？" : "你好，\(nickname)")
+                    .font(.title2.bold()).foregroundStyle(WhaleTheme.ink)
+                if let confirmation = model.pending.first(where: \.requiresConfirmation) {
+                    Button { model.presentedConfirmation = confirmation } label: {
+                        Label("\(ToolPresentation.title(confirmation.tool))，等你确认", systemImage: "checkmark.circle")
+                            .font(.headline).frame(maxWidth: .infinity, alignment: .leading)
+                            .foregroundStyle(WhaleTheme.accent).whaleCard(padding: 14)
+                    }.buttonStyle(.plain)
+                } else if let task = model.taskRecords.first(where: {
+                    ["awaiting_tool_results", "completed_with_limits"].contains($0.status) && Date().timeIntervalSince($0.updatedAt) < 7 * 86400
+                }) {
                     Button(action: onOpenRecords) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "list.bullet.clipboard")
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("有一件事需要继续核对").font(.system(size: 13, weight: .semibold))
-                                Text(task.goal).font(.system(size: 12)).lineLimit(2)
-                            }
-                            Spacer(minLength: 0)
-                            Image(systemName: "chevron.right")
-                        }.foregroundStyle(WhaleTheme.ink).whaleCard()
+                        VStack(alignment: .leading, spacing: 6) {
+                            Label("有一件事需要核对", systemImage: "list.bullet.clipboard").font(.headline)
+                            Text(task.goal).font(.subheadline).lineLimit(2)
+                        }.foregroundStyle(WhaleTheme.ink).frame(maxWidth: .infinity, alignment: .leading).whaleCard(padding: 14)
                     }.buttonStyle(.plain)
                 }
-                weatherCard
-                categoryGrid
                 todayCard
-                if model.isBusy {
-                    busyCard
+                InlinePlaybackView(model: model, onOpen: onOpenMusic)
+                quickActionSection
+                weatherSummary
+                if showQuote { dailyQuote }
+                AssistantActivityView(model: model)
+                if !model.messages.isEmpty {
+                    Button(action: onOpenConversation) {
+                        Label("继续最近对话", systemImage: "bubble.left.and.bubble.right")
+                            .font(.body.weight(.medium)).whaleTouchTarget()
+                    }.foregroundStyle(WhaleTheme.accent)
+                }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 24)
+        }.scrollIndicators(.hidden).scrollDismissesKeyboard(.interactively)
+            .background(WhaleTheme.background)
+            .background(ScrollOffsetMemory(key: "assistant-home"))
+            .task { await loadWeatherIfNeeded(); await loadHomeTodos(); await model.refreshDashboard() }
+            .onChange(of: model.permissionsSnapshot) { _, _ in Task { await loadWeatherIfNeeded(); await loadHomeTodos() } }
+            .sheet(isPresented: $showWeatherDetail) {
+                NavigationStack {
+                    ScrollView { weatherCard.padding(20) }.background(WhaleTheme.background)
+                        .navigationTitle("天气详情").navigationBarTitleDisplayMode(.inline)
+                        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { showWeatherDetail = false } } }
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 28 + bottomInset)
-        }
-        .scrollIndicators(.hidden)
-        .onTapGesture { dismissKeyboard() }
-        .task { await loadWeatherIfNeeded() }
-        .onChange(of: model.permissionsSnapshot["location"]) { _, status in
-            guard status == "granted" else { return }
-            Task { await loadWeather(force: true) }
-        }
+            .sheet(isPresented: $showQuickActionEditor) {
+                QuickActionEditor(actions: $quickActions)
+            }
     }
 
-    // MARK: - Daily quote
-
+    private var quickActionSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("常用操作").font(.headline).foregroundStyle(WhaleTheme.ink)
+                Spacer()
+                Button("编辑") { showQuickActionEditor = true }.font(.subheadline).whaleTouchTarget()
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) { ForEach(quickActions) { quickActionButton($0) } }
+                VStack(alignment: .leading, spacing: 8) { ForEach(quickActions) { quickActionButton($0) } }
+            }
+        }
+    }
+    private func quickActionButton(_ action: QuickAction) -> some View {
+        Button { perform(action) } label: {
+            Label(action.title, systemImage: action.icon).font(.subheadline.weight(.medium))
+                .padding(.horizontal, 12).frame(minHeight: 44)
+                .background(WhaleTheme.accentSoft, in: RoundedRectangle(cornerRadius: 12))
+        }.buttonStyle(.plain).foregroundStyle(WhaleTheme.accentDeep)
+    }
+    private func perform(_ action: QuickAction) {
+        switch action {
+        case .schedule:
+            Task { await model.requestPermission("calendarRead"); await model.refreshDashboard(force: true) }
+        case .reminder: onOpenTodo()
+        case .music: onOpenMusic()
+        case .headlines: onOpenDiscover(.headline)
+        case .nearby:
+            onOpenConversation()
+            NotificationCenter.default.post(name: .whalePrefillDraft, object: nil, userInfo: ["text": "帮我找附近的"])
+        }
+    }
+    private var weatherSummary: some View {
+        Button {
+            weatherExpanded = true; showWeatherDetail = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: weatherDays.first?.icon ?? "cloud.sun").foregroundStyle(WhaleTheme.accent)
+                if weatherLoading && weatherDays.isEmpty { Text("正在更新天气…") }
+                else if let day = weatherDays.first {
+                    Text("\(weatherLocation) · \(weather?.current?.summary ?? day.summary) · \(currentTemperatureText)")
+                } else { Text(locationStatus == "granted" ? "天气暂未更新" : "查看所在地天气") }
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right").font(.caption)
+            }.font(.subheadline).foregroundStyle(WhaleTheme.muted)
+                .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+                .padding(.horizontal, 14).background(WhaleTheme.soft, in: RoundedRectangle(cornerRadius: 14))
+        }.buttonStyle(.plain).accessibilityLabel("打开天气详情")
+    }
     private var dailyQuote: some View {
         TimelineView(.periodic(from: Date(), by: 60)) { context in
-            let quote = DailyQuote.text(at: context.date)
-            HStack(alignment: .top, spacing: 11) {
-                Button(action: onOpenConversation) {
-                    WhaleMarkView(size: 33)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("进入对话")
-
-                VStack(alignment: .leading, spacing: 7) {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text("BOSS")
-                            .font(.system(size: 9, weight: .heavy, design: .rounded))
-                            .tracking(0.6)
-                            .foregroundStyle(WhaleTheme.onAccent)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(WhaleTheme.accent, in: Capsule())
-                        Text("今日一句")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .tracking(0.5)
-                            .foregroundStyle(WhaleTheme.accentDeep)
-                        Spacer(minLength: 0)
-                        Text("每天 4 次 · 30 天不重样")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(WhaleTheme.muted.opacity(0.85))
-                    }
-                    Text(quote)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(WhaleTheme.ink)
-                        .lineSpacing(3.5)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 13)
-            .background {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [WhaleTheme.accent.opacity(0.17), WhaleTheme.card.opacity(0.94)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(WhaleTheme.accent.opacity(0.24), lineWidth: 0.9)
-            }
-            .shadow(color: .black.opacity(0.07), radius: 12, y: 5)
+            Button {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { quoteExpanded.toggle() }
+            } label: {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "quote.opening").foregroundStyle(WhaleTheme.accent)
+                    Text(DailyQuote.text(at: context.date)).font(.subheadline).foregroundStyle(WhaleTheme.muted)
+                        .lineLimit(quoteExpanded ? nil : 1)
+                    Spacer(minLength: 0)
+                }.frame(minHeight: 44, alignment: .center)
+            }.buttonStyle(.plain)
+                .accessibilityHint("点击展开今日一句")
+                .contextMenu { Button("隐藏今日一句") { showQuote = false } }
         }
     }
-
-    // MARK: - Music
-
-    private var musicQuickSubtitle: String {
-        guard let track = model.playback.track else {
-            return "曲库 · \(model.musicPlayMode.title)"
-        }
-        return (model.playback.isPlaying ? "正在播放 · " : "") + track.title
-    }
-
-    private var musicBadge: String {
-        guard model.playback.track != nil else { return "曲库" }
-        return model.playback.isPlaying ? "正在播放" : "已暂停"
-    }
-
-    // MARK: - Prompts
-
-    private var categoryGrid: some View {
-        LazyVGrid(
-            columns: [
-                GridItem(.flexible(), spacing: 10),
-                GridItem(.flexible(), spacing: 10)
-            ],
-            spacing: 10
-        ) {
-            discoverCard(
-                title: "AI科技",
-                subtitle: "模型 · 产品 · 前沿",
-                badge: "真实来源",
-                icon: "sparkles",
-                gradient: WhaleTheme.heroGradient
-            ) {
-                onOpenDiscover(.ai)
-            }
-
-            discoverCard(
-                title: "A股自选",
-                subtitle: "指数 · 个股 · 日 K",
-                badge: "公开行情",
-                icon: "chart.line.uptrend.xyaxis",
-                gradient: LinearGradient(
-                    colors: [WhaleTheme.moon, WhaleTheme.accentDeep],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            ) {
-                onOpenDiscover(.market)
-            }
-
-            discoverCard(
-                title: "游戏行情",
-                subtitle: "资讯 · 免费榜 · 畅销榜",
-                badge: "App Store",
-                icon: "gamecontroller.fill",
-                gradient: WhaleTheme.gameGradient
-            ) {
-                onOpenDiscover(.game)
-            }
-
-            discoverCard(
-                title: "我的音乐",
-                subtitle: musicQuickSubtitle,
-                badge: musicBadge,
-                icon: "music.note",
-                gradient: WhaleTheme.musicGradient,
-                action: onOpenMusic
-            )
-
-            discoverCard(
-                title: "时事新闻",
-                subtitle: "要闻 · 权威 RSS",
-                badge: "真实来源",
-                icon: "newspaper.fill",
-                gradient: WhaleTheme.headlineGradient
-            ) {
-                onOpenDiscover(.headline)
-            }
-
-            discoverCard(
-                title: "微博热搜",
-                subtitle: "实时榜 · 公开数据",
-                badge: "实时",
-                icon: "flame.fill",
-                gradient: WhaleTheme.weiboGradient
-            ) {
-                onOpenDiscover(.weibo)
-            }
-        }
-    }
-
-    private func discoverCard(
-        title: String,
-        subtitle: String,
-        badge: String,
-        icon: String,
-        gradient: LinearGradient,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .top) {
-                    Image(systemName: icon)
-                        .font(.system(size: 19, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 38, height: 38)
-                        .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    Spacer(minLength: 4)
-                    Text(badge)
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.88))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 4)
-                        .background(.white.opacity(0.14), in: Capsule())
-                }
-                Spacer(minLength: 2)
-                Text(title)
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                Text(subtitle)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .padding(13)
-            .frame(maxWidth: .infinity, minHeight: 114, alignment: .leading)
-            .background(gradient, in: RoundedRectangle(cornerRadius: 19, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 19, style: .continuous)
-                    .strokeBorder(.white.opacity(0.14), lineWidth: 0.8)
-            }
-            .shadow(color: .black.opacity(0.08), radius: 12, y: 5)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(title)，\(subtitle)")
+    private func loadHomeTodos() async {
+        guard model.permissionsSnapshot["reminder"] == "granted" else { homeTodos = []; return }
+        homeTodos = (try? await model.loadTodoReminders(includeCompleted: false)) ?? homeTodos
     }
 
     // MARK: - Weather
@@ -262,15 +159,15 @@ struct WhaleHomeCanvas: View {
             if locationStatus != "granted" {
                 HStack(alignment: .center, spacing: 12) {
                     Image(systemName: "location.circle.fill")
-                        .font(.system(size: 28, weight: .medium))
+                        .whaleFont(size: 28, weight: .medium)
                         .symbolRenderingMode(.palette)
                         .foregroundStyle(WhaleTheme.coral, WhaleTheme.coral.opacity(0.12))
                     VStack(alignment: .leading, spacing: 4) {
                         Text(locationStatus == "denied" ? "定位权限未开启" : "查看所在地的真实天气")
-                            .font(.system(size: 17, weight: .semibold))
+                            .whaleFont(size: 17, weight: .semibold)
                             .foregroundStyle(WhaleTheme.ink)
                         Text("授权后显示温度、降水和穿衣建议。")
-                            .font(.system(size: 13))
+                            .whaleFont(size: 13)
                             .foregroundStyle(WhaleTheme.muted)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -289,22 +186,22 @@ struct WhaleHomeCanvas: View {
                         }
                     }
                 }
-                .font(.system(size: 14, weight: .semibold))
+                .whaleFont(size: 14, weight: .semibold)
                 .foregroundStyle(WhaleTheme.accent)
                 .buttonStyle(.plain)
             } else if let weatherError {
                 VStack(alignment: .leading, spacing: 7) {
                     Text("暂时没有取得天气数据")
-                        .font(.system(size: 16, weight: .semibold))
+                        .whaleFont(size: 16, weight: .semibold)
                         .foregroundStyle(WhaleTheme.ink)
                     Text(weatherError)
-                        .font(.system(size: 13))
+                        .whaleFont(size: 13)
                         .foregroundStyle(WhaleTheme.muted)
                         .fixedSize(horizontal: false, vertical: true)
                     Button("重新查询") {
                         Task { await loadWeather(force: true) }
                     }
-                    .font(.system(size: 14, weight: .semibold))
+                    .whaleFont(size: 14, weight: .semibold)
                     .foregroundStyle(WhaleTheme.accent)
                     .buttonStyle(.plain)
                 }
@@ -316,24 +213,24 @@ struct WhaleHomeCanvas: View {
                         Image(systemName: today.icon)
                             .symbolRenderingMode(.palette)
                             .foregroundStyle(WhaleTheme.coral, WhaleTheme.moon)
-                            .font(.system(size: 31, weight: .medium))
+                            .whaleFont(size: 31, weight: .medium)
                             .frame(width: 52, height: 52)
                             .background(WhaleTheme.coral.opacity(0.09), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
 
                         VStack(alignment: .leading, spacing: 5) {
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Text(weather?.current?.summary ?? today.summary)
-                                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                                    .whaleFont(size: 20, weight: .bold, design: .rounded)
                                     .foregroundStyle(WhaleTheme.ink)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.75)
                                 Spacer(minLength: 0)
                                 Text(currentTemperatureText)
-                                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                                    .whaleFont(size: 34, weight: .bold, design: .rounded)
                                     .foregroundStyle(WhaleTheme.ink)
                             }
                             Text(weatherMetaLine(today))
-                            .font(.system(size: 13, weight: .medium))
+                            .whaleFont(size: 13, weight: .medium)
                             .foregroundStyle(WhaleTheme.muted)
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
@@ -347,7 +244,7 @@ struct WhaleHomeCanvas: View {
                                 .tint(WhaleTheme.accent)
                         } else {
                             Image(systemName: weatherExpanded ? "chevron.up" : "chevron.down")
-                                .font(.system(size: 13, weight: .bold))
+                                .whaleFont(size: 13, weight: .bold)
                                 .foregroundStyle(WhaleTheme.muted)
                         }
                     }
@@ -374,7 +271,7 @@ struct WhaleHomeCanvas: View {
                         Label("日落 \(sun.sunsetText)", systemImage: "sunset.fill")
                         Spacer(minLength: 0)
                     }
-                    .font(.system(size: 13, weight: .medium))
+                    .whaleFont(size: 13, weight: .medium)
                     .foregroundStyle(WhaleTheme.muted)
                 }
 
@@ -387,7 +284,7 @@ struct WhaleHomeCanvas: View {
 
                 HStack(spacing: 5) {
                     Text("Open-Meteo · 真实预报")
-                        .font(.system(size: 10, weight: .medium))
+                        .whaleFont(size: 13, weight: .medium)
                         .foregroundStyle(WhaleTheme.muted.opacity(0.75))
                     Spacer()
                     Button {
@@ -398,7 +295,7 @@ struct WhaleHomeCanvas: View {
                             Text("刷新")
                         }
                     }
-                    .font(.system(size: 12, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .foregroundStyle(WhaleTheme.accent)
                     .buttonStyle(.plain)
                     .accessibilityLabel("刷新天气")
@@ -410,7 +307,7 @@ struct WhaleHomeCanvas: View {
                         .controlSize(.small)
                         .tint(WhaleTheme.accent)
                     Text("正在读取所在地天气…")
-                        .font(.system(size: 14))
+                        .whaleFont(size: 14)
                         .foregroundStyle(WhaleTheme.muted)
                     Spacer(minLength: 0)
                 }
@@ -465,13 +362,13 @@ struct WhaleHomeCanvas: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
-                    .font(.system(size: 10, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                 Text(label)
-                    .font(.system(size: 11, weight: .medium))
+                    .whaleFont(size: 13, weight: .medium)
             }
             .foregroundStyle(WhaleTheme.muted)
             Text(value)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .whaleFont(size: 15, weight: .semibold, design: .rounded)
                 .foregroundStyle(WhaleTheme.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -482,24 +379,24 @@ struct WhaleHomeCanvas: View {
     private func hourlyStrip(_ hours: [WeatherSnapshot.Hour]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("逐小时预报")
-                .font(.system(size: 14, weight: .semibold))
+                .whaleFont(size: 14, weight: .semibold)
                 .foregroundStyle(WhaleTheme.muted)
             ScrollView(.horizontal) {
                 HStack(spacing: 16) {
                     ForEach(hours) { hour in
                         VStack(spacing: 5) {
                             Text(hour.hourLabel)
-                                .font(.system(size: 12, weight: .medium))
+                                .whaleFont(size: 13, weight: .medium)
                                 .foregroundStyle(WhaleTheme.muted)
                             Image(systemName: hour.icon)
-                                .font(.system(size: 17, weight: .medium))
+                                .whaleFont(size: 17, weight: .medium)
                                 .symbolRenderingMode(.palette)
                                 .foregroundStyle(hour.isDay ? WhaleTheme.coral : WhaleTheme.moon, WhaleTheme.moon.opacity(0.5))
                             Text(hour.temperatureC.map { "\(Int($0.rounded()))°" } ?? "—")
-                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .whaleFont(size: 15, weight: .bold, design: .rounded)
                                 .foregroundStyle(WhaleTheme.ink)
                             Text(hour.precipitationChance.map { "\(Int($0.rounded()))%" } ?? " ")
-                                .font(.system(size: 11, weight: .medium))
+                                .whaleFont(size: 13, weight: .medium)
                                 .foregroundStyle(WhaleTheme.moon)
                         }
                         .frame(width: 42)
@@ -526,13 +423,13 @@ struct WhaleHomeCanvas: View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 5) {
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                 Text(label)
-                    .font(.system(size: 12, weight: .medium))
+                    .whaleFont(size: 13, weight: .medium)
             }
             .foregroundStyle(WhaleTheme.muted)
             Text(value)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .whaleFont(size: 16, weight: .semibold, design: .rounded)
                 .foregroundStyle(WhaleTheme.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -581,98 +478,39 @@ struct WhaleHomeCanvas: View {
 
     private var todayCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 10) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("TODAY · \(todayLabel)")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .tracking(0.8)
-                        .foregroundStyle(WhaleTheme.muted)
-                    Text(calendarGranted ? todayTitle : "今天还没有读取日历")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundStyle(WhaleTheme.ink)
-                }
-                Spacer(minLength: 8)
-                if calendarGranted {
-                    Text(todayStatusText)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.coral)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 5)
-                        .background(WhaleTheme.coral.opacity(0.11), in: Capsule())
-                }
-            }
-
-            if calendarGranted {
-                if todayEvents.isEmpty {
-                    HStack(spacing: 12) {
-                        Image(systemName: "sun.max.fill")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(WhaleTheme.coral)
-                            .frame(width: 38, height: 38)
-                            .background(WhaleTheme.coral.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("今天没有日程")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(WhaleTheme.ink)
-                            Text(nextEventText)
-                                .font(.system(size: 11))
-                                .foregroundStyle(WhaleTheme.muted)
-                                .lineLimit(2)
-                        }
-                    }
-                } else {
-                    ForEach(todayEvents.prefix(4)) { event in
-                        eventRow(event)
-                    }
-                    if todayEvents.count > 4 {
-                        Text("还有 \(todayEvents.count - 4) 项，去记录里查看")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(WhaleTheme.muted)
-                    }
-                }
-            } else {
-                HStack(alignment: .center, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("授权后显示真实日程，不会生成示例事件。")
-                            .font(.system(size: 12))
-                            .foregroundStyle(WhaleTheme.muted)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Button("读取我的日历") {
-                            Task { await model.requestPermission("calendarRead") }
-                        }
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.accent)
-                        .buttonStyle(.plain)
-                    }
-                    Spacer(minLength: 4)
-                    Image(systemName: "calendar.badge.clock")
-                        .font(.system(size: 24, weight: .medium))
-                        .foregroundStyle(WhaleTheme.muted.opacity(0.6))
-                }
-            }
-
             HStack {
+                Text("今天 · \(todayLabel)").font(.headline).foregroundStyle(WhaleTheme.ink)
                 Spacer()
-                Button { onOpenRecords() } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock.arrow.circlepath")
-                        Text("记录回顾")
-                        Image(systemName: "chevron.right")
-                    }
-                }
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(WhaleTheme.accent)
-                .buttonStyle(.plain)
+                Button("查看待办", action: onOpenTodo).font(.subheadline).whaleTouchTarget()
             }
-        }
-        .whaleCard(padding: 17)
+            if model.isDashboardLoading { ProgressView("正在读取安排…").font(.subheadline) }
+            if calendarGranted {
+                if todayEvents.isEmpty { Text("今天暂无日程").font(.body).foregroundStyle(WhaleTheme.muted) }
+                ForEach(todayEvents.filter { $0.endAt > Date() }.prefix(2)) { event in eventRow(event) }
+            } else {
+                Button("连接日历，查看今天安排") { Task { await model.requestPermission("calendarRead") } }
+                    .font(.body).foregroundStyle(WhaleTheme.accent).frame(minHeight: 44)
+            }
+            ForEach(homeTodos.filter { !$0.completed }.prefix(2)) { item in
+                Button(action: onOpenTodo) {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "circle").foregroundStyle(WhaleTheme.muted)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(item.title).font(.body).foregroundStyle(WhaleTheme.ink).lineLimit(2)
+                            if let due = item.dueAt { Text(due.formatted(date: .abbreviated, time: .shortened)).font(.subheadline).foregroundStyle(WhaleTheme.muted) }
+                        }
+                    }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                }.buttonStyle(.plain)
+            }
+            if let error = model.dashboardError { Text(error).font(.subheadline).foregroundStyle(WhaleTheme.warm) }
+        }.whaleCard()
     }
 
     private func eventRow(_ event: CalendarEventPreview) -> some View {
         HStack(alignment: .top, spacing: 11) {
             VStack(spacing: 4) {
                 Text(event.startAt.formatted(date: .omitted, time: .shortened))
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .whaleFont(size: 13, weight: .semibold, design: .rounded)
                     .foregroundStyle(WhaleTheme.muted)
                 Circle()
                     .fill(WhaleTheme.accent)
@@ -682,11 +520,11 @@ struct WhaleHomeCanvas: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(event.title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .whaleFont(size: 14, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(2)
                 Text(event.calendarTitle)
-                    .font(.system(size: 10))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
             }
             Spacer(minLength: 4)
@@ -734,10 +572,10 @@ struct WhaleHomeCanvas: View {
                 .tint(WhaleTheme.accent)
             VStack(alignment: .leading, spacing: 2) {
                 Text("鲸鱼正在处理")
-                    .font(.system(size: 13, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                 Text(model.statusLine)
-                    .font(.system(size: 11))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(2)
             }

@@ -8,6 +8,7 @@ struct TodoReminder: Identifiable, Equatable {
     let listName: String
     let dueAt: Date?
     let notes: String?
+    let deduplicated: Bool
 
     init?(json: JSONValue) {
         guard let object = json.objectValue,
@@ -20,6 +21,7 @@ struct TodoReminder: Identifiable, Equatable {
         self.listName = object.optionalString("listName") ?? "提醒事项"
         self.dueAt = object.optionalString("dueAt").flatMap(ToolDate.parse)
         self.notes = object.optionalString("notes")
+        self.deduplicated = object.optionalBool("deduplicated") ?? false
     }
 }
 
@@ -96,6 +98,11 @@ struct TodoView: View {
     @State private var busyIds: Set<String> = []
     @State private var errorText: String?
     @State private var toast: String?
+    @State private var undoAction: TodoUndo?
+    @State private var undoExpiresAt = Date.distantPast
+    @State private var showTimeEditor = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private let drafts = ComposerDraftStore()
     @State private var pendingDeletion: TodoReminder?
     @FocusState private var composerFocused: Bool
 
@@ -161,22 +168,29 @@ struct TodoView: View {
                 }
 
                 if let toast {
-                    Text(toast)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.onAccent)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 9)
-                        .background(WhaleTheme.auroraGradient, in: Capsule())
-                        .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
-                        .padding(.top, 6)
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                    HStack(spacing: 12) {
+                        Text(toast).font(.subheadline).foregroundStyle(WhaleTheme.ink)
+                        if undoAction != nil {
+                            Button("撤销") { undoLastChange() }.font(.subheadline.weight(.semibold)).whaleTouchTarget()
+                        }
+                    }.padding(.horizontal, 14).padding(.vertical, 4)
+                        .background(WhaleTheme.card, in: Capsule()).overlay(Capsule().stroke(WhaleTheme.line))
+                        .padding(.top, 8)
                 }
             }
             .safeAreaInset(edge: .bottom) {
                 composer.padding(.bottom, embedded ? bottomBarInset : 0)
             }
             .navigationBarHidden(true)
-            .task { await reload() }
+            .task { draft = drafts.load(context: "todo"); await reload() }
+            .onChange(of: draft) { _, text in drafts.save(text, context: "todo") }
+            .sheet(isPresented: $showTimeEditor) {
+                TodoTimeEditor(original: draft) { title, due in
+                    let item = try await model.createTodoReminder(title: title, dueAt: due)
+                    draft = ""; upsert(item); undoAction = item.deduplicated ? nil : .added(item)
+                    showToast(item.deduplicated ? "已有相同提醒" : "已添加 · " + title, undo: !item.deduplicated)
+                }
+            }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     Task { await reload() }
@@ -188,7 +202,6 @@ struct TodoView: View {
             .onChange(of: voice.finalResult) { _, result in
                 guard let result, voice.errorText == nil, !result.text.isEmpty else { return }
                 draft = result.text
-                submitText(result.text)
             }
             .onDisappear { voice.cancel() }
             .alert("删除这条待办？", isPresented: Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } })) {
@@ -206,11 +219,11 @@ struct TodoView: View {
         HStack(spacing: 12) {
             WhaleIconTile(systemName: "checklist", size: 46, tint: WhaleTheme.accent)
             VStack(alignment: .leading, spacing: 3) {
-                Text("事情待办")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                Text("待办")
+                    .whaleFont(size: 24, weight: .bold, design: .rounded)
                     .foregroundStyle(WhaleTheme.ink)
-                Text("系统提醒事项 · 实时同步")
-                    .font(.system(size: 12))
+                Text("新增、完成，随手就能记好")
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
             }
             Spacer(minLength: 8)
@@ -220,7 +233,7 @@ struct TodoView: View {
                 Image(systemName: embedded ? "bubble.left.and.bubble.right" : "xmark")
                     .font(.system(size: embedded ? 15 : 14, weight: .semibold))
                     .foregroundStyle(WhaleTheme.ink)
-                    .whaleGlassCircle(size: 36)
+                    .whaleGlassCircle(size: 44)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(embedded ? "回到对话" : "关闭待办")
@@ -230,13 +243,13 @@ struct TodoView: View {
     private var permissionCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("需要提醒事项权限", systemImage: "checklist")
-                .font(.system(size: 15, weight: .semibold))
+                .whaleFont(size: 15, weight: .semibold)
                 .foregroundStyle(WhaleTheme.ink)
 
             Text(reminderStatus == "denied"
                  ? "权限已被拒绝。请到 设置 › 隐私与安全性 › 提醒事项 中允许鲸鱼访问；返回后会自动刷新。"
                  : "允许后，这里会直接显示手机里真实的提醒事项，新增和勾选也会写回系统。")
-                .font(.system(size: 13))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -252,7 +265,7 @@ struct TodoView: View {
                 }
             } label: {
                 Text(reminderStatus == "denied" ? "打开系统设置" : "允许访问提醒事项")
-                    .font(.system(size: 14, weight: .semibold))
+                    .whaleFont(size: 14, weight: .semibold)
                     .foregroundStyle(WhaleTheme.onAccent)
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: 44)
@@ -291,7 +304,7 @@ struct TodoView: View {
                 statMetric(.completed, count: completedItems.count, label: "已完成", tint: WhaleTheme.success)
             }
             Text("进行中 = 今天到期或已逾期；待办 = 全部未完成")
-                .font(.system(size: 9))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted.opacity(0.8))
                 .frame(maxWidth: .infinity, alignment: .center)
         }
@@ -310,11 +323,11 @@ struct TodoView: View {
         } label: {
             VStack(spacing: 2) {
                 Text("\(count)")
-                    .font(.system(size: 23, weight: .bold, design: .rounded))
+                    .whaleFont(size: 23, weight: .bold, design: .rounded)
                     .foregroundStyle(tint)
                     .monospacedDigit()
                 Text(label)
-                    .font(.system(size: 10, weight: .medium))
+                    .whaleFont(size: 13, weight: .medium)
                     .foregroundStyle(WhaleTheme.muted)
             }
             .frame(maxWidth: .infinity)
@@ -342,12 +355,12 @@ struct TodoView: View {
             HStack(spacing: 6) {
                 Text(value.title)
                 Text("\(count)")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .whaleFont(size: 13, weight: .bold, design: .rounded)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background((filter == value ? WhaleTheme.onAccent : WhaleTheme.muted).opacity(0.12), in: Capsule())
             }
-            .font(.system(size: 13, weight: .semibold))
+            .whaleFont(size: 13, weight: .semibold)
             .foregroundStyle(filter == value ? WhaleTheme.onAccent : WhaleTheme.ink)
             .padding(.horizontal, 13)
             .padding(.vertical, 8)
@@ -369,7 +382,7 @@ struct TodoView: View {
             HStack(spacing: 9) {
                 ProgressView().scaleEffect(0.8)
                 Text("正在读取提醒事项…")
-                    .font(.system(size: 13))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
             }
             .frame(maxWidth: .infinity)
@@ -388,13 +401,13 @@ struct TodoView: View {
     private var emptyState: some View {
         VStack(spacing: 10) {
             Image(systemName: emptyIcon)
-                .font(.system(size: 28, weight: .light))
+                .whaleFont(size: 28, weight: .light)
                 .foregroundStyle(WhaleTheme.muted.opacity(0.7))
             Text(emptyTitle)
-                .font(.system(size: 15, weight: .semibold))
+                .whaleFont(size: 15, weight: .semibold)
                 .foregroundStyle(WhaleTheme.ink)
             Text(emptyHint)
-                .font(.system(size: 12))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted)
         }
         .frame(maxWidth: .infinity)
@@ -437,11 +450,11 @@ struct TodoView: View {
                         ProgressView().scaleEffect(0.55)
                     } else if item.completed {
                         Image(systemName: "checkmark")
-                            .font(.system(size: 12, weight: .bold))
+                            .whaleFont(size: 13, weight: .bold)
                             .foregroundStyle(WhaleTheme.success)
                     }
                 }
-                .frame(width: 40, height: 40)
+                .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -450,7 +463,7 @@ struct TodoView: View {
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(item.title)
-                    .font(.system(size: 14, weight: .medium))
+                    .whaleFont(size: 14, weight: .medium)
                     .foregroundStyle(item.completed ? WhaleTheme.muted : WhaleTheme.ink)
                     .strikethrough(item.completed, color: WhaleTheme.muted)
                     .lineLimit(3)
@@ -459,22 +472,22 @@ struct TodoView: View {
                 HStack(spacing: 7) {
                     if let due = item.dueAt {
                         Label(dueText(due), systemImage: "clock")
-                            .font(.system(size: 11, weight: .medium))
+                            .whaleFont(size: 13, weight: .medium)
                             .foregroundStyle(dueColor(item, due))
                     } else {
                         Text("无日期")
-                            .font(.system(size: 11))
+                            .whaleFont(size: 13)
                             .foregroundStyle(WhaleTheme.muted.opacity(0.75))
                     }
                     Text(item.listName)
-                        .font(.system(size: 10, weight: .medium))
+                        .whaleFont(size: 13, weight: .medium)
                         .foregroundStyle(WhaleTheme.muted)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(WhaleTheme.soft, in: Capsule())
                     if let notes = item.notes, !notes.isEmpty {
                         Image(systemName: "note.text")
-                            .font(.system(size: 10))
+                            .whaleFont(size: 13)
                             .foregroundStyle(WhaleTheme.muted.opacity(0.7))
                             .accessibilityLabel("有备注")
                     }
@@ -492,9 +505,9 @@ struct TodoView: View {
                 Button("删除待办", systemImage: "trash", role: .destructive) { delete(item) }
             } label: {
                 Image(systemName: "ellipsis")
-                    .font(.system(size: 14, weight: .semibold))
+                    .whaleFont(size: 14, weight: .semibold)
                     .foregroundStyle(WhaleTheme.muted)
-                    .frame(width: 34, height: 40)
+                    .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
         }
@@ -515,27 +528,27 @@ struct TodoView: View {
 
     private var hint: some View {
         Text("直接写内容新增，或点麦克风说一句；输入「完成 买菜」勾掉，「删除 买菜」移除。")
-            .font(.system(size: 11))
+            .whaleFont(size: 13)
             .foregroundStyle(WhaleTheme.muted.opacity(0.85))
             .fixedSize(horizontal: false, vertical: true)
             .padding(.top, 2)
     }
 
     private func errorBanner(_ message: String) -> some View {
-        Label(message, systemImage: "exclamationmark.triangle.fill")
-            .font(.system(size: 12))
-            .foregroundStyle(WhaleTheme.danger)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(WhaleTheme.danger.opacity(0.08), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-            .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: 8) {
+            Label(message, systemImage: "exclamationmark.triangle").font(.subheadline).foregroundStyle(WhaleTheme.warm)
+            if message.contains("提醒时间") {
+                Button("补充具体时间") { showTimeEditor = true }.font(.body).whaleTouchTarget()
+            }
+        }.frame(maxWidth: .infinity, alignment: .leading).padding(14)
+            .background(WhaleTheme.soft, in: RoundedRectangle(cornerRadius: 14))
     }
 
     private var composer: some View {
         VStack(spacing: 7) {
             if let voiceError = voice.errorText {
                 Label(voiceError, systemImage: "mic.slash.fill")
-                    .font(.system(size: 11))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.danger)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -549,9 +562,9 @@ struct TodoView: View {
                     Task { await voice.toggle() }
                 } label: {
                     Image(systemName: voice.isRecording ? "waveform" : "mic.fill")
-                        .font(.system(size: 17, weight: .semibold))
+                        .whaleFont(size: 17, weight: .semibold)
                         .foregroundStyle(voice.isRecording ? WhaleTheme.onAccent : WhaleTheme.accent)
-                        .frame(width: 38, height: 38)
+                        .frame(width: 44, height: 44)
                         .background(
                             voice.isRecording ? WhaleTheme.danger : WhaleTheme.accentSoft,
                             in: Circle()
@@ -561,11 +574,11 @@ struct TodoView: View {
                 .disabled(isSubmitting || voice.isFinalizing)
                 .accessibilityLabel(voice.isRecording ? "停止语音输入" : "语音新增待办")
 
-                TextField("写一件事，或点麦克风说", text: $draft)
-                    .font(.system(size: 14))
+                TextField("记一件事，或点击麦克风", text: $draft, axis: .vertical)
+                    .lineLimit(1...4)
+                    .whaleFont(size: 14)
                     .focused($composerFocused)
-                    .submitLabel(.done)
-                    .onSubmit { submitDraft() }
+                    .submitLabel(.return)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
 
@@ -573,14 +586,14 @@ struct TodoView: View {
                     ZStack {
                         Circle()
                             .fill(WhaleTheme.auroraGradient)
-                            .frame(width: 34, height: 34)
+                            .frame(width: 44, height: 44)
                         if isSubmitting {
                             ProgressView()
                                 .scaleEffect(0.6)
                                 .tint(WhaleTheme.onAccent)
                         } else {
                             Image(systemName: "arrow.up")
-                                .font(.system(size: 14, weight: .bold))
+                                .whaleFont(size: 14, weight: .bold)
                                 .foregroundStyle(WhaleTheme.onAccent)
                         }
                     }
@@ -599,8 +612,8 @@ struct TodoView: View {
                     .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
             )
 
-            Text("新增和完成都会直接写入系统「提醒事项」")
-                .font(.system(size: 10))
+            Text("点击提交后保存；语音识别后可先检查内容")
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted.opacity(0.75))
         }
         .padding(.horizontal, 16)
@@ -615,7 +628,7 @@ struct TodoView: View {
                 .fill(WhaleTheme.danger)
                 .frame(width: 8, height: 8)
             Text(voice.transcript.isEmpty ? "正在听你说…" : voice.transcript)
-                .font(.system(size: 12, weight: .medium))
+                .whaleFont(size: 13, weight: .medium)
                 .foregroundStyle(WhaleTheme.ink)
                 .lineLimit(2)
             Spacer(minLength: 6)
@@ -623,7 +636,7 @@ struct TodoView: View {
                 voice.stop()
             } label: {
                 Text("停止")
-                    .font(.system(size: 12, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .foregroundStyle(WhaleTheme.danger)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
@@ -648,6 +661,7 @@ struct TodoView: View {
         let raw = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !raw.isEmpty, !isSubmitting else { return }
         errorText = nil
+        undoAction = nil
         isSubmitting = true
 
         Task {
@@ -656,7 +670,7 @@ struct TodoView: View {
                     let message = try await run(command)
                     draft = ""
                     await reload(silent: true)
-                    showToast(message)
+                    showToast(message, undo: undoAction != nil)
                 } else {
                     let parsed = TodoQuickParser.parseAdd(raw)
                     if let message = parsed.validationError {
@@ -670,11 +684,12 @@ struct TodoView: View {
                     draft = ""
                     filter = .pending
                     upsert(item)
+                    undoAction = item.deduplicated ? nil : .added(item)
                     await reload(silent: true)
                     if let dueAt = parsed.dueAt {
-                        showToast("已加入 · \(dueText(dueAt))")
+                        showToast(item.deduplicated ? "已有相同提醒" : "已添加 · \(dueText(dueAt))", undo: !item.deduplicated)
                     } else {
-                        showToast("已加入 · \(item.title)")
+                        showToast(item.deduplicated ? "已有相同提醒" : "已添加 · \(item.title)", undo: !item.deduplicated)
                     }
                 }
             } catch {
@@ -690,11 +705,13 @@ struct TodoView: View {
             let target = try uniqueMatch(keyword, in: pendingItems, missing: "没有找到未完成的「\(keyword)」。")
             let updated = try await model.setTodoReminder(target, completed: true)
             upsert(updated)
+            undoAction = .completion(before: target, after: updated)
             return "已完成 · \(target.title)"
         case .restore(let keyword):
             let target = try uniqueMatch(keyword, in: completedItems, missing: "没有找到已完成的「\(keyword)」。")
             let updated = try await model.setTodoReminder(target, completed: false)
             upsert(updated)
+            undoAction = .completion(before: target, after: updated)
             return "已恢复 · \(target.title)"
         case .delete(let keyword):
             let target = try uniqueMatch(keyword, in: items, missing: "没有找到「\(keyword)」。")
@@ -726,8 +743,9 @@ struct TodoView: View {
             do {
                 let updated = try await model.setTodoReminder(item, completed: !item.completed)
                 upsert(updated)
+                undoAction = .completion(before: item, after: updated)
                 await reload(silent: true)
-                showToast(item.completed ? "已恢复 · \(item.title)" : "已完成 · \(item.title)")
+                showToast(item.completed ? "已恢复 · \(item.title)" : "已完成 · \(item.title)", undo: true)
             } catch {
                 errorText = error.localizedDescription
             }
@@ -794,14 +812,35 @@ struct TodoView: View {
         items.removeAll { $0.id == id }
     }
 
-    private func showToast(_ text: String) {
-        withAnimation(.easeOut(duration: 0.18)) { toast = text }
-        let current = text
+    private func showToast(_ text: String, undo: Bool = false) {
+        toast = text
+        if !undo { undoAction = nil }
+        undoExpiresAt = Date().addingTimeInterval(8)
+        let expires = undoExpiresAt
         Task {
-            try? await Task.sleep(nanoseconds: 2_200_000_000)
-            if toast == current {
-                withAnimation(.easeIn(duration: 0.18)) { toast = nil }
-            }
+            try? await Task.sleep(nanoseconds: undo ? 8_000_000_000 : 3_000_000_000)
+            if undoExpiresAt == expires { toast = nil; undoAction = nil }
+        }
+    }
+
+    private func undoLastChange() {
+        guard let action = undoAction, !isSubmitting else { return }
+        isSubmitting = true
+        Task {
+            defer { isSubmitting = false }
+            do {
+                let latest = try await model.loadTodoReminders(includeCompleted: true)
+                let current = latest.first { $0.id == action.expected.id }
+                guard action.canUndo(current: current, now: Date(), expiresAt: undoExpiresAt) else {
+                    throw ToolExecutionError(code: "undo_changed", message: "事项已变化或撤销时间已过，请到待办里核对。")
+                }
+                switch action {
+                case .added(let item): try await model.deleteTodoReminder(item); removeLocal(item.id)
+                case .completion(let before, let after): let restored = try await model.setTodoReminder(after, completed: before.completed); upsert(restored)
+                }
+                showToast("已撤销本次修改")
+                await reload(silent: true)
+            } catch { errorText = error.localizedDescription }
         }
     }
 

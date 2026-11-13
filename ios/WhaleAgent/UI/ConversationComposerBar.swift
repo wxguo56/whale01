@@ -19,6 +19,10 @@ struct ConversationComposerBar: View {
     @State private var showFileImporter = false
     @State private var importError: String?
     @State private var finishingVoice = false
+    @State private var draftContext: String?
+    @State private var voicePrefix = ""
+    @Environment(\.scenePhase) private var scenePhase
+    private let drafts = ComposerDraftStore()
 
     var body: some View {
         VStack(spacing: 7) {
@@ -32,9 +36,15 @@ struct ConversationComposerBar: View {
                 voiceStrip
             }
             composer
+            if model.isBusy && !draft.isEmpty {
+                Text("草稿已保留，这一轮结束后可发送")
+                    .font(.subheadline).foregroundStyle(WhaleTheme.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 6)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(WhaleTheme.chrome)
         .photosPicker(
             isPresented: $showPhotoPicker,
             selection: $photoItem,
@@ -53,7 +63,7 @@ struct ConversationComposerBar: View {
         }
         .onChange(of: voice.transcript) { _, text in
             guard !text.isEmpty else { return }
-            draft = text
+            draft = voicePrefix.isEmpty ? text : voicePrefix + "\n" + text
         }
         .onChange(of: voice.isRecording) { wasRecording, isRecording in
             guard wasRecording, !isRecording else { return }
@@ -62,10 +72,27 @@ struct ConversationComposerBar: View {
                 focused = true
             }
         }
-        .onChange(of: model.messages.isEmpty) { _, empty in
-            if empty { draft = "" }
+        .task {
+            if draftContext == nil { draftContext = model.composerContextID; draft = drafts.load(context: model.composerContextID) }
         }
-        .onDisappear { voice.cancel() }
+        .task(id: draft) {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled, let context = draftContext else { return }
+            drafts.save(draft, context: context)
+        }
+        .onChange(of: model.composerContextID) { _, context in
+            if let old = draftContext { drafts.save(draft, context: old) }
+            draftContext = context; draft = drafts.load(context: context)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active, let context = draftContext { drafts.save(draft, context: context); voice.cancel() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .whalePrefillDraft)) { notification in
+            guard let text = notification.userInfo?["text"] as? String else { return }
+            draft = draft.isEmpty ? text : draft + "\n" + text
+            focused = true
+        }
+        .onDisappear { if let context = draftContext { drafts.save(draft, context: context) }; voice.cancel() }
     }
 
     // MARK: - Composer
@@ -85,11 +112,11 @@ struct ConversationComposerBar: View {
                         ProgressView().controlSize(.small)
                     } else {
                         Image(systemName: "plus")
-                            .font(.system(size: 19, weight: .medium))
+                            .whaleFont(size: 19, weight: .medium)
                             .foregroundStyle(WhaleTheme.ink)
                     }
                 }
-                .frame(width: 38, height: 38)
+                .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -97,25 +124,26 @@ struct ConversationComposerBar: View {
             .opacity(model.isBusy || model.isExtractingDocument ? 0.4 : 1)
             .accessibilityLabel("导入照片或文件识别文字")
 
-            TextField(model.messages.isEmpty ? "发消息，或按住说话" : "继续上次对话", text: $draft)
-                .font(.system(size: 15))
+            TextField("说点什么，或输入文字", text: $draft, axis: .vertical)
+                .font(.body)
                 .foregroundStyle(WhaleTheme.ink)
-                .lineLimit(1)
-                .frame(height: 24)
+                .lineLimit(1...5)
+                .frame(minHeight: 44)
                 .padding(.horizontal, 4)
                 .focused($focused)
-                .disabled(model.isBusy || voice.isFinalizing || finishingVoice)
-                .submitLabel(.send)
-                .onSubmit { submit() }
+                .disabled(voice.isRecording || voice.isFinalizing || finishingVoice)
+                .submitLabel(.return)
+                .accessibilityLabel("消息草稿")
+                .accessibilityIdentifier("assistant-composer")
 
             if focused {
                 Button {
                     focused = false
                 } label: {
                     Image(systemName: "keyboard.chevron.compact.down")
-                        .font(.system(size: 19, weight: .semibold))
+                        .whaleFont(size: 19, weight: .semibold)
                         .foregroundStyle(WhaleTheme.muted)
-                        .frame(width: 38, height: 38)
+                        .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -123,54 +151,50 @@ struct ConversationComposerBar: View {
             } else {
                 Button {
                     focused = false
+                    if !voice.isRecording { voicePrefix = draft.trimmingCharacters(in: .whitespacesAndNewlines) }
                     Task { await voice.toggle() }
                 } label: {
                     Image(systemName: voice.isRecording ? "waveform" : "mic")
-                        .font(.system(size: 19, weight: .medium))
+                        .whaleFont(size: 19, weight: .medium)
                         .foregroundStyle(voice.isRecording ? WhaleTheme.danger : WhaleTheme.ink)
-                        .frame(width: 38, height: 38)
+                        .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .disabled(model.isBusy)
+                .disabled(model.isBusy || voice.isFinalizing || finishingVoice)
                 .opacity(model.isBusy ? 0.4 : 1)
                 .accessibilityLabel(voice.isRecording ? "停止语音输入" : "语音输入")
             }
 
             Button(action: submit) {
                 Image(systemName: "paperplane.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 38, height: 38)
-                    .background(
-                        WhaleTheme.composerSendGradient,
-                        in: RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    )
-                    .shadow(color: WhaleTheme.accent.opacity(0.24), radius: 10, y: 4)
+                    .whaleFont(size: 16, weight: .semibold)
+                    .foregroundStyle(WhaleTheme.buttonInk)
+                    .frame(width: 44, height: 44)
+                    .background(WhaleTheme.accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(model.isBusy || isDraftEmpty || finishingVoice)
             .opacity(model.isBusy || isDraftEmpty ? 0.5 : 1)
             .accessibilityLabel("发送")
+            .accessibilityIdentifier("assistant-send")
         }
-        .padding(.leading, 5)
-        .padding(.trailing, 5)
+        .padding(.horizontal, 4)
         .padding(.vertical, 6)
         .background {
-            RoundedRectangle(cornerRadius: 23, style: .continuous)
-                .fill(WhaleTheme.card.opacity(0.97))
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(WhaleTheme.field)
                 .overlay {
                     RoundedRectangle(cornerRadius: 23, style: .continuous)
-                        .strokeBorder(WhaleTheme.line.opacity(0.9), lineWidth: 0.8)
+                        .strokeBorder(WhaleTheme.line, lineWidth: 0.8)
                 }
-                .shadow(color: Color.black.opacity(0.13), radius: 18, y: 8)
         }
         .animation(.easeInOut(duration: 0.16), value: focused)
     }
 
     private func notice(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 11))
+            .whaleFont(size: 13)
             .foregroundStyle(WhaleTheme.warm)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
@@ -193,14 +217,14 @@ struct ConversationComposerBar: View {
                 .frame(width: 8, height: 8)
                 .padding(.top, 5)
             Text(voice.transcript.isEmpty ? "正在听你说…" : voice.transcript)
-                .font(.system(size: 13))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.ink)
                 .lineLimit(3)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button("停止") { voice.stop() }
-                .font(.system(size: 13, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
                 .tint(WhaleTheme.danger)
-                .frame(minHeight: 32)
+                .frame(minHeight: 44)
         }
         .padding(.horizontal, 13)
         .padding(.vertical, 9)
@@ -224,13 +248,17 @@ struct ConversationComposerBar: View {
                 }
                 focused = false
                 draft = ""
-                await model.send(text: final)
+                if let context = draftContext { drafts.save("", context: context) }
+                let composed = voicePrefix.isEmpty ? final : voicePrefix + "\n" + final
+                voicePrefix = ""
+                await model.send(text: composed)
             }
         } else {
             let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { return }
             focused = false
             draft = ""
+            if let context = draftContext { drafts.save("", context: context) }
             Task { await model.send(text: text) }
         }
     }

@@ -10,7 +10,7 @@ struct HorizontalTabSwipe: ViewModifier {
                 .onEnded { value in
                     let dx = value.translation.width
                     let dy = value.translation.height
-                    guard abs(dx) > 64, abs(dy) < 56, abs(dx) > abs(dy) * 1.4 else { return }
+                    guard value.startLocation.x > 28, abs(dx) > 64, abs(dy) < 56, abs(dx) > abs(dy) * 1.4 else { return }
                     if dx < 0 {
                         onNext()
                     } else {
@@ -32,27 +32,10 @@ struct DiscoverChannelHeader: View {
     var detail: String? = nil
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: channel.icon)
-                .font(.system(size: 21, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 46, height: 46)
-                .background(WhaleTheme.auroraGradient, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-            VStack(alignment: .leading, spacing: 3) {
-                Text(channel.title)
-                    .font(.system(size: 27, weight: .bold, design: .rounded))
-                    .foregroundStyle(WhaleTheme.ink)
-                Text(detail ?? channel.subtitle)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(WhaleTheme.muted)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 2)
+        Text(detail ?? channel.subtitle).font(.subheadline).foregroundStyle(WhaleTheme.muted)
+            .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
     }
+
 }
 
 struct DiscoverSectionTitle: View {
@@ -65,18 +48,18 @@ struct DiscoverSectionTitle: View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .whaleFont(size: 18, weight: .bold, design: .rounded)
                     .foregroundStyle(WhaleTheme.ink)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 11))
+                        .whaleFont(size: 13)
                         .foregroundStyle(WhaleTheme.muted)
                 }
             }
             Spacer()
             if let action, let onAction {
                 Button(action) { onAction() }
-                    .font(.system(size: 12, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .foregroundStyle(WhaleTheme.accent)
                     .buttonStyle(.plain)
             }
@@ -91,30 +74,30 @@ struct NewsFeatureCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Text("焦点")
-                    .font(.system(size: 9, weight: .black))
+                    .whaleFont(size: 13, weight: .black)
                     .tracking(0.8)
                     .foregroundStyle(WhaleTheme.onAccent)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(WhaleTheme.accent, in: Capsule())
                 Text(item.source)
-                    .font(.system(size: 10, weight: .medium))
+                    .whaleFont(size: 13, weight: .medium)
                     .foregroundStyle(WhaleTheme.muted)
                 Spacer()
                 Text(DiscoverFormat.relative(item.publishedAt))
-                    .font(.system(size: 10))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
             }
 
             Text(item.displayTitle)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .whaleFont(size: 20, weight: .bold, design: .rounded)
                 .foregroundStyle(WhaleTheme.ink)
                 .lineLimit(4)
                 .multilineTextAlignment(.leading)
 
             if !item.displaySummary.isEmpty {
                 Text(item.displaySummary)
-                    .font(.system(size: 12))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
@@ -123,9 +106,9 @@ struct NewsFeatureCard: View {
             HStack(spacing: 5) {
                 Text("阅读详情")
                 Image(systemName: "arrow.up.right")
-                    .font(.system(size: 9, weight: .bold))
+                    .whaleFont(size: 13, weight: .bold)
             }
-            .font(.system(size: 11, weight: .semibold))
+            .whaleFont(size: 13, weight: .semibold)
             .foregroundStyle(WhaleTheme.accent)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -156,13 +139,13 @@ struct NewsRowCard: View {
                 .frame(width: 48, height: 48)
                 .overlay {
                     Image(systemName: channelIcon)
-                        .font(.system(size: 18, weight: .semibold))
+                        .whaleFont(size: 18, weight: .semibold)
                         .foregroundStyle(WhaleTheme.onAccent.opacity(0.88))
                 }
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(item.displayTitle)
-                    .font(.system(size: 16, weight: .semibold))
+                    .whaleFont(size: 16, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
@@ -171,12 +154,12 @@ struct NewsRowCard: View {
                     Circle().fill(WhaleTheme.muted.opacity(0.5)).frame(width: 3, height: 3)
                     Text(DiscoverFormat.relative(item.publishedAt))
                 }
-                .font(.system(size: 11))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted)
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")
-                .font(.system(size: 10, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
                 .foregroundStyle(WhaleTheme.muted.opacity(0.5))
                 .padding(.top, 5)
         }
@@ -224,18 +207,18 @@ struct DiscoverErrorState: View {
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "wifi.exclamationmark")
-                .font(.system(size: 30, weight: .light))
+                .whaleFont(size: 30, weight: .light)
                 .foregroundStyle(WhaleTheme.muted)
             Text("暂时没有取到数据")
-                .font(.system(size: 15, weight: .semibold))
+                .whaleFont(size: 15, weight: .semibold)
                 .foregroundStyle(WhaleTheme.ink)
             Text(message)
-                .font(.system(size: 12))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             Button("重试", action: retry)
-                .font(.system(size: 13, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
                 .foregroundStyle(WhaleTheme.onAccent)
                 .padding(.horizontal, 22)
                 .padding(.vertical, 10)
@@ -258,15 +241,15 @@ struct MarketIndexCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(quote.name)
-                .font(.system(size: 11, weight: .medium))
+                .whaleFont(size: 13, weight: .medium)
                 .foregroundStyle(WhaleTheme.muted)
                 .lineLimit(1)
             Text(DiscoverFormat.price(quote.price))
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .whaleFont(size: 18, weight: .bold, design: .rounded)
                 .monospacedDigit()
                 .foregroundStyle(WhaleTheme.ink)
             Text(DiscoverFormat.percent(quote.changePercent))
-                .font(.system(size: 11, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
                 .monospacedDigit()
                 .foregroundStyle(tint)
         }
@@ -289,18 +272,18 @@ struct QuoteRowCard: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(quote.name)
-                    .font(.system(size: 15, weight: .semibold))
+                    .whaleFont(size: 15, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(1)
                 Text(quote.displayCode)
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .whaleFont(size: 13, weight: .medium, design: .monospaced)
                     .foregroundStyle(WhaleTheme.muted)
                 if let flow {
                     HStack(spacing: 4) {
                         Text("主力")
                         Text(DiscoverFormat.signedCompactAmount(flow.mainNet))
                     }
-                    .font(.system(size: 9, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .monospacedDigit()
                     .foregroundStyle(flow.isInflow ? WhaleTheme.danger : WhaleTheme.success)
                 }
@@ -308,16 +291,16 @@ struct QuoteRowCard: View {
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 3) {
                 Text(DiscoverFormat.price(quote.price))
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .whaleFont(size: 17, weight: .bold, design: .rounded)
                     .monospacedDigit()
                     .foregroundStyle(WhaleTheme.ink)
                 Text(DiscoverFormat.percent(quote.changePercent))
-                    .font(.system(size: 11, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .monospacedDigit()
                     .foregroundStyle(tint)
             }
             Image(systemName: "chevron.right")
-                .font(.system(size: 10, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
                 .foregroundStyle(WhaleTheme.muted.opacity(0.5))
         }
         .padding(.vertical, 12)
@@ -341,9 +324,9 @@ struct AIPaperCategoryBar: View {
                         } label: {
                             VStack(spacing: 1) {
                                 Text(category.title)
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .whaleFont(size: 13, weight: .semibold)
                                 Text(category.rawValue)
-                                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                    .whaleFont(size: 13, weight: .medium, design: .monospaced)
                             }
                             .foregroundStyle(selection == category ? WhaleTheme.onAccent : WhaleTheme.muted)
                             .padding(.horizontal, 11)
@@ -382,32 +365,32 @@ struct AIPaperCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 7) {
                 Text(paper.category)
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .whaleFont(size: 13, weight: .bold, design: .monospaced)
                     .foregroundStyle(WhaleTheme.accent)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
                     .background(WhaleTheme.accent.opacity(0.11), in: Capsule())
                 if !paper.authors.isEmpty {
                     Text(paper.authors)
-                        .font(.system(size: 9, weight: .medium))
+                        .whaleFont(size: 13, weight: .medium)
                         .foregroundStyle(WhaleTheme.muted)
                         .lineLimit(1)
                 }
                 Spacer(minLength: 4)
                 Text(DiscoverFormat.relative(paper.publishedAt))
-                    .font(.system(size: 9))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
             }
 
             Text(paper.displayTitle)
-                .font(.system(size: 15, weight: .semibold))
+                .whaleFont(size: 15, weight: .semibold)
                 .foregroundStyle(WhaleTheme.ink)
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)
 
             if !paper.displaySummary.isEmpty {
                 Text(paper.displaySummary)
-                    .font(.system(size: 11))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
@@ -418,9 +401,9 @@ struct AIPaperCard: View {
                     HStack(spacing: 4) {
                         Text("阅读 arXiv 原文")
                         Image(systemName: "arrow.up.right")
-                            .font(.system(size: 8, weight: .bold))
+                            .whaleFont(size: 13, weight: .bold)
                     }
-                    .font(.system(size: 11, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .foregroundStyle(WhaleTheme.accent)
                 }
             }
@@ -442,17 +425,17 @@ struct MarketSearchField: View {
     var body: some View {
         HStack(spacing: 9) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 13, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
                 .foregroundStyle(WhaleTheme.muted)
             TextField("搜索股票名称或代码", text: $text)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-                .font(.system(size: 14))
+                .whaleFont(size: 14)
                 .foregroundStyle(WhaleTheme.ink)
             if !text.isEmpty {
                 Button(action: onClear) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 15))
+                        .whaleFont(size: 15)
                         .foregroundStyle(WhaleTheme.muted.opacity(0.7))
                 }
                 .buttonStyle(.plain)
@@ -473,10 +456,10 @@ struct MarketDisclaimer: View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 5) {
                 Image(systemName: "clock.badge.exclamationmark")
-                    .font(.system(size: 10, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                 Text("公开行情 · 延迟以来源为准 · 不构成投资建议")
             }
-            .font(.system(size: 10, weight: .medium))
+            .whaleFont(size: 13, weight: .medium)
             .foregroundStyle(WhaleTheme.muted)
             HStack(spacing: 4) {
                 if !source.isEmpty { Text(source) }
@@ -484,7 +467,7 @@ struct MarketDisclaimer: View {
                     Text("· \(DiscoverFormat.clock(updatedAt)) 更新")
                 }
             }
-            .font(.system(size: 9))
+            .whaleFont(size: 13)
             .foregroundStyle(WhaleTheme.muted.opacity(0.8))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -521,14 +504,14 @@ struct StockSeedLoaderView: View {
                 if let errorText {
                     VStack(spacing: 12) {
                         Image(systemName: "chart.line.downtrend.xyaxis")
-                            .font(.system(size: 28, weight: .light))
+                            .whaleFont(size: 28, weight: .light)
                             .foregroundStyle(WhaleTheme.muted)
                         Text(errorText)
-                            .font(.system(size: 13))
+                            .whaleFont(size: 13)
                             .foregroundStyle(WhaleTheme.muted)
                             .multilineTextAlignment(.center)
                         Button("重试") { Task { await load() } }
-                            .font(.system(size: 13, weight: .semibold))
+                            .whaleFont(size: 13, weight: .semibold)
                             .foregroundStyle(WhaleTheme.accent)
                     }
                     .padding(28)
@@ -536,7 +519,7 @@ struct StockSeedLoaderView: View {
                     VStack(spacing: 12) {
                         ProgressView().tint(WhaleTheme.accent)
                         Text("正在读取 \(result.name) 的真实行情")
-                            .font(.system(size: 12))
+                            .whaleFont(size: 13)
                             .foregroundStyle(WhaleTheme.muted)
                     }
                 }
@@ -551,19 +534,19 @@ struct StockSeedLoaderView: View {
         HStack(spacing: 10) {
             Button { dismiss() } label: {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 15, weight: .semibold))
+                    .whaleFont(size: 15, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
-                    .whaleGlassCircle(size: 34)
+                    .whaleGlassCircle(size: 44)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("返回")
             VStack(alignment: .leading, spacing: 1) {
                 Text(result.name)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .whaleFont(size: 16, weight: .bold, design: .rounded)
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(1)
                 Text(result.displayCode)
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .whaleFont(size: 13, weight: .medium, design: .monospaced)
                     .foregroundStyle(WhaleTheme.muted)
             }
             Spacer()
@@ -606,7 +589,7 @@ struct GameSectionSegment: View {
                             }
                         } label: {
                             Text(section.title)
-                                .font(.system(size: 12, weight: .semibold))
+                                .whaleFont(size: 13, weight: .semibold)
                                 .foregroundStyle(selection == section ? WhaleTheme.ink : WhaleTheme.muted)
                                 .padding(.horizontal, 13)
                                 .frame(height: 30)
@@ -649,21 +632,21 @@ struct GameRankHeader: View {
                 .frame(width: 46, height: 46)
                 .overlay {
                     Image(systemName: "trophy.fill")
-                        .font(.system(size: 19, weight: .semibold))
+                        .whaleFont(size: 19, weight: .semibold)
                         .foregroundStyle(WhaleTheme.onAccent.opacity(0.92))
                 }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("App Store 中国区 · \(title)")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .whaleFont(size: 16, weight: .bold, design: .rounded)
                     .foregroundStyle(WhaleTheme.ink)
                 Text("来源：\(source.isEmpty ? "Apple App Store 公开榜单" : source)")
-                    .font(.system(size: 10))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(1)
                 if let updatedAt {
                     Text("更新于 \(DiscoverFormat.relative(updatedAt))")
-                        .font(.system(size: 9))
+                        .whaleFont(size: 13)
                         .foregroundStyle(WhaleTheme.muted.opacity(0.8))
                 }
             }
@@ -671,7 +654,7 @@ struct GameRankHeader: View {
             Spacer(minLength: 4)
 
             Text("\(count) 款")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .whaleFont(size: 13, weight: .semibold, design: .rounded)
                 .foregroundStyle(WhaleTheme.accent)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 5)
@@ -689,7 +672,7 @@ struct GameRankRowCard: View {
     var body: some View {
         HStack(spacing: 11) {
             Text("\(item.rank)")
-                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .whaleFont(size: 13, weight: .heavy, design: .rounded)
                 .foregroundStyle(item.rank <= 3 ? WhaleTheme.onAccent : WhaleTheme.muted)
                 .frame(width: 26, height: 26)
                 .background(
@@ -705,7 +688,7 @@ struct GameRankRowCard: View {
                         .fill(WhaleTheme.soft)
                         .overlay {
                             Image(systemName: "gamecontroller.fill")
-                                .font(.system(size: 16))
+                                .whaleFont(size: 16)
                                 .foregroundStyle(WhaleTheme.muted.opacity(0.6))
                         }
                 }
@@ -716,7 +699,7 @@ struct GameRankRowCard: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name)
-                    .font(.system(size: 16, weight: .semibold))
+                    .whaleFont(size: 16, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -727,14 +710,14 @@ struct GameRankRowCard: View {
                         Text("上架 \(item.releaseText)")
                     }
                 }
-                .font(.system(size: 9))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted)
             }
 
             Spacer(minLength: 0)
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 10, weight: .bold))
+                .whaleFont(size: 13, weight: .bold)
                 .foregroundStyle(WhaleTheme.muted.opacity(0.55))
         }
         .padding(.vertical, 10)
@@ -757,21 +740,21 @@ struct WeiboHotHeader: View {
                 .frame(width: 46, height: 46)
                 .overlay {
                     Image(systemName: board.icon)
-                        .font(.system(size: 19, weight: .semibold))
+                        .whaleFont(size: 19, weight: .semibold)
                         .foregroundStyle(.white.opacity(0.94))
                 }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(board.title)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .whaleFont(size: 16, weight: .bold, design: .rounded)
                     .foregroundStyle(WhaleTheme.ink)
                 Text("来源：\(source.isEmpty ? (board == .weibo ? "微博公开热搜接口" : "知乎公开热榜接口") : source)")
-                    .font(.system(size: 10))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(1)
                 if let updatedAt {
                     Text("更新于 \(DiscoverFormat.relative(updatedAt))")
-                        .font(.system(size: 9))
+                        .whaleFont(size: 13)
                         .foregroundStyle(WhaleTheme.muted.opacity(0.8))
                 }
             }
@@ -779,7 +762,7 @@ struct WeiboHotHeader: View {
             Spacer(minLength: 4)
 
             Text("\(count) 条")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .whaleFont(size: 13, weight: .semibold, design: .rounded)
                 .foregroundStyle(board == .weibo ? WhaleTheme.danger : WhaleTheme.accent)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 5)
@@ -797,7 +780,7 @@ struct WeiboHotRowCard: View {
     var body: some View {
         HStack(alignment: .top, spacing: 11) {
             Text("\(item.rank)")
-                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .whaleFont(size: 13, weight: .heavy, design: .rounded)
                 .foregroundStyle(item.rank <= 3 ? Color.white : WhaleTheme.muted)
                 .frame(width: 27, height: 27)
                 .background(
@@ -806,14 +789,14 @@ struct WeiboHotRowCard: View {
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(item.word)
-                    .font(.system(size: 16, weight: .semibold))
+                    .whaleFont(size: 16, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
 
                 if !item.note.isEmpty && item.note != item.word {
                     Text(item.note)
-                        .font(.system(size: 10))
+                        .whaleFont(size: 13)
                         .foregroundStyle(WhaleTheme.muted)
                         .lineLimit(1)
                 }
@@ -821,7 +804,7 @@ struct WeiboHotRowCard: View {
                 HStack(spacing: 6) {
                     if !item.tag.isEmpty {
                         Text(item.tag)
-                            .font(.system(size: 9, weight: .bold))
+                            .whaleFont(size: 13, weight: .bold)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
@@ -834,14 +817,14 @@ struct WeiboHotRowCard: View {
                         Text("热度 \(item.hotText)")
                     }
                 }
-                .font(.system(size: 9))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted)
             }
 
             Spacer(minLength: 0)
 
             Image(systemName: "arrow.up.right")
-                .font(.system(size: 10, weight: .bold))
+                .whaleFont(size: 13, weight: .bold)
                 .foregroundStyle(WhaleTheme.muted.opacity(0.55))
                 .padding(.top, 5)
         }

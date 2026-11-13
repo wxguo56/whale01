@@ -7,6 +7,7 @@ enum AppTab: String, Hashable {
     case conversation
     case records
     case settings
+    case discover
 }
 
 struct OperationRecord: Identifiable, Equatable, Codable {
@@ -530,6 +531,32 @@ struct PlaybackSnapshot: Equatable {
 }
 
 enum ToolPresentation {
+    static func confirmationAction(_ tool: String, conflictCount: Int = 0) -> String {
+        if conflictCount > 0 { return "仍安排这个时间" }
+        switch tool {
+        case "create_reminder": return "添加提醒"
+        case "update_reminder": return "保存提醒修改"
+        case "delete_reminder": return "删除这条待办"
+        case "create_calendar_event": return "添加日程"
+        case "update_calendar_event": return "保存日程改期"
+        case "delete_calendar_event": return "删除这条日程"
+        case "prepare_message": return "打开消息草稿"
+        case "open_navigation": return "打开地图导航"
+        case "set_memory": return "保存偏好"
+        case "delete_memory": return "删除这条偏好"
+        default: return "继续"
+        }
+    }
+    static func resultTitle(tool: String, status: String) -> String {
+        let title = Self.title(tool)
+        switch status {
+        case "success": return title + "已完成"
+        case "cancelled": return title + "已跳过"
+        case "needs_authorization": return title + "需要授权"
+        case "execution_unknown": return title + "结果待核对"
+        default: return title + "未完成"
+        }
+    }
     static func title(_ tool: String) -> String {
         ToolCatalog.label(tool)
     }

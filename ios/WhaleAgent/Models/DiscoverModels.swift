@@ -14,10 +14,10 @@ enum DiscoverChannel: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .ai: return "AI科技"
         case .market: return "A股自选"
-        case .game: return "游戏行情"
+        case .game: return "游戏动态"
         case .music: return "我的音乐"
         case .headline: return "时事新闻"
-        case .weibo: return "微博热搜"
+        case .weibo: return "热榜"
         }
     }
 
@@ -28,7 +28,7 @@ enum DiscoverChannel: String, CaseIterable, Identifiable, Hashable {
         case .game: return "游戏媒体资讯 · App Store 榜单"
         case .music: return "系统资料库 · 本地音乐 · 播放控制"
         case .headline: return "要闻 · 权威媒体 RSS"
-        case .weibo: return "实时热搜榜 · 公开数据"
+        case .weibo: return "微博热搜 · 知乎热榜"
         }
     }
 

@@ -51,7 +51,7 @@ struct MusicView: View {
             if showsClose {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("完成") { dismiss() }
-                        .font(.system(size: 15, weight: .semibold))
+                        .whaleFont(size: 15, weight: .semibold)
                 }
             }
         }
@@ -79,10 +79,10 @@ struct MusicView: View {
     private var searchField: some View {
         HStack(spacing: 9) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 14, weight: .semibold))
+                .whaleFont(size: 14, weight: .semibold)
                 .foregroundStyle(WhaleTheme.muted)
             TextField("搜索歌曲、艺人或专辑", text: $model.musicQuery)
-                .font(.system(size: 14))
+                .whaleFont(size: 14)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .submitLabel(.search)
@@ -95,7 +95,7 @@ struct MusicView: View {
                     Task { await model.loadMusicLibrary() }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 15))
+                        .whaleFont(size: 15)
                         .foregroundStyle(WhaleTheme.muted.opacity(0.7))
                 }
                 .buttonStyle(.plain)
@@ -115,12 +115,12 @@ struct MusicView: View {
 
             VStack(spacing: 5) {
                 Text(displayTitle)
-                    .font(.system(size: 20, weight: .semibold))
+                    .whaleFont(size: 20, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
                 Text(displaySubtitle)
-                    .font(.system(size: 12))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(1)
             }
@@ -140,7 +140,7 @@ struct MusicView: View {
                     Spacer()
                     Text(timeText(model.playback.track?.durationSec ?? 0))
                 }
-                .font(.system(size: 11))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted)
             }
             .padding(.horizontal, 8)
@@ -150,7 +150,7 @@ struct MusicView: View {
                     Task { await model.playPrevious() }
                 } label: {
                     Image(systemName: "backward.fill")
-                        .font(.system(size: 20, weight: .semibold))
+                        .whaleFont(size: 20, weight: .semibold)
                         .foregroundStyle(WhaleTheme.ink)
                         .frame(width: 52, height: 44)
                 }
@@ -160,7 +160,7 @@ struct MusicView: View {
                     Task { await model.togglePlayback() }
                 } label: {
                     Image(systemName: model.playback.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 24, weight: .bold))
+                        .whaleFont(size: 24, weight: .bold)
                         .foregroundStyle(.white)
                         .frame(width: 66, height: 66)
                         .background(WhaleTheme.accent, in: Circle())
@@ -172,9 +172,9 @@ struct MusicView: View {
                 } label: {
                     VStack(spacing: 3) {
                         Image(systemName: model.musicPlayMode.icon)
-                            .font(.system(size: 17, weight: .semibold))
+                            .whaleFont(size: 17, weight: .semibold)
                         Text(model.musicPlayMode.title)
-                            .font(.system(size: 9, weight: .semibold))
+                            .whaleFont(size: 13, weight: .semibold)
                     }
                     .foregroundStyle(WhaleTheme.ink)
                     .frame(width: 62, height: 44)
@@ -184,7 +184,7 @@ struct MusicView: View {
             }
 
             Text("左右滑动黑胶切换专辑")
-                .font(.system(size: 10))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted.opacity(0.85))
         }
         .padding(.top, 2)
@@ -311,16 +311,16 @@ struct MusicView: View {
         VStack(alignment: .leading, spacing: 11) {
             HStack(alignment: .firstTextBaseline) {
                 Text("资料库专辑")
-                    .font(.system(size: 17, weight: .semibold))
+                    .whaleFont(size: 17, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                 Text("· \(model.musicAlbums.count) 张")
-                    .font(.system(size: 12))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                 Spacer()
                 Button("刷新") {
                     Task { await model.loadMusicLibrary() }
                 }
-                .font(.system(size: 12, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
                 .tint(WhaleTheme.accent)
             }
 
@@ -352,7 +352,7 @@ struct MusicView: View {
                             .frame(width: 42, height: 42)
                             .overlay {
                                 Image(systemName: isCurrent(album) && model.playback.isPlaying ? "waveform" : "play.fill")
-                                    .font(.system(size: 15, weight: .bold))
+                                    .whaleFont(size: 15, weight: .bold)
                                     .foregroundStyle(.white)
                             }
                             .padding(10)
@@ -363,11 +363,11 @@ struct MusicView: View {
                     }
 
                 Text(album.title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .whaleFont(size: 15, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(1)
                 Text("\(album.artist) · \(album.trackCount) 首")
-                    .font(.system(size: 12))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(1)
             }
@@ -391,7 +391,7 @@ struct MusicView: View {
                     endPoint: .bottomTrailing
                 )
                 Text(String(album.title.prefix(1)))
-                    .font(.system(size: 62, weight: .bold, design: .rounded))
+                    .whaleFont(size: 62, weight: .bold, design: .rounded)
                     .foregroundStyle(.white.opacity(0.88))
             }
         }
@@ -414,21 +414,21 @@ struct MusicView: View {
                         .frame(width: 52, height: 52)
                         .overlay {
                             Text("云")
-                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .whaleFont(size: 22, weight: .bold, design: .rounded)
                                 .foregroundStyle(.white)
                         }
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text("网易云音乐")
-                            .font(.system(size: 15, weight: .semibold))
+                            .whaleFont(size: 15, weight: .semibold)
                             .foregroundStyle(WhaleTheme.ink)
                         Text("打开已登录的 App，继续播放你的歌单")
-                            .font(.system(size: 12))
+                            .whaleFont(size: 13)
                             .foregroundStyle(WhaleTheme.muted)
                     }
                     Spacer(minLength: 4)
                     Image(systemName: "arrow.up.forward.app")
-                        .font(.system(size: 16, weight: .semibold))
+                        .whaleFont(size: 16, weight: .semibold)
                         .foregroundStyle(WhaleTheme.accent)
                 }
                 .padding(14)
@@ -441,7 +441,7 @@ struct MusicView: View {
             .buttonStyle(.plain)
 
             Text("iOS 不允许第三方 App 读取网易云的账号、歌单或受版权保护的音频。这里只负责打开 App，不会假装已经替你播放。")
-                .font(.system(size: 11))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 4)
@@ -455,24 +455,24 @@ struct MusicView: View {
             } label: {
                 HStack(spacing: 11) {
                     Image(systemName: "music.note.list")
-                        .font(.system(size: 15, weight: .semibold))
+                        .whaleFont(size: 15, weight: .semibold)
                         .foregroundStyle(WhaleTheme.accent)
                         .frame(width: 36, height: 36)
                         .background(WhaleTheme.accentSoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("曲库")
-                            .font(.system(size: 15, weight: .semibold))
+                            .whaleFont(size: 15, weight: .semibold)
                             .foregroundStyle(WhaleTheme.ink)
                         Text(librarySummary)
-                            .font(.system(size: 11))
+                            .whaleFont(size: 13)
                             .foregroundStyle(WhaleTheme.muted)
                     }
 
                     Spacer(minLength: 8)
 
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
+                        .whaleFont(size: 13, weight: .semibold)
                         .foregroundStyle(WhaleTheme.muted)
                         .rotationEffect(.degrees(libraryExpanded ? 180 : 0))
                         .animation(.easeInOut(duration: 0.2), value: libraryExpanded)
@@ -511,17 +511,17 @@ struct MusicView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("我的曲库")
-                    .font(.system(size: 17, weight: .semibold))
+                    .whaleFont(size: 17, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                 Text("· \(model.musicTracks.count) 首")
-                    .font(.system(size: 12))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                 Spacer()
                 Button {
                     showImporter = true
                 } label: {
                     Label("导入", systemImage: "plus")
-                        .font(.system(size: 13, weight: .semibold))
+                        .whaleFont(size: 13, weight: .semibold)
                 }
                 .tint(WhaleTheme.accent)
             }
@@ -529,14 +529,14 @@ struct MusicView: View {
             if let error = model.musicError, !error.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
                     Label(error, systemImage: "info.circle")
-                        .font(.system(size: 13))
+                        .whaleFont(size: 13)
                         .foregroundStyle(WhaleTheme.muted)
                         .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 14) {
                         Button("导入音频") { showImporter = true }
                         Button("重新读取") { Task { await model.loadMusicLibrary() } }
                     }
-                    .font(.system(size: 13, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .tint(WhaleTheme.accent)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -556,10 +556,10 @@ struct MusicView: View {
             WhaleIconTile(systemName: "music.note", size: 68)
                 .padding(.top, 8)
             Text("音乐库还没有歌曲")
-                .font(.system(size: 19, weight: .semibold))
+                .whaleFont(size: 19, weight: .semibold)
                 .foregroundStyle(WhaleTheme.ink)
             Text("系统「音乐」资料库里有了专辑或歌曲后会自动出现在这里。也可以导入自己拥有的音频文件，或打开已登录的网易云音乐。")
-                .font(.system(size: 14))
+                .whaleFont(size: 14)
                 .foregroundStyle(WhaleTheme.muted)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -573,7 +573,7 @@ struct MusicView: View {
             .buttonStyle(.plain)
             .padding(.top, 6)
             Button("了解音乐来源") { showSourceInfo = true }
-                .font(.system(size: 13, weight: .medium))
+                .whaleFont(size: 13, weight: .medium)
                 .tint(WhaleTheme.accent)
                 .padding(.bottom, 6)
         }
@@ -600,30 +600,30 @@ struct MusicView: View {
 
                         VStack(alignment: .leading, spacing: 3) {
                             Text(track.title)
-                                .font(.system(size: 15, weight: .medium))
+                                .whaleFont(size: 15, weight: .medium)
                                 .foregroundStyle(WhaleTheme.ink)
                                 .lineLimit(1)
                             HStack(spacing: 6) {
                                 if track.isLocal {
                                     Text("本机")
-                                        .font(.system(size: 10, weight: .semibold))
+                                        .whaleFont(size: 13, weight: .semibold)
                                         .padding(.horizontal, 5)
                                         .padding(.vertical, 1)
                                         .background(WhaleTheme.accentSoft, in: Capsule())
                                         .foregroundStyle(WhaleTheme.accent)
                                 }
                                 Text(trackMeta(track))
-                                    .font(.system(size: 12))
+                                    .whaleFont(size: 13)
                                     .foregroundStyle(WhaleTheme.muted)
                                     .lineLimit(1)
                             }
                         }
                         Spacer()
                         Text(track.durationText)
-                            .font(.system(size: 11))
+                            .whaleFont(size: 13)
                             .foregroundStyle(WhaleTheme.muted)
                         Image(systemName: isCurrent(track) && model.playback.isPlaying ? "waveform" : "play.fill")
-                            .font(.system(size: 11, weight: .bold))
+                            .whaleFont(size: 13, weight: .bold)
                             .foregroundStyle(WhaleTheme.accent)
                             .frame(width: 20)
                     }
@@ -666,7 +666,7 @@ struct MusicView: View {
                     endPoint: .bottomTrailing
                 )
                 Image(systemName: "music.note")
-                    .font(.system(size: 17, weight: .semibold))
+                    .whaleFont(size: 17, weight: .semibold)
                     .foregroundStyle(.white.opacity(0.9))
             }
         }
@@ -675,21 +675,21 @@ struct MusicView: View {
     private var permissionCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("系统音乐库未授权", systemImage: "lock.shield")
-                .font(.system(size: 15, weight: .semibold))
+                .whaleFont(size: 15, weight: .semibold)
                 .foregroundStyle(WhaleTheme.ink)
             Text("允许访问「媒体与 Apple Music」后，鲸鱼才能读取资料库里的歌曲和专辑。导入的本机文件不依赖这个权限。")
-                .font(.system(size: 13))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)
             if model.permissionsSnapshot["music"] == "denied" {
                 Button("前往系统设置") { model.openSystemSettings() }
-                    .font(.system(size: 13, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .tint(WhaleTheme.accent)
             } else {
                 Button("允许访问系统音乐库") {
                     Task { await model.requestMusicAccess() }
                 }
-                .font(.system(size: 13, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
                 .tint(WhaleTheme.accent)
             }
         }
@@ -816,7 +816,7 @@ private struct VinylBody: View {
             ZStack {
                 LinearGradient(colors: palette, startPoint: .topLeading, endPoint: .bottomTrailing)
                 Text(String(title.prefix(1)))
-                    .font(.system(size: 44, weight: .heavy, design: .rounded))
+                    .whaleFont(size: 44, weight: .heavy, design: .rounded)
                     .foregroundStyle(Color.white.opacity(0.9))
             }
         }

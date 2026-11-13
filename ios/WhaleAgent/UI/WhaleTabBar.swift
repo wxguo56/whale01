@@ -40,7 +40,7 @@ struct WhaleTabBar: View {
         } label: {
             VStack(spacing: 3) {
                 Image(systemName: icon)
-                    .font(.system(size: 17, weight: .semibold))
+                    .whaleFont(size: 17, weight: .semibold)
                     .symbolVariant(selected ? .fill : .none)
                 Text(title)
                     .font(.system(size: 10, weight: selected ? .semibold : .medium))

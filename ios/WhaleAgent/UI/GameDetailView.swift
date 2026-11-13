@@ -33,7 +33,7 @@ struct GameDetailView: View {
                             detailState
                         }
                         Text("来源：Apple App Store 中国区公开接口（RSS 榜单 / lookup）。榜单与详情随 App Store 实时变化。")
-                            .font(.system(size: 9))
+                            .whaleFont(size: 13)
                             .foregroundStyle(WhaleTheme.muted.opacity(0.82))
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
@@ -63,27 +63,27 @@ struct GameDetailView: View {
         HStack(spacing: 10) {
             Button { dismiss() } label: {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 15, weight: .semibold))
+                    .whaleFont(size: 15, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
-                    .whaleGlassCircle(size: 34)
+                    .whaleGlassCircle(size: 44)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("返回")
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(item.name)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .whaleFont(size: 16, weight: .bold, design: .rounded)
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(1)
                 Text("\(board.title) · 第 \(item.rank) 名")
-                    .font(.system(size: 10, weight: .medium))
+                    .whaleFont(size: 13, weight: .medium)
                     .foregroundStyle(WhaleTheme.muted)
             }
             Spacer()
             if let url = (model.detail?.appStoreURL ?? item.url) {
                 Button { safari = SafariTarget(url: url) } label: {
                     Text("App Store")
-                        .font(.system(size: 12, weight: .semibold))
+                        .whaleFont(size: 13, weight: .semibold)
                         .foregroundStyle(WhaleTheme.accent)
                 }
                 .buttonStyle(.plain)
@@ -108,7 +108,7 @@ struct GameDetailView: View {
                             .fill(WhaleTheme.soft)
                             .overlay {
                                 Image(systemName: "gamecontroller.fill")
-                                    .font(.system(size: 26, weight: .light))
+                                    .whaleFont(size: 26, weight: .light)
                                     .foregroundStyle(WhaleTheme.muted)
                             }
                     }
@@ -122,11 +122,11 @@ struct GameDetailView: View {
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text(model.detail?.trackName ?? item.name)
-                        .font(.system(size: 21, weight: .bold, design: .rounded))
+                        .whaleFont(size: 21, weight: .bold, design: .rounded)
                         .foregroundStyle(WhaleTheme.ink)
                         .lineLimit(2)
                     Text(model.detail?.artistName ?? item.artist)
-                        .font(.system(size: 12, weight: .medium))
+                        .whaleFont(size: 13, weight: .medium)
                         .foregroundStyle(WhaleTheme.muted)
                         .lineLimit(1)
                     HStack(spacing: 6) {
@@ -142,18 +142,18 @@ struct GameDetailView: View {
 
             HStack(spacing: 8) {
                 Image(systemName: "star.fill")
-                    .font(.system(size: 11, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .foregroundStyle(WhaleTheme.warm)
                 Text(model.detail?.ratingText ?? "—")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .whaleFont(size: 14, weight: .bold, design: .rounded)
                     .monospacedDigit()
                     .foregroundStyle(WhaleTheme.ink)
                 Text(model.detail?.ratingCountText ?? "评分数加载中")
-                    .font(.system(size: 10))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                 Spacer()
                 Text("上架 \(model.detail?.releaseText ?? item.releaseText)")
-                    .font(.system(size: 10))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
             }
         }
@@ -170,20 +170,20 @@ struct GameDetailView: View {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("当前榜单")
-                        .font(.system(size: 11, weight: .medium))
+                        .whaleFont(size: 13, weight: .medium)
                         .foregroundStyle(WhaleTheme.muted)
                     Text(board.title)
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .whaleFont(size: 17, weight: .bold, design: .rounded)
                         .foregroundStyle(WhaleTheme.ink)
                 }
                 Spacer()
                 Text("#\(item.rank)")
-                    .font(.system(size: 30, weight: .heavy, design: .rounded))
+                    .whaleFont(size: 30, weight: .heavy, design: .rounded)
                     .monospacedDigit()
                     .foregroundStyle(WhaleTheme.accent)
             }
             Text("排名来自 App Store 中国区游戏分类榜单，按 Apple 公开排序展示。")
-                .font(.system(size: 9))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted.opacity(0.9))
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -198,7 +198,7 @@ struct GameDetailView: View {
     private func metricsCard(_ detail: AppStoreAppDetail) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("应用资料")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .whaleFont(size: 15, weight: .bold, design: .rounded)
                 .foregroundStyle(WhaleTheme.ink)
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                 stat("类别", detail.categoryText)
@@ -224,16 +224,16 @@ struct GameDetailView: View {
     private func reachCard(_ detail: AppStoreAppDetail) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("下载量与收入")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .whaleFont(size: 15, weight: .bold, design: .rounded)
                 .foregroundStyle(WhaleTheme.ink)
 
             HStack(alignment: .top, spacing: 9) {
                 Image(systemName: "info.circle")
-                    .font(.system(size: 12, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .foregroundStyle(WhaleTheme.warm)
                     .padding(.top, 1)
                 Text("Apple 不公开单款游戏的下载量与收入金额，这里只展示真实可核对的数据，不做编造。")
-                    .font(.system(size: 10))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -258,7 +258,7 @@ struct GameDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("游戏介绍")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .whaleFont(size: 15, weight: .bold, design: .rounded)
                     .foregroundStyle(WhaleTheme.ink)
                 Spacer()
                 if !detail.descriptionText.isEmpty {
@@ -267,18 +267,18 @@ struct GameDetailView: View {
                             showFullDescription.toggle()
                         }
                     }
-                    .font(.system(size: 11, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .foregroundStyle(WhaleTheme.accent)
                     .buttonStyle(.plain)
                 }
             }
             if detail.descriptionText.isEmpty {
                 Text("App Store 没有提供这个应用的介绍。")
-                    .font(.system(size: 11))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
             } else {
                 Text(detail.descriptionText)
-                    .font(.system(size: 12))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.ink.opacity(0.86))
                     .lineSpacing(3)
                     .lineLimit(showFullDescription ? nil : 6)
@@ -297,7 +297,7 @@ struct GameDetailView: View {
         if !detail.screenshots.isEmpty {
             VStack(alignment: .leading, spacing: 9) {
                 Text("截图")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .whaleFont(size: 15, weight: .bold, design: .rounded)
                     .foregroundStyle(WhaleTheme.ink)
                 ScrollView(.horizontal) {
                     HStack(spacing: 9) {
@@ -349,14 +349,14 @@ struct GameDetailView: View {
         case .failed(let message):
             VStack(spacing: 10) {
                 Text(message)
-                    .font(.system(size: 12))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                 Button("重新加载") {
                     Task { await model.load() }
                 }
-                .font(.system(size: 13, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
                 .foregroundStyle(WhaleTheme.onAccent)
                 .padding(.horizontal, 22)
                 .padding(.vertical, 10)
@@ -372,7 +372,7 @@ struct GameDetailView: View {
 
     private func chip(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 9, weight: .semibold))
+            .whaleFont(size: 13, weight: .semibold)
             .foregroundStyle(WhaleTheme.muted)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -383,11 +383,11 @@ struct GameDetailView: View {
     private func stat(_ label: String, _ value: String) -> some View {
         HStack {
             Text(label)
-                .font(.system(size: 11))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted)
             Spacer()
             Text(value)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .whaleFont(size: 13, weight: .semibold, design: .rounded)
                 .monospacedDigit()
                 .foregroundStyle(WhaleTheme.ink)
                 .lineLimit(1)
@@ -402,17 +402,17 @@ struct GameDetailView: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack {
                 Text(label)
-                    .font(.system(size: 12, weight: .medium))
+                    .whaleFont(size: 13, weight: .medium)
                     .foregroundStyle(WhaleTheme.muted)
                 Spacer()
                 Text(value)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .whaleFont(size: 14, weight: .bold, design: .rounded)
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             }
             Text(note)
-                .font(.system(size: 9))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted.opacity(0.85))
         }
         .padding(.horizontal, 12)
@@ -471,7 +471,7 @@ struct ScreenshotViewer: View {
                         )
                 } else if phase.error != nil {
                     Text("截图加载失败，请稍后重试")
-                        .font(.system(size: 14))
+                        .whaleFont(size: 14)
                         .foregroundStyle(.white.opacity(0.72))
                 } else {
                     ProgressView().tint(.white)
@@ -482,7 +482,7 @@ struct ScreenshotViewer: View {
         .overlay(alignment: .topTrailing) {
             Button { dismiss() } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .bold))
+                    .whaleFont(size: 13, weight: .bold)
                     .foregroundStyle(.white)
                     .frame(width: 36, height: 36)
                     .background(.white.opacity(0.18), in: Circle())

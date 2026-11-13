@@ -5,10 +5,12 @@ struct DiscoverView: View {
     @ObservedObject var appModel: AppModel
     @State private var path = NavigationPath()
     private let channel: DiscoverChannel
+    private let returnTitle: String
     @StateObject private var store: DiscoverChannelStore
 
-    init(initialChannel: DiscoverChannel, appModel: AppModel) {
+    init(initialChannel: DiscoverChannel, appModel: AppModel, returnTitle: String = "发现") {
         channel = initialChannel
+        self.returnTitle = returnTitle
         _store = StateObject(wrappedValue: DiscoverChannelStore.shared)
         self.appModel = appModel
     }
@@ -26,21 +28,17 @@ struct DiscoverView: View {
             .overlay(alignment: .leading) {
                 if path.isEmpty { edgeBackZone }
             }
-            .overlay(alignment: .topTrailing) {
-                if path.isEmpty {
-                    Button { dismiss() } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(WhaleTheme.ink)
-                            .whaleGlassCircle(size: 34)
+            .navigationTitle(channel.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if path.isEmpty {
+                        Button { dismiss() } label: { Label(returnTitle, systemImage: "chevron.left") }
+                            .accessibilityLabel("返回" + returnTitle)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("返回首页")
-                    .padding(.trailing, 16)
-                    .padding(.top, 12)
                 }
             }
-            .toolbar(.hidden, for: .navigationBar)
             .task {
 #if DEBUG
                 let environment = ProcessInfo.processInfo.environment

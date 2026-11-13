@@ -11,8 +11,8 @@ settings:
     SWIFT_STRICT_CONCURRENCY: minimal
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     COMPRESS_PNG_FILES: NO
-    CURRENT_PROJECT_VERSION: "112"
-    MARKETING_VERSION: "0.6.4"
+    CURRENT_PROJECT_VERSION: "113"
+    MARKETING_VERSION: "0.7.0"
     WHALE_API_TOKEN: ""
     DEEPSEEK_API_KEY: ""
   configs:
@@ -149,7 +149,28 @@ targets:
         TEST_TARGET_NAME: WhaleAgent
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/WhaleAgent.app/WhaleAgent"
         BUNDLE_LOADER: "$(TEST_HOST)"
+  WhaleAgentUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: WhaleAgentUITests
+    dependencies:
+      - target: WhaleAgent
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.whale01.agent.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: WhaleAgent
 schemes:
+  WhaleAgentInteractions:
+    build:
+      targets:
+        WhaleAgent: all
+        WhaleAgentUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - WhaleAgentUITests
   WhaleAgent:
     build:
       targets:

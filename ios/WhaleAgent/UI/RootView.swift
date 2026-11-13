@@ -5,131 +5,52 @@ import UIKit
 @MainActor
 struct RootView: View {
     @StateObject private var model = AppModel()
-    @StateObject private var keyboard = KeyboardObserver()
-    @State private var page: AppTab? = RootView.restoredTab()
+    @State private var page = NavigationHabits.restoredTab(UserDefaults.standard.string(forKey: "whale.root.tab"))
     @State private var showRecords = false
-    @AppStorage("whale.discover.open") private var showDiscover = false
-    @State private var discoverChannel: DiscoverChannel
+    @State private var showSettings = false
     @State private var settingsDetailOpen = false
-    @State private var contentBottom: CGFloat = 0
+    @State private var showDiscover = false
+    @State private var discoverChannel: DiscoverChannel = .ai
+    @State private var discoverReturnTitle = "助手"
     @AppStorage("whale.appearance") private var appearance = "system"
-    @AppStorage("whale.root.tab") private var savedTab = "conversation"
-    @AppStorage("whale.discover.channel") private var discoverChannelRaw = "ai"
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    init() {
-        let stored = UserDefaults.standard.string(forKey: "whale.discover.channel") ?? ""
-        _discoverChannel = State(initialValue: DiscoverChannel(rawValue: stored) ?? .ai)
-    }
 
     var body: some View {
-        GeometryReader { proxy in
-            ZStack(alignment: .bottom) {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 0) {
-                        ConversationTabView(
-                            model: model,
-                            bottomInset: ConversationComposerBar.reservedHeight + WhaleTabBar.height + keyboardOverlap,
-                            onOpenRecords: { showRecords = true },
-                            onOpenSettings: { go(.settings) },
-                            onOpenMusic: { openDiscover(.music) },
-                            onOpenTodo: { go(.records) },
-                            onOpenDiscover: openDiscover
-                        )
-                        .frame(width: proxy.size.width, height: proxy.size.height)
-                        .id(AppTab.conversation)
-
-                        TodoView(
-                            model: model,
-                            embedded: true,
-                            onBackToChat: { go(.conversation) },
-                            bottomBarInset: keyboard.isVisible ? 0 : WhaleTabBar.height
-                        )
-                            .frame(width: proxy.size.width, height: proxy.size.height)
-                            .id(AppTab.records)
-
-                        SettingsView(
-                            model: model,
-                            isDetailOpen: $settingsDetailOpen,
-                            onBackToChat: { go(.conversation) }
-                        )
-                        .frame(width: proxy.size.width, height: proxy.size.height)
-                        .id(AppTab.settings)
-                    }
-                    .scrollTargetLayout()
-                }
-                .scrollTargetBehavior(.paging)
-                .scrollPosition(id: $page)
-                .scrollIndicators(.hidden)
-                .scrollDisabled(
-                    settingsDetailOpen || showRecords || model.presentedConfirmation != nil || keyboard.isVisible
-                )
-                .background(WhaleBackdrop())
-
-                VStack(spacing: 0) {
-                    if page == .conversation {
-                        ConversationComposerBar(model: model)
-                    }
-                    if !keyboard.isVisible && !settingsDetailOpen {
-                        WhaleTabBar(selection: $page)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
-                }
-                .padding(.bottom, keyboardOverlap)
-                .animation(.easeInOut(duration: 0.18), value: keyboard.isVisible)
-            }
-            .background {
-                GeometryReader { geo in
-                    Color.clear.preference(
-                        key: ContentBottomKey.self,
-                        value: geo.frame(in: .global).maxY
-                    )
-                }
-            }
-            .onPreferenceChange(ContentBottomKey.self) { contentBottom = $0 }
+        TabView(selection: $page) {
+            ConversationTabView(model: model, bottomInset: 0,
+                onOpenRecords: { showRecords = true }, onOpenSettings: { showSettings = true },
+                onOpenMusic: { openDiscover(.music) }, onOpenTodo: { page = .records }, onOpenDiscover: openDiscover)
+                .safeAreaInset(edge: .bottom, spacing: 0) { ConversationComposerBar(model: model) }
+                .tabItem { Label("助手", systemImage: "bubble.left.and.bubble.right") }.tag(AppTab.conversation)
+            TodoView(model: model, embedded: true, onBackToChat: { page = .conversation }, bottomBarInset: 0)
+                .tabItem { Label("待办", systemImage: "checklist") }.tag(AppTab.records)
+            DiscoverHubView(model: model, onOpen: openDiscover, onSettings: { showSettings = true })
+                .tabItem { Label("发现", systemImage: "square.grid.2x2") }.tag(AppTab.discover)
         }
-        .background(WhaleBackdrop())
         .tint(WhaleTheme.accent)
-        .ignoresSafeArea(.keyboard, edges: page == .conversation ? .bottom : [])
-        .sheet(item: $model.presentedConfirmation) { item in
-            ConfirmationSheet(model: model, item: item)
-        }
-        .sheet(isPresented: $showRecords) {
-            RecordsView(model: model, showsClose: true, onClose: { showRecords = false })
+        .toolbarBackground(WhaleTheme.chrome, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        .preferredColorScheme(colorScheme)
+        .sheet(item: $model.presentedConfirmation) { item in ConfirmationSheet(model: model, item: item) }
+        .sheet(isPresented: $showRecords) { RecordsView(model: model, showsClose: true, onClose: { showRecords = false }) }
+        .sheet(isPresented: $showSettings) {
+            SettingsView(model: model, isDetailOpen: $settingsDetailOpen, onBackToChat: { showSettings = false })
+                .presentationDragIndicator(.visible)
         }
         .fullScreenCover(isPresented: $showDiscover) {
-            DiscoverView(initialChannel: discoverChannel, appModel: model)
+            DiscoverView(initialChannel: discoverChannel, appModel: model, returnTitle: discoverReturnTitle)
                 .id(discoverChannel)
         }
-        .animation(.easeInOut(duration: 0.2), value: model.playback.track?.trackId)
-        .preferredColorScheme(colorScheme)
         .task {
 #if DEBUG
-            if ProcessInfo.processInfo.environment["WHALE_DEMO_HOME"] == "1" {
-                showDiscover = false
-                page = .conversation
-            }
-            if ProcessInfo.processInfo.environment["WHALE_DEMO_WEATHER"] == "1" {
-                showDiscover = false
-                page = .conversation
-            }
-            if ProcessInfo.processInfo.environment["WHALE_DEMO_DISCOVER"] == "1" {
-                discoverChannel = .ai
-                discoverChannelRaw = DiscoverChannel.ai.rawValue
-                showDiscover = true
-            }
-            if ProcessInfo.processInfo.environment["WHALE_DEMO_GAME"] == "1" {
-                discoverChannel = .game
-                discoverChannelRaw = DiscoverChannel.game.rawValue
-                showDiscover = true
-            }
-            if let raw = ProcessInfo.processInfo.environment["WHALE_DEMO_CHANNEL"],
-               let channel = DiscoverChannel(rawValue: raw) {
-                discoverChannel = channel
-                discoverChannelRaw = raw
-                showDiscover = true
-            }
+            let environment = ProcessInfo.processInfo.environment
+            if environment["WHALE_DEMO_HOME"] == "1" || environment["WHALE_DEMO_WEATHER"] == "1" { page = .conversation }
+            if environment["WHALE_DEMO_TODO"] == "1" { page = .records }
+            if environment["WHALE_DEMO_HUB"] == "1" { page = .discover }
+            if environment["WHALE_DEMO_SETTINGS"] == "1" { showSettings = true }
+            if environment["WHALE_DEMO_DISCOVER"] == "1" { openDiscover(.market) }
+            if environment["WHALE_DEMO_GAME"] == "1" { openDiscover(.game) }
+            if let raw = environment["WHALE_DEMO_CHANNEL"], let channel = DiscoverChannel(rawValue: raw) { openDiscover(channel) }
 #endif
             await model.health()
             await model.reconcileUnknownWrites()
@@ -139,66 +60,26 @@ struct RootView: View {
             await model.refreshDashboard(force: true)
             await model.drainSharedInbox()
         }
-        .onOpenURL { url in
-            Task { await model.handleSharedURL(url) }
-        }
+        .onOpenURL { url in Task { await model.handleSharedURL(url) } }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
-            Task {
-                await model.flushResultOutbox()
-                await model.drainSharedInbox()
-            }
+            Task { await model.flushResultOutbox(); await model.drainSharedInbox() }
         }
-        .onChange(of: page) { oldPage, newPage in
-            guard oldPage != newPage else { return }
-            savedTab = newPage?.rawValue ?? AppTab.conversation.rawValue
+        .onChange(of: page) { _, tab in
+            UserDefaults.standard.set(tab.rawValue, forKey: "whale.root.tab")
             UISelectionFeedbackGenerator().selectionChanged()
-            UIApplication.shared.sendAction(
-                #selector(UIResponder.resignFirstResponder),
-                to: nil,
-                from: nil,
-                for: nil
-            )
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
         .onReceive(NotificationCenter.default.publisher(for: .whaleOpenChat)) { _ in
-            showDiscover = false
-            showRecords = false
-            go(.conversation)
+            showDiscover = false; showRecords = false; showSettings = false; page = .conversation
         }
     }
-
-    private func go(_ tab: AppTab) {
-        guard page != tab else { return }
-        if reduceMotion {
-            page = tab
-        } else {
-            withAnimation(.snappy(duration: 0.34)) {
-                page = tab
-            }
-        }
-    }
-
     private func openDiscover(_ channel: DiscoverChannel) {
-        discoverChannel = channel
-        discoverChannelRaw = channel.rawValue
-        showDiscover = true
+        discoverReturnTitle = page == .discover ? "发现" : "助手"
+        discoverChannel = channel; showDiscover = true
     }
-
-    private static func restoredTab() -> AppTab {
-        AppTab(rawValue: UserDefaults.standard.string(forKey: "whale.root.tab") ?? "") ?? .conversation
-    }
-
     private var colorScheme: ColorScheme? {
-        switch appearance {
-        case "light": return .light
-        case "dark": return .dark
-        default: return nil
-        }
-    }
-
-    private var keyboardOverlap: CGFloat {
-        guard let top = keyboard.top, contentBottom > 0 else { return 0 }
-        return max(0, contentBottom - top)
+        appearance == "light" ? .light : appearance == "dark" ? .dark : nil
     }
 }
 
@@ -226,13 +107,13 @@ private struct ConfirmationSheet: View {
                     }
 
                     Text(ToolPresentation.detail(for: item))
-                        .font(.system(size: 17, weight: .medium))
+                        .whaleFont(size: 17, weight: .medium)
                         .foregroundStyle(WhaleTheme.ink)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .whaleCard()
 
                     if checkingPreview {
-                        ProgressView("正在核对系统日历…")
+                        ProgressView("正在核对操作信息…")
                     }
                     if let preview = calendarPreview {
                         Label(preview.detail, systemImage: preview.conflictCount > 0 ? "exclamationmark.calendar" : "calendar.badge.checkmark")
@@ -256,7 +137,7 @@ private struct ConfirmationSheet: View {
                     Button {
                         Task { await model.confirm(item, calendarFingerprint: calendarPreview?.fingerprint) }
                     } label: {
-                        Text("确认执行").whalePrimaryButton()
+                        Text(ToolPresentation.confirmationAction(item.tool, conflictCount: calendarPreview?.conflictCount ?? 0)).whalePrimaryButton()
                     }
                     .buttonStyle(.plain)
                     .disabled(model.isBusy || checkingPreview || previewError != nil)
@@ -266,7 +147,7 @@ private struct ConfirmationSheet: View {
                         Task { await model.skip(item) }
                     } label: {
                         Text("跳过本次，不执行")
-                            .font(.system(size: 15))
+                            .whaleFont(size: 15)
                             .frame(maxWidth: .infinity)
                             .frame(minHeight: 44)
                     }
@@ -298,12 +179,4 @@ private struct ConfirmationSheet: View {
         catch { previewError = error.localizedDescription }
     }
 
-}
-
-private struct ContentBottomKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
 }

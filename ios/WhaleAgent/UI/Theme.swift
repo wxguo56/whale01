@@ -22,13 +22,13 @@ extension Color {
 enum WhaleTheme {
     // Abyss Aurora: deep-sea surfaces, mint aurora, moonlit blue and only a
     // little coral for time/weather/attention states.
-    static let accent = Color(light: 0x128F86, dark: 0x62EAD6)
+    static let accent = Color(light: 0x087C75, dark: 0x62EAD6)
     static let accentDeep = Color(light: 0x0B756F, dark: 0x3CCFC4)
     static let accentSoft = Color(light: 0xDFF6F2, dark: 0x123B3D)
     static let moon = Color(light: 0x2E73C8, dark: 0x78B9FF)
     static let coral = Color(light: 0xD77B3D, dark: 0xFFB27A)
     static let ink = Color(light: 0x102522, dark: 0xF2F8F7)
-    static let muted = Color(light: 0x647772, dark: 0xA6B9B6)
+    static let muted = Color(light: 0x53645F, dark: 0xA6B9B6)
     static let background = Color(light: 0xF2F8F7, dark: 0x071311)
     static let card = Color(light: 0xFFFFFF, dark: 0x0D201E)
     static let cardSolid = Color(light: 0xE7F1EE, dark: 0x142C29)
@@ -37,6 +37,7 @@ enum WhaleTheme {
     static let field = Color(light: 0xEAF3F0, dark: 0x0C1D1B)
     static let chrome = Color(light: 0xF7FBFA, dark: 0x091714)
     static let onAccent = Color(light: 0x062521, dark: 0x04211E)
+    static let buttonInk = Color(light: 0xFFFFFF, dark: 0x04211E)
     static let glassStroke = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
             ? UIColor.white.withAlphaComponent(0.16)
@@ -138,12 +139,12 @@ extension View {
 
     func whalePrimaryButton() -> some View {
         self
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(WhaleTheme.onAccent)
+            .font(.headline)
+            .foregroundStyle(WhaleTheme.ink)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 52)
             .background(
-                WhaleTheme.auroraGradient,
+                WhaleTheme.accentSoft,
                 in: RoundedRectangle(cornerRadius: WhaleTheme.controlRadius, style: .continuous)
             )
     }
@@ -157,24 +158,11 @@ struct GlassCardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(padding)
-            .background {
-                if reduceTransparency {
-                    RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .fill(WhaleTheme.cardSolid)
-                } else {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: radius, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                        RoundedRectangle(cornerRadius: radius, style: .continuous)
-                            .fill(WhaleTheme.card.opacity(0.56))
-                    }
-                }
-            }
+            .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(WhaleTheme.card))
             .overlay {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+                    .strokeBorder(WhaleTheme.line, lineWidth: 0.8)
             }
-            .shadow(color: .black.opacity(0.12), radius: 18, y: 8)
     }
 }
 
@@ -184,28 +172,7 @@ struct WhaleBackdrop: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        ZStack {
-            WhaleTheme.pageGradient
-
-            Circle()
-                .fill(WhaleTheme.accent.opacity(colorScheme == .dark ? 0.18 : 0.20))
-                .frame(width: 360, height: 360)
-                .blur(radius: 82)
-                .offset(x: -150, y: -300)
-
-            Circle()
-                .fill(WhaleTheme.moon.opacity(colorScheme == .dark ? 0.13 : 0.12))
-                .frame(width: 320, height: 320)
-                .blur(radius: 92)
-                .offset(x: 168, y: -150)
-
-            Ellipse()
-                .fill(WhaleTheme.accentDeep.opacity(colorScheme == .dark ? 0.13 : 0.08))
-                .frame(width: 420, height: 240)
-                .blur(radius: 110)
-                .offset(x: 80, y: 360)
-        }
-        .ignoresSafeArea()
+        WhaleTheme.background.ignoresSafeArea()
     }
 }
 
@@ -250,12 +217,7 @@ struct WhaleChromeBackground: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        ZStack {
-            Rectangle()
-                .fill(.ultraThinMaterial)
-            Rectangle()
-                .fill(WhaleTheme.chrome.opacity(reduceTransparency ? 1 : 0.82))
-        }
+        WhaleTheme.chrome
     }
 }
 
@@ -290,7 +252,7 @@ struct WhaleSectionTitle: View {
     var body: some View {
         HStack {
             Text(title)
-                .font(.system(size: 17, weight: .semibold))
+                .whaleFont(size: 17, weight: .semibold)
                 .foregroundStyle(WhaleTheme.ink)
             Spacer()
             if let action, let onAction {

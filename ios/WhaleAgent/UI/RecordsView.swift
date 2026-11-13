@@ -50,7 +50,7 @@ struct RecordsView: View {
                         }
                         ForEach(groups) { group in
                             Text(label(for: group.day))
-                                .font(.system(size: 13, weight: .medium))
+                                .whaleFont(size: 13, weight: .medium)
                                 .foregroundStyle(WhaleTheme.muted)
                                 .padding(.top, 18)
                                 .padding(.bottom, 10)
@@ -102,10 +102,10 @@ struct RecordsView: View {
     private func summaryMetric(_ value: String, label: String, tint: Color) -> some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .whaleFont(size: 24, weight: .bold, design: .rounded)
                 .foregroundStyle(tint)
             Text(label)
-                .font(.system(size: 9, weight: .medium))
+                .whaleFont(size: 13, weight: .medium)
                 .foregroundStyle(WhaleTheme.muted)
         }
         .frame(maxWidth: .infinity)
@@ -131,7 +131,7 @@ struct RecordsView: View {
             withAnimation(.snappy(duration: 0.22)) { filter = key }
         } label: {
             Text(title)
-                .font(.system(size: 11, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
                 .foregroundStyle(filter == key ? WhaleTheme.onAccent : WhaleTheme.muted)
                 .padding(.horizontal, 12)
                 .frame(height: 30)
@@ -146,7 +146,7 @@ struct RecordsView: View {
     private var taskSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("最近任务")
-                .font(.system(size: 13, weight: .medium))
+                .whaleFont(size: 13, weight: .medium)
                 .foregroundStyle(WhaleTheme.muted)
                 .padding(.top, 18)
             ForEach(model.taskRecords.prefix(8)) { task in
@@ -159,10 +159,10 @@ struct RecordsView: View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.triangle.branch")
-                    .font(.system(size: 12, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .foregroundStyle(WhaleTheme.accent)
                 Text(task.goal)
-                    .font(.system(size: 15, weight: .semibold))
+                    .whaleFont(size: 15, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(2)
                 Spacer()
@@ -176,7 +176,7 @@ struct RecordsView: View {
                         .lineLimit(1)
                 }
             }
-            .font(.system(size: 11))
+            .whaleFont(size: 13)
             .foregroundStyle(WhaleTheme.muted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -187,17 +187,17 @@ struct RecordsView: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("任务与记录")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .whaleFont(size: 24, weight: .bold, design: .rounded)
                     .foregroundStyle(WhaleTheme.ink)
                 Text("提醒、日程与地点操作的真实结果")
-                    .font(.system(size: 12))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
             }
             Spacer()
             if showsClose {
                 Button(action: onClose) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 15, weight: .semibold))
+                        .whaleFont(size: 15, weight: .semibold)
                         .foregroundStyle(WhaleTheme.ink)
                         .whaleGlassCircle()
                 }
@@ -206,7 +206,7 @@ struct RecordsView: View {
             } else {
                 Button(action: onBackToChat) {
                     Image(systemName: "bubble.left.and.bubble.right")
-                        .font(.system(size: 16, weight: .medium))
+                        .whaleFont(size: 16, weight: .medium)
                         .foregroundStyle(WhaleTheme.ink)
                         .whaleGlassCircle()
                 }
@@ -223,10 +223,10 @@ struct RecordsView: View {
         VStack(spacing: 14) {
             WhaleIconTile(systemName: "clock", size: 68)
             Text("还没有记录")
-                .font(.system(size: 19, weight: .semibold))
+                .whaleFont(size: 19, weight: .semibold)
                 .foregroundStyle(WhaleTheme.ink)
             Text("完成一次提醒、日程、地点或音乐操作后，结果会出现在这里。")
-                .font(.system(size: 14))
+                .whaleFont(size: 14)
                 .foregroundStyle(WhaleTheme.muted)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -265,17 +265,17 @@ struct OperationRecordCard: View {
                 .frame(width: 28, height: 28)
                 .overlay {
                     Image(systemName: action.icon)
-                        .font(.system(size: 12, weight: .semibold))
+                        .whaleFont(size: 13, weight: .semibold)
                         .foregroundStyle(tint)
                 }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(action.title)
-                    .font(.system(size: 13, weight: .medium))
+                    .whaleFont(size: 13, weight: .medium)
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(1)
                 Text(action.createdAt.formatted(date: .omitted, time: .shortened))
-                    .font(.system(size: 10))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
             }
 
@@ -302,24 +302,24 @@ struct OperationRecordCard: View {
                     .frame(width: 34, height: 34)
                     .overlay {
                         Image(systemName: action.icon)
-                            .font(.system(size: 14, weight: .semibold))
+                            .whaleFont(size: 14, weight: .semibold)
                             .foregroundStyle(tint)
                     }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(action.title)
-                        .font(.system(size: 15, weight: .semibold))
+                        .whaleFont(size: 15, weight: .semibold)
                         .foregroundStyle(WhaleTheme.ink)
                         .lineLimit(3)
                     Text(action.createdAt.formatted(date: .abbreviated, time: .shortened))
-                        .font(.system(size: 11))
+                        .whaleFont(size: 13)
                         .foregroundStyle(WhaleTheme.muted)
                 }
 
                 Spacer(minLength: 6)
 
                 Text(action.isSuccess ? "已完成" : "待核对")
-                    .font(.system(size: 10, weight: .bold))
+                    .whaleFont(size: 13, weight: .bold)
                     .foregroundStyle(tint)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -328,7 +328,7 @@ struct OperationRecordCard: View {
 
             if !action.detail.isEmpty {
                 Text(action.detail)
-                    .font(.system(size: 13))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .fixedSize(horizontal: false, vertical: true)
             }

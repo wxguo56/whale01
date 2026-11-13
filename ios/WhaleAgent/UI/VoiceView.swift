@@ -17,12 +17,12 @@ struct VoiceView: View {
             mascot
 
             Text(stateTitle)
-                .font(.system(size: 23, weight: .bold, design: .rounded))
+                .whaleFont(size: 23, weight: .bold, design: .rounded)
                 .foregroundStyle(WhaleTheme.ink)
                 .padding(.top, 2)
 
             Text(stateCaption)
-                .font(.system(size: 14))
+                .whaleFont(size: 14)
                 .foregroundStyle(WhaleTheme.muted)
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
@@ -37,7 +37,7 @@ struct VoiceView: View {
             Spacer(minLength: 6)
             controls
             Text("停止后自动发送，或转成文字继续编辑。")
-                .font(.system(size: 12))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted)
                 .padding(.top, 10)
         }
@@ -61,10 +61,10 @@ struct VoiceView: View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("语音对话")
-                    .font(.system(size: 17, weight: .semibold))
+                    .whaleFont(size: 17, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                 Text(voice.isRecording ? "正在听你说话" : "轻点麦克风开始")
-                    .font(.system(size: 12))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
             }
 
@@ -74,7 +74,7 @@ struct VoiceView: View {
                 finishToText()
             } label: {
                 Text("转文字")
-                    .font(.system(size: 14, weight: .medium))
+                    .whaleFont(size: 14, weight: .medium)
                     .foregroundStyle(WhaleTheme.accent)
                     .frame(minWidth: 54, minHeight: 40)
             }
@@ -84,7 +84,7 @@ struct VoiceView: View {
                 cancel()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .semibold))
+                    .whaleFont(size: 14, weight: .semibold)
                     .foregroundStyle(WhaleTheme.muted)
                     .frame(width: 36, height: 36)
                     .background(WhaleTheme.card, in: Circle())
@@ -137,7 +137,7 @@ struct VoiceView: View {
                 restart()
             } label: {
                 Image(systemName: "arrow.counterclockwise")
-                    .font(.system(size: 17, weight: .semibold))
+                    .whaleFont(size: 17, weight: .semibold)
                     .foregroundStyle(WhaleTheme.muted)
                     .frame(width: 46, height: 46)
                     .background(WhaleTheme.card, in: Circle())
@@ -150,7 +150,7 @@ struct VoiceView: View {
                 primaryAction()
             } label: {
                 Image(systemName: primaryIcon)
-                    .font(.system(size: 24, weight: .semibold))
+                    .whaleFont(size: 24, weight: .semibold)
                     .foregroundStyle(.white)
                     .frame(width: 68, height: 68)
                     .background(voice.isRecording ? WhaleTheme.accent : WhaleTheme.accentDeep, in: Circle())
@@ -163,7 +163,7 @@ struct VoiceView: View {
                 finishToText()
             } label: {
                 Image(systemName: "keyboard")
-                    .font(.system(size: 18, weight: .medium))
+                    .whaleFont(size: 18, weight: .medium)
                     .foregroundStyle(WhaleTheme.muted)
                     .frame(width: 46, height: 46)
                     .background(WhaleTheme.card, in: Circle())

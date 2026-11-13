@@ -14,6 +14,7 @@ struct ConversationTabView: View {
 
     @AppStorage("whale.chat.browsingStarter") private var browsingStarter = false
     @State private var showConversation = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var showingStarter: Bool {
         !showConversation && (model.messages.isEmpty || browsingStarter)
@@ -49,13 +50,13 @@ struct ConversationTabView: View {
                     }
                 }
             }
-            .animation(.easeInOut(duration: 0.2), value: showingStarter)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: showingStarter)
         }
         .onChange(of: model.messages.count) { oldCount, newCount in
             if newCount > oldCount || newCount == 0 {
                 browsingStarter = false
             }
-            if newCount > oldCount {
+            if newCount > oldCount && model.messages.last?.role == .user {
                 showConversation = true
             }
         }
@@ -80,72 +81,21 @@ struct ConversationTabView: View {
     private var header: some View {
         HStack(spacing: 10) {
             if !showingStarter {
-                Button(action: goToStarter) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(WhaleTheme.ink)
-                        .whaleGlassCircle(size: 34)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("返回新对话")
-                .transition(.opacity)
+                Button(action: goToStarter) { Image(systemName: "chevron.left").whaleTouchTarget() }
+                    .buttonStyle(.plain).accessibilityLabel("返回助手首页")
             }
-
-            Button(action: enterConversation) {
-                WhaleMarkView(size: 40)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("进入对话")
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 7) {
-                    Text("鲸鱼")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundStyle(WhaleTheme.ink)
-                    Text("BETA")
-                        .font(.system(size: 8, weight: .black, design: .rounded))
-                        .tracking(0.7)
-                        .foregroundStyle(WhaleTheme.accent)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(WhaleTheme.accent.opacity(0.11), in: Capsule())
-                }
-                HStack(spacing: 5) {
-                    Circle()
-                        .fill(statusColor)
-                        .frame(width: 6, height: 6)
-                    Text(statusText)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(WhaleTheme.muted)
-                        .lineLimit(1)
-                }
-            }
-
-            if let track = model.playback.track {
-                Spacer(minLength: 3)
-                Button(action: onOpenMusic) {
-                    MiniVinylView(track: track, isPlaying: model.playback.isPlaying)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("正在播放 \(track.title)，打开音乐")
-            } else {
-                Spacer(minLength: 0)
-            }
-
-        }
-        .padding(.horizontal, 18)
-        .padding(.top, 8)
-        .padding(.bottom, 9)
-        .background {
-            WhaleChromeBackground()
-                .ignoresSafeArea(edges: .top)
-        }
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(WhaleTheme.glassStroke)
-                .frame(height: 0.5)
-        }
-        .animation(.easeInOut(duration: 0.2), value: showingStarter)
+            Text("鲸鱼").font(.title2.bold()).foregroundStyle(WhaleTheme.ink)
+            Spacer()
+            Menu {
+                Button("新对话", systemImage: "square.and.pencil") { model.newConversation(); goToStarter() }
+                    .disabled(model.isBusy || !model.pending.isEmpty)
+                Button("执行记录", systemImage: "clock.arrow.circlepath", action: onOpenRecords)
+            } label: { Image(systemName: "ellipsis").whaleTouchTarget() }
+            .accessibilityLabel("对话与记录")
+            Button(action: onOpenSettings) { Image(systemName: "gearshape").whaleTouchTarget() }
+                .accessibilityLabel("设置")
+        }.foregroundStyle(WhaleTheme.accent).padding(.horizontal, 16).padding(.vertical, 4)
+            .background(WhaleTheme.chrome)
     }
 
     private var statusText: String {
@@ -297,7 +247,7 @@ private struct MiniVinylView: View {
             )
             .overlay {
                 Image(systemName: "music.note")
-                    .font(.system(size: 8, weight: .bold))
+                    .whaleFont(size: 13, weight: .bold)
                     .foregroundStyle(.white.opacity(0.92))
             }
         }

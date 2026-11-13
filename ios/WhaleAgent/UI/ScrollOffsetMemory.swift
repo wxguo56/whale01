@@ -5,9 +5,13 @@ import UIKit
 /// Attach with `.background(ScrollOffsetMemory(key: "channel"))` on a ScrollView.
 struct ScrollOffsetMemory: UIViewRepresentable {
     let key: String
+    var onRestored: ((Bool) -> Void)? = nil
+    var startAtBottom = false
 
     final class Coordinator {
-        let key: String
+        var key: String
+        var generation = 0
+        var onRestored: ((Bool) -> Void)?
         var observation: NSKeyValueObservation?
         var saveWork: DispatchWorkItem?
         weak var scrollView: UIScrollView?
@@ -31,7 +35,9 @@ struct ScrollOffsetMemory: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(key: key)
+        let coordinator = Coordinator(key: key)
+        coordinator.onRestored = onRestored
+        return coordinator
     }
 
     func makeUIView(context: Context) -> UIView {
@@ -45,6 +51,14 @@ struct ScrollOffsetMemory: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.onRestored = onRestored
+        if context.coordinator.key != key {
+            context.coordinator.saveWork?.cancel()
+            context.coordinator.persist(context.coordinator.lastOffset)
+            context.coordinator.key = key
+            context.coordinator.generation += 1
+            if let scrollView = context.coordinator.scrollView { restore(on: scrollView, coordinator: context.coordinator) }
+        }
         DispatchQueue.main.async {
             attach(from: uiView, coordinator: context.coordinator)
         }
@@ -71,20 +85,26 @@ struct ScrollOffsetMemory: UIViewRepresentable {
     }
 
     private func restore(on scrollView: UIScrollView, coordinator: Coordinator) {
-        let stored = UserDefaults.standard.double(forKey: "whale.scroll." + key)
-        guard stored > 1 else { return }
+        let storedKey = "whale.scroll." + key
+        let hasStoredOffset = UserDefaults.standard.object(forKey: storedKey) != nil
+        let stored = UserDefaults.standard.double(forKey: storedKey)
+        let generation = coordinator.generation
         coordinator.isRestoring = true
 
         func attempt(_ remaining: Int) {
+            guard coordinator.generation == generation else { return }
             let maxOffset = max(0, scrollView.contentSize.height + scrollView.adjustedContentInset.bottom - scrollView.bounds.height)
             if maxOffset < CGFloat(stored) * 0.6, remaining > 0 {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { attempt(remaining - 1) }
                 return
             }
-            let target = min(CGFloat(stored), maxOffset)
+            let target = !hasStoredOffset && startAtBottom ? maxOffset : min(max(0, CGFloat(stored)), maxOffset)
             scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: target), animated: false)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                guard coordinator.generation == generation else { return }
                 coordinator.isRestoring = false
+                coordinator.lastOffset = target
+                coordinator.onRestored?(maxOffset - target < 80)
             }
         }
 

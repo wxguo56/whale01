@@ -13,10 +13,9 @@ struct NewsDetailView: View {
                 topBar
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        cover
                         meta
                         Text(item.displayTitle)
-                            .font(.system(size: 25, weight: .bold, design: .rounded))
+                            .whaleFont(size: 25, weight: .bold, design: .rounded)
                             .foregroundStyle(WhaleTheme.ink)
                             .fixedSize(horizontal: false, vertical: true)
                             .textSelection(.enabled)
@@ -29,6 +28,7 @@ struct NewsDetailView: View {
                     .padding(.bottom, 36)
                 }
                 .scrollIndicators(.hidden)
+                .background(ScrollOffsetMemory(key: "article-" + item.id))
             }
         }
         .toolbar(.hidden, for: .navigationBar)
@@ -43,27 +43,27 @@ struct NewsDetailView: View {
         HStack {
             Button { dismiss() } label: {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 15, weight: .semibold))
+                    .whaleFont(size: 15, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
-                    .whaleGlassCircle(size: 34)
+                    .whaleGlassCircle(size: 44)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("返回")
             Spacer()
             Text(channel.title)
-                .font(.system(size: 12, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
                 .foregroundStyle(WhaleTheme.muted)
             Spacer()
             if let url = item.url {
                 ShareLink(item: url) {
                     Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 14, weight: .semibold))
+                        .whaleFont(size: 14, weight: .semibold)
                         .foregroundStyle(WhaleTheme.ink)
-                        .whaleGlassCircle(size: 34)
+                        .whaleGlassCircle(size: 44)
                 }
                 .buttonStyle(.plain)
             } else {
-                Color.clear.frame(width: 34, height: 34)
+                Color.clear.frame(width: 44, height: 44)
             }
         }
         .padding(.horizontal, 16)
@@ -86,10 +86,10 @@ struct NewsDetailView: View {
                 .offset(x: 230, y: -60)
             VStack(alignment: .leading, spacing: 8) {
                 Image(systemName: channel == .ai ? "sparkles.rectangle.stack.fill" : channel == .game ? "gamecontroller.fill" : "newspaper.fill")
-                    .font(.system(size: 28, weight: .semibold))
+                    .whaleFont(size: 28, weight: .semibold)
                     .foregroundStyle(.white.opacity(0.92))
                 Text("来源摘要")
-                    .font(.system(size: 10, weight: .bold))
+                    .whaleFont(size: 13, weight: .bold)
                     .tracking(1.2)
                     .foregroundStyle(.white.opacity(0.72))
             }
@@ -102,14 +102,14 @@ struct NewsDetailView: View {
     private var meta: some View {
         HStack(spacing: 7) {
             Text(item.source)
-                .font(.system(size: 11, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
                 .foregroundStyle(WhaleTheme.accent)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 5)
                 .background(WhaleTheme.accent.opacity(0.11), in: Capsule())
             Circle().fill(WhaleTheme.muted.opacity(0.5)).frame(width: 3, height: 3)
             Text(DiscoverFormat.relative(item.publishedAt))
-                .font(.system(size: 11))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted)
             Spacer()
         }
@@ -119,19 +119,19 @@ struct NewsDetailView: View {
         VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 6) {
                 Image(systemName: "waveform.path.ecg")
-                    .font(.system(size: 12, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                 Text("鲸鱼摘要")
-                    .font(.system(size: 12, weight: .bold))
+                    .whaleFont(size: 13, weight: .bold)
             }
             .foregroundStyle(WhaleTheme.accent)
             Text(item.displaySummary.isEmpty ? "这条资讯只提供标题，原文摘要需要打开来源查看。" : item.displaySummary)
-                .font(.system(size: 14))
+                .whaleFont(size: 14)
                 .foregroundStyle(WhaleTheme.ink.opacity(0.9))
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
             Text("基于来源摘要整理，不替代原文。")
-                .font(.system(size: 9))
+                .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -149,9 +149,9 @@ struct NewsDetailView: View {
                 Text("阅读原文")
                 Spacer()
                 Image(systemName: "arrow.up.right")
-                    .font(.system(size: 11, weight: .bold))
+                    .whaleFont(size: 13, weight: .bold)
             }
-            .font(.system(size: 15, weight: .semibold))
+            .whaleFont(size: 15, weight: .semibold)
             .foregroundStyle(WhaleTheme.onAccent)
             .padding(.horizontal, 17)
             .frame(height: 52)
@@ -163,7 +163,7 @@ struct NewsDetailView: View {
 
     private var copyrightNote: some View {
         Text("鲸鱼只提供标题、来源摘要与原文跳转，不转载全文。版权归原媒体所有。")
-            .font(.system(size: 10))
+            .whaleFont(size: 13)
             .foregroundStyle(WhaleTheme.muted)
             .fixedSize(horizontal: false, vertical: true)
     }

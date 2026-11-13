@@ -25,6 +25,7 @@ struct ChatMessage: Identifiable, Equatable, Codable {
     var links: [ResultLink]? = nil
     var weather: [WeatherDaySummary]? = nil
     var tool: String? = nil
+    var executionStatus: String? = nil
     let createdAt: Date
 
     init(
@@ -36,6 +37,7 @@ struct ChatMessage: Identifiable, Equatable, Codable {
         links: [ResultLink]? = nil,
         weather: [WeatherDaySummary]? = nil,
         tool: String? = nil,
+        executionStatus: String? = nil,
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -46,6 +48,7 @@ struct ChatMessage: Identifiable, Equatable, Codable {
         self.links = links
         self.weather = weather
         self.tool = tool
+        self.executionStatus = executionStatus
         self.createdAt = createdAt
     }
 }
@@ -107,6 +110,10 @@ final class AppModel: ObservableObject {
     @Published private(set) var musicDidLoad = false
     @Published private(set) var isExecutingTool = false
     @Published private(set) var isSpeakingReply = false
+    @Published private(set) var activityText = "正在处理请求"
+    @Published private(set) var executingToolName: String?
+    @Published private(set) var composerContextID = UserDefaults.standard.string(forKey: "whale.composer.context") ?? UUID().uuidString
+    @Published private(set) var canStopReply = false
     @Published private(set) var speakingMessageId: String?
     @Published var voiceReplyEnabled: Bool
 
@@ -130,6 +137,9 @@ final class AppModel: ObservableObject {
     private var speechInterruptObserver: AnyCancellable?
     private var speakReplyForActiveTurn = false
     private var currentGoal: String?
+    private var networkRequest: Task<AgentTurnResponse, Error>?
+    private var stoppedReply = false
+    private var lastFailedInput: String?
 
     private static let activeTurnKey = "whale.activeTurnId"
     private static let conversationKey = "whale.conversationId"
@@ -145,6 +155,7 @@ final class AppModel: ObservableObject {
         messages = ChatHistoryStore.load()
         memories = MemoryStore.shared.list()
         permissionsSnapshot = permissions.snapshot()
+        UserDefaults.standard.set(composerContextID, forKey: "whale.composer.context")
         composerObserver = NotificationCenter.default.publisher(for: .whaleComposerFinished)
             .receive(on: RunLoop.main)
             .sink { [weak self] note in
@@ -431,6 +442,9 @@ final class AppModel: ObservableObject {
         errorText = nil
         presentedConfirmation = nil
         currentGoal = displayText ?? text
+        stoppedReply = false
+        lastFailedInput = nil
+        activityText = "正在理解你的请求"
         appendMessage(ChatMessage(role: .user, text: displayText ?? text))
         isBusy = true
         defer { isBusy = false }
@@ -441,12 +455,13 @@ final class AppModel: ObservableObject {
         refreshPermissions()
         let startedAt = Date()
         do {
-            let response = try await client.startTurn(
-                text: text,
-                conversationId: conversationId,
-                permissions: permissionsSnapshot,
-                deferExecution: defersToDevice
-            )
+            let transport = client
+            let conversation = conversationId
+            let permissionState = permissionsSnapshot
+            let deferred = defersToDevice
+            let response = try await requestAgent {
+                try await transport.startTurn(text: text, conversationId: conversation, permissions: permissionState, deferExecution: deferred)
+            }
             TurnMetricsStore.record(seconds: Date().timeIntervalSince(startedAt))
             conversationId = response.conversationId
             activeTurnId = response.turnId
@@ -454,8 +469,45 @@ final class AppModel: ObservableObject {
             appendReplyIfNeeded(response)
             await handle(response)
         } catch {
-            fail(error)
+            if stoppedReply || error is CancellationError || (error as? URLError)?.code == .cancelled {
+                appendMessage(ChatMessage(role: .tool, text: "已停止等待回复", detail: "已保留对话和草稿；系统中已经完成的操作不会因此撤销。"))
+            } else {
+                if activeTurnId == nil && pending.isEmpty { lastFailedInput = text }
+                fail(error)
+            }
         }
+    }
+
+    var activityDescription: String {
+        if let name = executingToolName { return ToolPresentation.title(name) }
+        return activityText
+    }
+
+    func stopReply() {
+        guard canStopReply, !isExecutingTool else { return }
+        stoppedReply = true
+        networkRequest?.cancel()
+        canStopReply = false
+        speech.stop()
+    }
+
+    private func requestAgent(_ operation: @escaping @Sendable () async throws -> AgentTurnResponse) async throws -> AgentTurnResponse {
+        stoppedReply = false
+        let request = Task { try await operation() }
+        networkRequest = request
+        canStopReply = true
+        defer { networkRequest = nil; canStopReply = false }
+        let response = try await request.value
+        if stoppedReply { throw CancellationError() }
+        return response
+    }
+
+    func retryCurrentRequest() async {
+        guard !isBusy else { return }
+        if !(await ResultOutbox.shared.list()).isEmpty { await flushResultOutbox(); return }
+        if !pending.isEmpty { presentNextConfirmation(); return }
+        if let input = lastFailedInput { await send(text: input); return }
+        await health()
     }
 
     // MARK: - Shared content
@@ -658,6 +710,7 @@ final class AppModel: ObservableObject {
     }
 
     func newConversation() {
+        guard !isBusy, pending.isEmpty else { return }
         speech.stop()
         speakReplyForActiveTurn = false
         conversationId = nil
@@ -670,6 +723,9 @@ final class AppModel: ObservableObject {
         presentedConfirmation = nil
         errorText = nil
         currentGoal = nil
+        lastFailedInput = nil
+        composerContextID = UUID().uuidString
+        UserDefaults.standard.set(composerContextID, forKey: "whale.composer.context")
         setMessages([])
     }
 
@@ -1080,10 +1136,12 @@ final class AppModel: ObservableObject {
     private func executeAndCollect(_ item: PendingTool) async {
         guard results[item.toolCallId] == nil else { return }
         isExecutingTool = true
+        executingToolName = item.tool
         let startedAt = Date()
         let result = await router.execute(item)
         ToolMetricsStore.record(tool: item.tool, seconds: Date().timeIntervalSince(startedAt))
         isExecutingTool = false
+        executingToolName = nil
         results[item.toolCallId] = result
         await reloadRecentActions()
         let places: [PlaceSummary]
@@ -1100,12 +1158,13 @@ final class AppModel: ObservableObject {
         appendMessage(
             ChatMessage(
                 role: .tool,
-                text: "\(ToolPresentation.title(item.tool)) · \(result.status)",
+                text: ToolPresentation.resultTitle(tool: item.tool, status: result.status),
                 detail: ToolPresentation.resultDetail(tool: item.tool, status: result.status, data: result.data, error: result.error),
                 places: places,
                 links: links.isEmpty ? nil : links,
                 weather: weather.isEmpty ? nil : weather,
                 tool: item.tool
+                , executionStatus: result.status
             )
         )
         if item.tool == "create_calendar_event" || item.tool == "list_calendar_events"
@@ -1125,10 +1184,17 @@ final class AppModel: ObservableObject {
         pending = []
         autoStarted = []
         do {
-            let response = try await client.submitToolResults(turnId: turnId, results: payload)
+            activityText = "正在整理执行结果"
+            let transport = client
+            let response = try await requestAgent { try await transport.submitToolResults(turnId: turnId, results: payload) }
             await ResultOutbox.shared.remove(turnId: turnId)
             await adopt(response)
         } catch {
+            if stoppedReply || error is CancellationError || (error as? URLError)?.code == .cancelled {
+                errorText = "系统操作结果已保存，已停止整理回复。请在记录中核对，稍后可继续回传。"
+                appendMessage(ChatMessage(role: .tool, text: "结果已保留", detail: errorText))
+                return
+            }
             if isStateConflict(error), await recoverOutboxEntry(entry, retryIfAwaiting: false) {
                 return
             }

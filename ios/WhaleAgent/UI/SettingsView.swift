@@ -40,12 +40,12 @@ fileprivate enum SettingsChrome {
     static func header(_ title: String, trailing: String?) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.system(size: 13, weight: .bold))
+                .whaleFont(size: 13, weight: .bold)
                 .foregroundStyle(WhaleTheme.ink)
             Spacer()
             if let trailing {
                 Text(trailing)
-                    .font(.system(size: 10))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
             }
         }
@@ -74,17 +74,17 @@ fileprivate enum SettingsChrome {
     static func label(title: String, subtitle: String, icon: String, tone: SettingsTone) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
+                .whaleFont(size: 16, weight: .semibold)
                 .foregroundStyle(tone.foreground)
                 .frame(width: 38, height: 38)
                 .background(tone.background, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .whaleFont(size: 15, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                 Text(subtitle)
-                    .font(.system(size: 11))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(2)
             }
@@ -101,11 +101,11 @@ fileprivate enum SettingsChrome {
     static func infoRow(_ title: String, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             Text(title)
-                .font(.system(size: 14))
+                .whaleFont(size: 14)
                 .foregroundStyle(WhaleTheme.muted)
             Spacer(minLength: 12)
             Text(value)
-                .font(.system(size: 14))
+                .whaleFont(size: 14)
                 .foregroundStyle(WhaleTheme.ink)
                 .multilineTextAlignment(.trailing)
         }
@@ -152,7 +152,7 @@ struct SettingsView: View {
                     categorySection
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, WhaleTabBar.height + 40)
+                .padding(.bottom, 24)
             }
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
@@ -180,23 +180,23 @@ struct SettingsView: View {
     private var header: some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("CONTROL ROOM")
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                Text("偏好与服务")
+                    .whaleFont(size: 13, weight: .bold, design: .rounded)
                     .tracking(1.3)
                     .foregroundStyle(WhaleTheme.muted)
                 Text("设置")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .whaleFont(size: 28, weight: .bold, design: .rounded)
                     .foregroundStyle(WhaleTheme.ink)
             }
             Spacer()
             Button(action: onBackToChat) {
-                Image(systemName: "bubble.left.and.bubble.right")
-                    .font(.system(size: 16, weight: .medium))
+                Image(systemName: "xmark")
+                    .whaleFont(size: 16, weight: .medium)
                     .foregroundStyle(WhaleTheme.ink)
                     .whaleGlassCircle()
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("回到对话")
+            .accessibilityLabel("关闭设置")
         }
         .padding(.top, 10)
     }
@@ -210,11 +210,11 @@ struct SettingsView: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(profileNickname.isEmpty ? "个人资料" : profileNickname)
-                        .font(.system(size: 16, weight: .semibold))
+                        .whaleFont(size: 16, weight: .semibold)
                         .foregroundStyle(WhaleTheme.ink)
                         .lineLimit(1)
                     Text(profileBio.isEmpty ? "填写昵称和介绍，鲸鱼会更懂你" : profileBio)
-                        .font(.system(size: 11))
+                        .whaleFont(size: 13)
                         .foregroundStyle(WhaleTheme.muted)
                         .lineLimit(1)
                 }
@@ -227,7 +227,7 @@ struct SettingsView: View {
                         color: model.backendOnline ? WhaleTheme.success : WhaleTheme.warm
                     )
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
+                        .whaleFont(size: 13, weight: .semibold)
                         .foregroundStyle(WhaleTheme.muted.opacity(0.7))
                 }
             }
@@ -305,17 +305,17 @@ struct SettingsView: View {
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 16, weight: .semibold))
+                    .whaleFont(size: 16, weight: .semibold)
                     .foregroundStyle(tone.foreground)
                     .frame(width: 38, height: 38)
                     .background(tone.background, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 15, weight: .semibold))
+                        .whaleFont(size: 15, weight: .semibold)
                         .foregroundStyle(WhaleTheme.ink)
                     Text(subtitle)
-                        .font(.system(size: 11))
+                        .whaleFont(size: 13)
                         .foregroundStyle(WhaleTheme.muted)
                         .lineLimit(1)
                 }
@@ -323,7 +323,7 @@ struct SettingsView: View {
                 Spacer(minLength: 8)
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .foregroundStyle(WhaleTheme.muted)
             }
             .frame(minHeight: 56)
@@ -369,10 +369,10 @@ struct SettingsView: View {
 
                 VStack(spacing: 1) {
                     Text(title)
-                        .font(.system(size: 12, weight: .semibold))
+                        .whaleFont(size: 13, weight: .semibold)
                         .foregroundStyle(WhaleTheme.ink)
                     Text(subtitle)
-                        .font(.system(size: 9))
+                        .whaleFont(size: 13)
                         .foregroundStyle(WhaleTheme.muted)
                 }
             }
@@ -468,7 +468,7 @@ private struct PermissionsSettingsView: View {
                 }
 
                 Text("授权状态由系统决定；被拒绝的项目需要到系统设置里重新开启。")
-                    .font(.system(size: 11))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .padding(.horizontal, 3)
             }
@@ -564,12 +564,16 @@ private struct PermissionsSettingsView: View {
 
 private struct PreferencesSettingsView: View {
     @ObservedObject var model: AppModel
+    @AppStorage("whale.home.showQuote") private var showQuote = true
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 SettingsChrome.header("助手偏好", trailing: "随时可改")
 
+                SettingsChrome.card {
+                    Toggle("首页显示今日一句", isOn: $showQuote).font(.body).frame(minHeight: 52)
+                }
                 SettingsChrome.card {
                     Toggle(isOn: Binding(
                         get: { model.voiceReplyEnabled },
@@ -598,9 +602,9 @@ private struct PreferencesSettingsView: View {
                         Spacer(minLength: 8)
                         HStack(spacing: 3) {
                             Image(systemName: "lock.fill")
-                                .font(.system(size: 9, weight: .semibold))
+                                .whaleFont(size: 13, weight: .semibold)
                             Text("始终开启")
-                                .font(.system(size: 10, weight: .medium))
+                                .whaleFont(size: 13, weight: .medium)
                         }
                         .foregroundStyle(WhaleTheme.muted)
                     }
@@ -631,7 +635,7 @@ private struct MemorySettingsView: View {
                 SettingsChrome.card {
                     if model.memories.isEmpty {
                         Text("还没有保存偏好。可以记住饮食、音乐、回复风格；偏好只影响建议，不会变成长期操作授权。")
-                            .font(.system(size: 12))
+                            .whaleFont(size: 13)
                             .foregroundStyle(WhaleTheme.muted)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -641,10 +645,10 @@ private struct MemorySettingsView: View {
                             HStack(alignment: .top, spacing: 10) {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(preference.key)
-                                        .font(.system(size: 14, weight: .semibold))
+                                        .whaleFont(size: 14, weight: .semibold)
                                         .foregroundStyle(WhaleTheme.ink)
                                     Text(preference.value)
-                                        .font(.system(size: 12))
+                                        .whaleFont(size: 13)
                                         .foregroundStyle(WhaleTheme.muted)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
@@ -653,7 +657,7 @@ private struct MemorySettingsView: View {
                                     model.deleteMemory(preference)
                                 } label: {
                                     Image(systemName: "trash")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .whaleFont(size: 13, weight: .semibold)
                                         .foregroundStyle(WhaleTheme.danger)
                                         .frame(width: 34, height: 34)
                                 }
@@ -669,14 +673,14 @@ private struct MemorySettingsView: View {
                         TextField("偏好名称，例如：饮食", text: $memoryKey)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
-                            .font(.system(size: 13))
+                            .whaleFont(size: 13)
                             .padding(.horizontal, 11)
                             .padding(.vertical, 9)
                             .background(WhaleTheme.field, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                         HStack(spacing: 8) {
                             TextField("内容，例如：不吃辣", text: $memoryValue)
-                                .font(.system(size: 13))
+                                .whaleFont(size: 13)
                                 .padding(.horizontal, 11)
                                 .padding(.vertical, 9)
                                 .background(WhaleTheme.field, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -686,7 +690,7 @@ private struct MemorySettingsView: View {
                                 memoryKey = ""
                                 memoryValue = ""
                             }
-                            .font(.system(size: 13, weight: .semibold))
+                            .whaleFont(size: 13, weight: .semibold)
                             .tint(WhaleTheme.accent)
                             .disabled(memoryKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                                       || memoryValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -812,10 +816,10 @@ private struct ServiceSettingsView: View {
             Group {
                 if let badgeIcon {
                     Image(systemName: badgeIcon)
-                        .font(.system(size: 16, weight: .semibold))
+                        .whaleFont(size: 16, weight: .semibold)
                 } else {
                     Text(badge)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .whaleFont(size: 15, weight: .bold, design: .rounded)
                 }
             }
             .foregroundStyle(badgeTone.foreground)
@@ -824,10 +828,10 @@ private struct ServiceSettingsView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .whaleFont(size: 15, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                 Text(subtitle)
-                    .font(.system(size: 11))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(1)
             }
@@ -859,7 +863,7 @@ private struct AdvancedSettingsView: View {
                     SettingsChrome.divider
                     SettingsChrome.infoRow("模型请求用量", ModelRequestMetrics.summary)
                     Text("分别记录模型首轮响应与设备执行耗时，不含用户确认等待。")
-                        .font(.system(size: 11))
+                        .whaleFont(size: 13)
                         .foregroundStyle(WhaleTheme.muted)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.vertical, 8)
@@ -881,7 +885,7 @@ private struct AdvancedSettingsView: View {
                             )
                             Spacer(minLength: 8)
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .semibold))
+                                .whaleFont(size: 13, weight: .semibold)
                                 .foregroundStyle(WhaleTheme.muted)
                         }
                         .frame(minHeight: 56)
@@ -898,17 +902,17 @@ private struct AdvancedSettingsView: View {
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text("WhaleAgent")
-                                .font(.system(size: 14, weight: .semibold))
+                                .whaleFont(size: 14, weight: .semibold)
                                 .foregroundStyle(WhaleTheme.ink)
                             Text("\(model.versionText) · UI v9")
-                                .font(.system(size: 11))
+                                .whaleFont(size: 13)
                                 .foregroundStyle(WhaleTheme.muted)
                         }
 
                         Spacer(minLength: 8)
 
                         Text("本机构建")
-                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .whaleFont(size: 13, weight: .bold, design: .rounded)
                             .tracking(0.4)
                             .foregroundStyle(WhaleTheme.accent)
                             .padding(.horizontal, 8)
@@ -940,17 +944,17 @@ private struct PermissionSettingsRow: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: spec.icon)
-                    .font(.system(size: 16, weight: .semibold))
+                    .whaleFont(size: 16, weight: .semibold)
                     .foregroundStyle(spec.tone.foreground)
                     .frame(width: 38, height: 38)
                     .background(spec.tone.background, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(spec.title)
-                        .font(.system(size: 15, weight: .semibold))
+                        .whaleFont(size: 15, weight: .semibold)
                         .foregroundStyle(WhaleTheme.ink)
                     Text(spec.subtitle)
-                        .font(.system(size: 11))
+                        .whaleFont(size: 13)
                         .foregroundStyle(WhaleTheme.muted)
                         .lineLimit(1)
                 }
@@ -960,7 +964,7 @@ private struct PermissionSettingsRow: View {
                 StatusPill(text: statusText, color: statusColor)
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
+                    .whaleFont(size: 13, weight: .semibold)
                     .foregroundStyle(WhaleTheme.muted.opacity(0.55))
             }
             .frame(minHeight: 56)
@@ -999,7 +1003,7 @@ private struct StatusPill: View {
                 .fill(color)
                 .frame(width: 5, height: 5)
             Text(text)
-                .font(.system(size: 10, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
         }
         .foregroundStyle(color)
         .padding(.horizontal, 8)
@@ -1141,11 +1145,11 @@ private struct ProfileEditorSheet: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(displayName)
-                    .font(.system(size: 19, weight: .semibold))
+                    .whaleFont(size: 19, weight: .semibold)
                     .foregroundStyle(WhaleTheme.ink)
                     .lineLimit(1)
                 Text("资料保存在这台设备，对话时作为上下文使用")
-                    .font(.system(size: 11))
+                    .whaleFont(size: 13)
                     .foregroundStyle(WhaleTheme.muted)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -1160,7 +1164,7 @@ private struct ProfileEditorSheet: View {
             fieldHeader("昵称", count: nickname.count, limit: nicknameLimit)
 
             TextField("鲸鱼怎么称呼你", text: $nickname)
-                .font(.system(size: 15))
+                .whaleFont(size: 15)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .focused($focusedField, equals: .nickname)
@@ -1189,7 +1193,7 @@ private struct ProfileEditorSheet: View {
             fieldHeader("自我介绍", count: bio.count, limit: bioLimit)
 
             TextField("例如：喜欢安静的小店，常在上海", text: $bio, axis: .vertical)
-                .font(.system(size: 15))
+                .whaleFont(size: 15)
                 .lineLimit(3...5)
                 .focused($focusedField, equals: .bio)
                 .submitLabel(.done)
@@ -1216,7 +1220,7 @@ private struct ProfileEditorSheet: View {
             "昵称和自我介绍会同步到「记忆偏好」，用于称呼和对话理解；只保存在本机，对话时会作为上下文发送给鲸鱼模型。",
             systemImage: "lock.shield"
         )
-        .font(.system(size: 11))
+        .whaleFont(size: 13)
         .foregroundStyle(WhaleTheme.muted)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 2)
@@ -1230,11 +1234,11 @@ private struct ProfileEditorSheet: View {
     private func fieldHeader(_ title: String, count: Int, limit: Int) -> some View {
         HStack {
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
+                .whaleFont(size: 13, weight: .semibold)
                 .foregroundStyle(WhaleTheme.ink)
             Spacer()
             Text("\(count)/\(limit)")
-                .font(.system(size: 10, weight: .medium))
+                .whaleFont(size: 13, weight: .medium)
                 .foregroundStyle(count >= limit ? WhaleTheme.coral : WhaleTheme.muted)
         }
     }

@@ -15,7 +15,7 @@ final class CoreTests: XCTestCase {
     }
 
     func testDiscoverGameChannelAndRankBoards() {
-        XCTAssertEqual(DiscoverChannel.game.title, "游戏行情")
+        XCTAssertEqual(DiscoverChannel.game.title, "游戏动态")
         XCTAssertEqual(DiscoverChannel.game.icon, "gamecontroller.fill")
         XCTAssertEqual(DiscoverChannel.weibo.title, "微博热搜")
         XCTAssertEqual(DiscoverChannel.weibo.icon, "flame.fill")
@@ -103,7 +103,7 @@ final class CoreTests: XCTestCase {
     func testDiscoverChannelsMatchHomeOrder() {
         XCTAssertEqual(
             DiscoverChannel.allCases.map(\.title),
-            ["AI科技", "A股自选", "游戏行情", "我的音乐", "时事新闻", "微博热搜"]
+            ["AI科技", "A股自选", "游戏动态", "我的音乐", "时事新闻", "热榜"]
         )
         XCTAssertEqual(AIPaperCategory.allCases.map(\.rawValue), ["cs.AI", "cs.LG", "cs.CL", "cs.CV"])
     }

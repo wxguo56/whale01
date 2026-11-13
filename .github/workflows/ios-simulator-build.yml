@@ -58,8 +58,8 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
-          MARKETING_VERSION=0.6.4 \
-            CURRENT_PROJECT_VERSION="112.${{ github.run_attempt }}" \
+          MARKETING_VERSION=0.7.0 \
+            CURRENT_PROJECT_VERSION="113.${{ github.run_attempt }}" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
@@ -87,6 +87,17 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             test | tee test.log
 
+      - name: Run navigation and draft UI tests
+        working-directory: ios
+        run: |
+          set -o pipefail
+          DEVICE_ID=$(xcrun simctl list devices available -j | /usr/bin/python3 -c 'import json,sys; c=[x for rt in json.load(sys.stdin)["devices"].values() for x in rt if x["name"].startswith("iPhone")]; c.sort(key=lambda x: x["name"] != "iPhone 16 Pro"); print(c[0]["udid"])')
+          xcodebuild -project WhaleAgent.xcodeproj -scheme WhaleAgentInteractions \
+            -destination "platform=iOS Simulator,id=$DEVICE_ID" -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES -maximum-test-execution-time-allowance 90 \
+            -derivedDataPath build -resultBundlePath build/InteractionResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO test | tee interaction-test.log
+
       - name: Upload test log
         if: always()
         uses: actions/upload-artifact@v4
@@ -94,5 +105,7 @@ jobs:
           name: ios-simulator-test-log
           path: |
             ios/test.log
+            ios/interaction-test.log
+            ios/build/InteractionResults.xcresult
             ios/build/TestResults.xcresult
           if-no-files-found: warn
