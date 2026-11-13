@@ -32,7 +32,9 @@ enum ToolModelSummary {
         switch value {
         case .object(let object):
             var result: [String: JSONValue] = [:]
-            for key in object.keys.sorted() where !localOnly.contains(key) {
+            let provenance = ["source", "sources", "fetchedAt", "updatedAt", "locatedAt", "openedAt", "simulated", "priceDataAvailable", "evidenceCount"]
+            let ordered = provenance.filter { object[$0] != nil } + object.keys.filter { !provenance.contains($0) }.sorted()
+            for key in ordered where !localOnly.contains(key) {
                 budget -= key.count
                 if budget <= 0 { result["truncatedForModel"] = .bool(true); break }
                 result[key] = bounded(object[key]!, budget: &budget, depth: depth + 1)

@@ -64,6 +64,9 @@ final class XfyunASRClient {
         audioLease = try AudioSessionCoordinator.shared.acquire(.recording) { [weak self] in
             self?.fail("讯飞录音被打断，已保留草稿。")
         }
+        defer {
+            if !isRunning { AudioSessionCoordinator.shared.release(audioLease); audioLease = nil }
+        }
 
         guard let url = authorizationURL() else {
             throw NSError(domain: "XfyunASR", code: -1, userInfo: [NSLocalizedDescriptionKey: "无法生成讯飞鉴权地址"])

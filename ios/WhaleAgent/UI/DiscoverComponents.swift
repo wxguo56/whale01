@@ -474,7 +474,7 @@ struct MarketDisclaimer: View {
             HStack(spacing: 5) {
                 Image(systemName: "clock.badge.exclamationmark")
                     .font(.system(size: 10, weight: .semibold))
-                Text("行情延迟以来源为准，未知时明确说明 · 不构成投资建议 · 不提供交易")
+                Text("公开行情 · 延迟以来源为准 · 不构成投资建议")
             }
             .font(.system(size: 10, weight: .medium))
             .foregroundStyle(WhaleTheme.muted)

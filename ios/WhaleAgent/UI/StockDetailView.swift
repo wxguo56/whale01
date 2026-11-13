@@ -123,7 +123,7 @@ struct StockDetailView: View {
             HStack(spacing: 5) {
                 Image(systemName: "clock")
                     .font(.system(size: 9, weight: .semibold))
-                Text("最近成交 \(DiscoverFormat.clock(quote.timestamp)) · 延迟以来源为准，未知时明确说明")
+                Text("最近成交 \(DiscoverFormat.clock(quote.timestamp)) · \(DiscoverFormat.delay(quote.delayedMinutes))")
             }
             .font(.system(size: 10))
             .foregroundStyle(WhaleTheme.muted)

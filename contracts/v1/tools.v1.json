@@ -632,7 +632,7 @@
       "name": "get_stock_quote",
       "version": "1.0",
       "skill": "research",
-      "description": "查询真实 A 股或指数行情。query 可以是股票名称、代码或多个代码。返回延迟约 15 分钟的公开行情、来源和最近成交时间；不得据此给出投资建议或假装实时。",
+      "description": "查询真实 A 股或指数行情。query 可以是股票名称、代码或多个代码。返回公开行情、来源和最近成交时间；延迟以来源声明为准，缺失时明确说明未知，不得据此给出投资建议或假装实时。",
       "requiresConfirmation": false,
       "requiresAuthorization": [],
       "inputSchema": {

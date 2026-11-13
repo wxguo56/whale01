@@ -22,6 +22,19 @@ struct WhaleHomeCanvas: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 dailyQuote
+                if let task = model.taskRecords.first(where: { ["awaiting_confirmation", "awaiting_tool_results", "completed_with_limits"].contains($0.status) }) {
+                    Button(action: onOpenRecords) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "list.bullet.clipboard")
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("有一件事需要继续核对").font(.system(size: 13, weight: .semibold))
+                                Text(task.goal).font(.system(size: 12)).lineLimit(2)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right")
+                        }.foregroundStyle(WhaleTheme.ink).whaleCard()
+                    }.buttonStyle(.plain)
+                }
                 weatherCard
                 categoryGrid
                 todayCard

@@ -107,13 +107,10 @@ struct VoiceView: View {
                 .fill(WhaleTheme.accent.opacity(0.07))
                 .frame(width: 124, height: 124)
                 .scaleEffect(pulse ? 0.97 : 1.03)
-            Image("WhaleMascot")
-                .resizable()
-                .scaledToFit()
+            WhaleCompanionView(listening: voice.isRecording || voice.isFinalizing)
                 .frame(width: 138, height: 104)
         }
         .frame(height: 142)
-        .accessibilityHidden(true)
     }
 
     private var waveBars: some View {

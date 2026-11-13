@@ -4,29 +4,45 @@ actor FeedDataStore {
     struct Entry: Sendable { let data: Data; let fetchedAt: Date }
     private var cache: [String: Entry] = [:]
     private var inFlight: [String: Task<Entry, Error>] = [:]
+    private var failures: [String: (count: Int, retryAt: Date)] = [:]
 
     func fetch(url: URL, force: Bool, session: URLSession) async throws -> Entry {
         let key = url.absoluteString
         if let pending = inFlight[key] { return try await pending.value }
         if !force, let cached = cache[key], Date().timeIntervalSince(cached.fetchedAt) < 300 { return cached }
+        if !force, let failure = failures[key], Date() < failure.retryAt {
+            throw DirectContentError.decode("资讯源暂时不可用，正在退避重试")
+        }
         let task = Task<Entry, Error> {
             var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData)
             request.setValue("application/rss+xml,application/atom+xml,application/xml,text/xml", forHTTPHeaderField: "Accept")
             request.setValue("WhaleAgent/0.6", forHTTPHeaderField: "User-Agent")
-            let (data, response) = try await session.data(for: request)
+            let (bytes, response) = try await session.bytes(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 throw DirectContentError.decode("资讯源请求失败")
             }
-            guard data.count <= 4 * 1024 * 1024 else { throw DirectContentError.decode("资讯源内容过大") }
+            let cap = 4 * 1024 * 1024
+            guard response.expectedContentLength <= cap else { throw DirectContentError.decode("资讯源内容过大") }
+            var data = Data()
+            for try await byte in bytes {
+                guard data.count < cap else { throw DirectContentError.decode("资讯源内容过大") }
+                data.append(byte)
+            }
             return Entry(data: data, fetchedAt: Date())
         }
         inFlight[key] = task
         do {
             let entry = try await task.value
             cache[key] = entry
+            failures[key] = nil
             inFlight[key] = nil
             return entry
-        } catch { inFlight[key] = nil; throw error }
+        } catch {
+            inFlight[key] = nil
+            let count = min(6, (failures[key]?.count ?? 0) + 1)
+            failures[key] = (count, Date().addingTimeInterval(min(120, pow(2, Double(count)) * 5)))
+            throw error
+        }
     }
 }
 

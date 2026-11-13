@@ -219,6 +219,7 @@ final class VoiceInputController: ObservableObject {
             xfyun = client
             isRecording = true
         } catch {
+            client.cancel()
             errorText = "讯飞语音启动失败：\(error.localizedDescription)"
         }
     }

@@ -20,7 +20,8 @@ with zipfile.ZipFile(args.ipa) as archive:
     assert info['CFBundleShortVersionString'] == identity['version'], 'IPA version mismatch'
     assert hashlib.sha256(tools).hexdigest() == identity['toolSHA256'], 'Tool manifest mismatch'
     assert len(json.loads(tools)['tools']) == identity['toolCount'], 'Tool count mismatch'
-    if args.public and embedded: raise SystemExit('Public distribution blocked: embedded long-lived credential detected')
+    if (args.public or identity['distribution'] == 'public') and embedded:
+        raise SystemExit('Public distribution blocked: embedded long-lived credential detected')
     result = {**identity, 'bundleId': info['CFBundleIdentifier'], 'installedBuild': info['CFBundleVersion'],
               'ipaSHA256': hashlib.sha256(args.ipa.read_bytes()).hexdigest(), 'bytes': args.ipa.stat().st_size,
               'embeddedCredentialPresent': embedded, 'publicDistributionAllowed': not embedded}

@@ -724,6 +724,11 @@ enum DiscoverFormat {
         return date.formatted(.dateTime.hour().minute())
     }
 
+    static func delay(_ minutes: Int?) -> String {
+        guard let minutes else { return "来源未声明延迟" }
+        return "来源声明延迟约 \(minutes) 分钟"
+    }
+
     static func longDate(_ iso: String?) -> String {
         guard let date = date(from: iso) else { return iso ?? "—" }
         return date.formatted(.dateTime.year().month().day())
