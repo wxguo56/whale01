@@ -30,13 +30,13 @@ export class GameRankService {
     this.cache = new Map();
   }
 
-  async list({ board = "free", limit = 50 } = {}) {
+  async list({ board = "free", limit = 50, force = false } = {}) {
     if (!BOARDS[board]) throw new GameRankError("board 只能是 free 或 grossing", "invalid_board", 400);
     const safeLimit = clampInteger(limit, 1, 100, 50);
     const cacheKey = `${board}:${safeLimit}`;
     const cached = this.cache.get(cacheKey);
     const nowMs = this.now().getTime();
-    if (cached && nowMs - cached.cachedAt < this.cacheTtlMs) {
+    if (!force && cached && nowMs - cached.cachedAt < this.cacheTtlMs) {
       return { ...cached.value, cached: true };
     }
 

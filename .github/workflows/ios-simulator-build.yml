@@ -69,13 +69,22 @@ jobs:
         working-directory: ios
         run: |
           set -o pipefail
-          DEVICE_ID=$(xcrun simctl list devices available -j | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; c=[x for rt in d.values() for x in rt if x["name"].startswith("iPhone")]; print(c[0]["udid"] if c else "")')
+          DEVICE_ID=$(xcrun simctl list devices available -j | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; c=[x for rt in d.values() for x in rt if x["name"].startswith("iPhone")]; c.sort(key=lambda x: x["name"] != "iPhone 16 Pro"); print(c[0]["udid"] if c else "")')
           test -n "$DEVICE_ID"
+          xcrun simctl boot "$DEVICE_ID" || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
           xcodebuild \
             -project WhaleAgent.xcodeproj \
             -scheme WhaleAgent \
             -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+            -destination-timeout 120 \
+            -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 30 \
+            -maximum-test-execution-time-allowance 60 \
             -derivedDataPath build \
+            -resultBundlePath build/TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
             test | tee test.log
 
       - name: Upload test log
@@ -83,5 +92,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-simulator-test-log
-          path: ios/test.log
+          path: |
+            ios/test.log
+            ios/build/TestResults.xcresult
           if-no-files-found: warn

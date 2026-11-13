@@ -156,6 +156,8 @@ test("GameRankService 读取 App Store 公开榜单并缓存", async () => {
   const second = await service.list({ board: "free", limit: 10 });
   assert.equal(second.cached, true);
   assert.equal(calls, 1);
+  await service.list({ board: "free", limit: 10, force: true });
+  assert.equal(calls, 2);
 });
 
 test("服务端工具把新闻与行情转换为可引用的真实结果", async () => {

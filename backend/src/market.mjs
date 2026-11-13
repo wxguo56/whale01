@@ -28,7 +28,7 @@ export class MarketService {
     this.quoteCache = new Map();
   }
 
-  async quotes(symbols, { allowPartial = true } = {}) {
+  async quotes(symbols, { allowPartial = true, force = false } = {}) {
     if (!Array.isArray(symbols) || !symbols.length) {
       throw new MarketError("symbols 至少需要一个股票代码", "invalid_symbols", 400);
     }
@@ -45,7 +45,7 @@ export class MarketService {
     const stale = [];
     for (const symbol of normalized) {
       const cached = this.quoteCache.get(symbol.symbol);
-      if (cached && nowMs - cached.cachedAt < this.quoteCacheTtlMs) quoteMap.set(symbol.symbol, cached.value);
+      if (!force && cached && nowMs - cached.cachedAt < this.quoteCacheTtlMs) quoteMap.set(symbol.symbol, cached.value);
       else stale.push(symbol);
     }
 

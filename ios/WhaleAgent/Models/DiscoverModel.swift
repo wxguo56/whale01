@@ -400,7 +400,7 @@ final class DiscoverModel: ObservableObject {
         let token = UUID()
         requestToken = token
         do {
-            let response = try await client.gameRank(board: board, limit: 50)
+            let response = try await client.gameRank(board: board, limit: 50, force: force)
             guard requestToken == token, channel == .game, gameSection.board == board else { return }
             rankCache[board] = (response, Date())
             DiscoverDiskCache.save(response, key: "rank-\(board.rawValue)")
@@ -457,7 +457,7 @@ final class DiscoverModel: ObservableObject {
         if indexes.isEmpty && watchQuotes.isEmpty { marketState = .loading }
         var messages: [String] = []
         do {
-            let response = try await marketProvider.indexes()
+            let response = try await marketProvider.indexes(force: force)
             guard marketToken == token else { return }
             indexes = response.quotes
             indexesUpdatedAt = response.updatedAt
@@ -469,7 +469,7 @@ final class DiscoverModel: ObservableObject {
         }
         if !symbols.isEmpty {
             do {
-                let response = try await marketProvider.quotes(symbols: symbols)
+                let response = try await marketProvider.quotes(symbols: symbols, force: force)
                 guard marketToken == token, watchlist == symbols else { return }
                 watchQuotes = response.quotes.filter { watchlist.contains($0.symbol) }
                 watchUpdatedAt = response.updatedAt

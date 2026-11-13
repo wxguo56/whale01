@@ -8,10 +8,10 @@ private final class ControlledMarket: MarketDataProvider {
     func search(_ query: String) async throws -> MarketSearchResponse {
         try await withCheckedThrowingContinuation { searches.append((query, $0)) }
     }
-    func indexes() async throws -> MarketQuoteResponse {
+    func indexes(force: Bool) async throws -> MarketQuoteResponse {
         MarketQuoteResponse(updatedAt: ToolDate.iso(Date()), delayedMinutes: nil, source: "test", quotes: [], errors: [])
     }
-    func quotes(symbols: [String]) async throws -> MarketQuoteResponse {
+    func quotes(symbols: [String], force: Bool) async throws -> MarketQuoteResponse {
         try await withCheckedThrowingContinuation { quoteRequests.append($0) }
     }
     func todayFundFlows(symbols: [String]) async -> [String: FundFlowPoint] { [:] }

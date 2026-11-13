@@ -66,14 +66,15 @@ final class DiscoverClient {
         }
     }
 
-    func gameRank(board: GameRankBoard, limit: Int = 50) async throws -> GameRankResponse {
+    func gameRank(board: GameRankBoard, limit: Int = 50, force: Bool = false) async throws -> GameRankResponse {
         if !hasBackend {
             return try await DirectContentClient.shared.gameRank(board: board, limit: limit)
         }
         do {
             return try await get("/v1/games/rank", query: [
                 URLQueryItem(name: "board", value: board.rawValue),
-                URLQueryItem(name: "limit", value: String(limit))
+                URLQueryItem(name: "limit", value: String(limit)),
+                URLQueryItem(name: "refresh", value: force ? "force" : "cached")
             ])
         } catch {
             return try await DirectContentClient.shared.gameRank(board: board, limit: limit)
@@ -112,7 +113,7 @@ final class DiscoverClient {
         await DirectContentClient.shared.todayFundFlows(symbols: symbols)
     }
 
-    func quotes(symbols: [String]) async throws -> MarketQuoteResponse {
+    func quotes(symbols: [String], force: Bool = false) async throws -> MarketQuoteResponse {
         guard !symbols.isEmpty else {
             return MarketQuoteResponse(updatedAt: "", delayedMinutes: nil, source: "", quotes: [], errors: [])
         }
@@ -121,19 +122,20 @@ final class DiscoverClient {
         }
         do {
             return try await get("/v1/market/quote", query: [
-                URLQueryItem(name: "symbols", value: symbols.joined(separator: ","))
+                URLQueryItem(name: "symbols", value: symbols.joined(separator: ",")),
+                URLQueryItem(name: "refresh", value: force ? "force" : "cached")
             ])
         } catch {
             return try await DirectContentClient.shared.quotes(symbols: symbols)
         }
     }
 
-    func indexes() async throws -> MarketQuoteResponse {
+    func indexes(force: Bool = false) async throws -> MarketQuoteResponse {
         if !hasBackend {
             return try await DirectContentClient.shared.indexes()
         }
         do {
-            return try await get("/v1/market/indexes", query: [])
+            return try await get("/v1/market/indexes", query: [URLQueryItem(name: "refresh", value: force ? "force" : "cached")])
         } catch {
             return try await DirectContentClient.shared.indexes()
         }

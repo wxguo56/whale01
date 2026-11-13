@@ -68,7 +68,7 @@ export function createHttpServer(runtime) {
       if (request.method === "GET" && url.pathname === "/v1/games/rank") {
         const board = url.searchParams.get("board") ?? "free";
         const limit = Number(url.searchParams.get("limit") ?? 50);
-        const result = await runtime.gameRank.list({ board, limit });
+        const result = await runtime.gameRank.list({ board, limit, force: url.searchParams.get("refresh") === "force" });
         sendJson(response, 200, result);
         return;
       }
@@ -78,13 +78,13 @@ export function createHttpServer(runtime) {
           .split(",")
           .map((item) => item.trim())
           .filter(Boolean);
-        const result = await runtime.market.quotes(symbols);
+        const result = await runtime.market.quotes(symbols, { force: url.searchParams.get("refresh") === "force" });
         sendJson(response, 200, result);
         return;
       }
 
       if (request.method === "GET" && url.pathname === "/v1/market/indexes") {
-        const result = await runtime.market.quotes(["sh000001", "sz399001", "sz399006", "sh000688"]);
+        const result = await runtime.market.quotes(["sh000001", "sz399001", "sz399006", "sh000688"], { force: url.searchParams.get("refresh") === "force" });
         sendJson(response, 200, result);
         return;
       }
