@@ -118,7 +118,7 @@ enum WhaleTheme {
     static let composerSendGradient = LinearGradient(
         colors: [
             Color(light: 0x3FCDBE, dark: 0x2FBFB2),
-            Color(light: 0x4E9BE8, dark: 0x3E86C9)
+            Color(light: 0x4E9BE8, dark: 0x4E9BE8)
         ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
