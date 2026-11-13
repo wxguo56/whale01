@@ -143,7 +143,7 @@ A. 已安装 GitHub CLI：
 ```bash
 gh auth login --hostname github.com --git-protocol https --web
 gh repo create whale01 --private --source . --remote origin --push
-gh workflow run "iOS Simulator Build" --repo <账号>/whale01
+gh workflow run ios-simulator-build.yml --repo <账号>/whale01 -f scope=quick
 gh run watch --repo <账号>/whale01
 ```
 
@@ -155,7 +155,7 @@ git credential-manager github login --device
 # 在 GitHub 网页创建私有仓库 whale01（不要初始化 README）
 git remote add origin https://github.com/<账号>/whale01.git
 git push -u origin main
-# 然后在 Actions 页面运行 iOS Simulator Build
+# 然后在 Actions 页面运行 Push Quick Validation；完整交互验收手动运行 iOS Manual Interaction Tests
 ```
 
 GCM 的 GitHub 授权范围已确认包含 `repo` 与 `workflow`，可以推送 `.github/workflows`。

@@ -19,21 +19,21 @@
 - 每周最多注册 10 个 App ID。
 - 不支持 HealthKit、WeatherKit、App Groups、推送通知等受限能力。
 
-因此免费版会禁用“天气”和“运动摘要”，返回明确的 `unavailable_in_free_build`，不会崩溃，也不会伪装成成功。提醒、日历、地点、导航、联系人、短信草稿、音乐仍保留。
+当前免费版的天气使用 Open-Meteo 公共 HTTPS 接口，可以查询；运动摘要因 HealthKit 能力受限，返回明确的 `unavailable_in_free_build`。提醒、日历、地点、导航、联系人、短信草稿、音乐仍保留。
 
 ## 已完成的工程改动
 
 - `ios/project.yml` 新增 `WhaleAgentSideload` target 与 scheme。
 - 新增空 entitlements 文件，避免安装时因缺少 HealthKit / WeatherKit 能力被拒。
-- `NativeToolRouter` 在 `FREE_SIGNING` 下拦截天气与运动摘要。
+- `NativeToolRouter` 在 `FREE_SIGNING` 下拦截运动摘要；天气走不需要 WeatherKit entitlement 的 Open-Meteo。
 - `PermissionCenter` 在免费版把运动数据标记为“免费签名不可用”。
 - 新增工作流 `.github/workflows/ios-sideload-ipa.yml`，在 `macos-15` 上构建未签名设备 IPA 并上传 artifact。
 
 ## 第一步：拿到 IPA
 
-1. 推送包含 `ios/**` 的提交，或在 GitHub Actions 手动运行 `iOS Sideload IPA`。
-2. 等待 job 绿色，确认日志包含 `BUILD SUCCEEDED` 和 `lipo -info` 输出 `arm64`。
-3. 下载 artifact `WhaleAgent-Sideload-ipa`，解压得到 `WhaleAgent-Sideload.ipa`。
+1. 推送只做 `Push Quick Validation`。在 Actions 手动运行 `iOS Manual Interaction Tests`，完成候选分支的原生/UI 回归。
+2. 手动运行同一分支的 `iOS Sideload IPA`，等待 job 绿色，确认日志包含 `ARCHIVE SUCCEEDED`，二进制为 `arm64`。
+3. 当前 artifact 是加密的 `WhaleAgent-Sideload-ipa-enc`。在本机使用已有私钥执行 `tools/publish-ipa.ps1 -RunId <运行编号> -ExpectedSourceSHA <完整源码SHA>`；脚本核对来源与校验和后解密，落到下文的固定安装文件。不要把 `.enc` 文件当成 IPA 导入 AltStore。
 
 首次构建记录：<https://github.com/wxguo56/whale01/actions/runs/42582592122>。日志确认 `ARCHIVE SUCCEEDED`，二进制为 `arm64`，Bundle ID 为 `com.whale01.whaleagent.alt`。
 
@@ -43,7 +43,7 @@
 2. 从 <https://altstore.io> 安装 AltServer，登录 Windows 后托盘出现 AltServer 图标。
 3. iPhone 打开“设置 → 隐私与安全性 → 开发者模式”，重启并确认开启。
 4. 电脑与 iPhone 连接同一 Wi-Fi；Windows 防火墙放行 AltServer。
-5. 后端使用局域网地址（当前默认 `http://10.219.86.103:8787`），并放行 8787 / 8790 端口。
+5. 默认由手机直接调用 DeepSeek 云 API，手机有可用的 Wi-Fi 或移动网络即可，在设置中配置个人密钥。若主动选择云后端模式，填写手机可访问的后端地址；局域网开发服务再按实际端口配置防火墙。
 
 ## 第三步 A：用 AltStore 安装
 
@@ -72,8 +72,8 @@ SideStore 适合不想长期开着电脑的场景，但首次安装仍需要电�
 5. 地点搜索与地图导航交接。
 6. 联系人解析与短信草稿，确认发送/取消回调。
 7. 音乐搜索、播放、暂停、继续、切歌。
-8. 请求天气或运动摘要，确认返回“免费签名不可用”，不崩溃、不编造数据。
-9. 断网、切后台再回来，记录当前失败表现（该能力尚未实现）。
+8. 查询天气并核对真实来源；请求运动摘要时确认免费版明确返回不可用。
+9. 验证断网重试、结果回传、切后台和重启恢复，检查实际系统记录是否重复；这些场景仍需真机记录结果。
 
 ## 与 TestFlight 的关系
 
