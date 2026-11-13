@@ -6,6 +6,7 @@ struct DiscoverChannelPage: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             if let notice = model.dataNotice {
                 Label(notice, systemImage: "clock.arrow.circlepath")
                     .whaleFont(size: 13)
@@ -15,7 +16,6 @@ struct DiscoverChannelPage: View {
                     .background(WhaleTheme.soft)
                     .accessibilityLabel(notice)
             }
-            content
         }
     }
 
