@@ -415,9 +415,12 @@ final class AppModel: ObservableObject {
         permissionsSnapshot = permissions.snapshot()
     }
 
-    func send(text rawText: String, displayText: String? = nil, speakReply: Bool = false) async {
+    func send(text rawText: String, displayText: String? = nil, speakReply: Bool = false, onAccepted: (() -> Void)? = nil) async {
         let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isBusy else { return }
+        isBusy = true
+        activityText = "正在核对任务状态"
+        defer { isBusy = false }
         if agentMode == "cloud" {
             if !backendOnline || backendExecutionMode == "unknown" {
                 await health()
@@ -446,8 +449,7 @@ final class AppModel: ObservableObject {
         lastFailedInput = nil
         activityText = "正在理解你的请求"
         appendMessage(ChatMessage(role: .user, text: displayText ?? text))
-        isBusy = true
-        defer { isBusy = false }
+        onAccepted?()
 
         if !backendOnline || backendExecutionMode == "unknown" {
             await health()

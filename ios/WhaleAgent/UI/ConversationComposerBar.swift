@@ -184,7 +184,7 @@ struct ConversationComposerBar: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(WhaleTheme.field)
                 .overlay {
-                    RoundedRectangle(cornerRadius: 23, style: .continuous)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .strokeBorder(WhaleTheme.line, lineWidth: 0.8)
                 }
         }
@@ -241,25 +241,35 @@ struct ConversationComposerBar: View {
             Task {
                 defer { finishingVoice = false }
                 guard let final = await voice.finishRecognition(), !final.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                    draft = voice.transcript
+                    draft = voicePrefix.isEmpty ? voice.transcript : voicePrefix + "\n" + voice.transcript
                     focused = true
                     return
                 }
                 focused = false
-                draft = ""
-                if let context = draftContext { drafts.save("", context: context) }
                 let composed = voicePrefix.isEmpty ? final : voicePrefix + "\n" + final
+                draft = composed
                 voicePrefix = ""
-                await model.send(text: composed)
+                finishingVoice = false
+                await sendDraft(composed, original: composed, context: draftContext)
             }
         } else {
             let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { return }
             focused = false
-            draft = ""
-            if let context = draftContext { drafts.save("", context: context) }
-            Task { await model.send(text: text) }
+            let original = draft
+            let context = draftContext
+            Task { await sendDraft(text, original: original, context: context) }
         }
+    }
+
+    private func sendDraft(_ text: String, original: String, context: String?) async {
+        await model.send(text: text, onAccepted: {
+            // Clear only after the message is accepted into persistent history.
+            // Preflight rejection and newer edits must keep their draft intact.
+            guard draftContext == context, draft == original else { return }
+            draft = ""
+            if let context { drafts.save("", context: context) }
+        })
     }
 
     private func ingestPhoto() async {
