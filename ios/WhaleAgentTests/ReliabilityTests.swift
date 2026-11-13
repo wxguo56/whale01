@@ -37,7 +37,7 @@ final class ReliabilityTests: XCTestCase {
         XCTAssertTrue(RealDataGuard.finalReply(for: .stock, usedTools: ["search_stock"], proposed: "股价20元").contains("没有取得真实行情"))
     }
 
-    func testTodoKeepsIncompleteTimesAsDraftsAndDoesNotAddEdits() {
+    func testTodoKeepsIncompleteTimesAsDraftsAndDoesNotAddEdits() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Shanghai")!
         let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 10))!
@@ -76,7 +76,7 @@ final class ReliabilityTests: XCTestCase {
         for (text, day, hour, minute) in clockCases {
             let parsed = TodoQuickParser.parseAdd(text, now: now, calendar: calendar)
             XCTAssertNil(parsed.validationError, text)
-            let due = parsed.dueAt!
+            let due = try XCTUnwrap(parsed.dueAt, text)
             XCTAssertEqual(calendar.component(.day, from: due), day, text)
             XCTAssertEqual(calendar.component(.hour, from: due), hour, text)
             XCTAssertEqual(calendar.component(.minute, from: due), minute, text)
