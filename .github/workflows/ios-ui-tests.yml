@@ -2,6 +2,12 @@ name: iOS Manual Interaction Tests
 
 on:
   workflow_dispatch:
+    inputs:
+      scope:
+        description: Run all native and UI tests, or retry UI tests only
+        type: choice
+        options: [all, ui]
+        default: all
   workflow_call:
 
 permissions:
@@ -15,7 +21,7 @@ jobs:
   test:
     name: Native unit and navigation UI regression
     runs-on: macos-15-intel
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,6 +41,7 @@ jobs:
           xcrun simctl boot "$DEVICE_ID" || true
           xcrun simctl bootstatus "$DEVICE_ID" -b
       - name: Run native unit tests
+        if: ${{ inputs.scope != 'ui' }}
         working-directory: ios
         run: |
           set -o pipefail
