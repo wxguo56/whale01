@@ -17,7 +17,7 @@ final class CoreTests: XCTestCase {
     func testDiscoverGameChannelAndRankBoards() {
         XCTAssertEqual(DiscoverChannel.game.title, "游戏动态")
         XCTAssertEqual(DiscoverChannel.game.icon, "gamecontroller.fill")
-        XCTAssertEqual(DiscoverChannel.weibo.title, "微博热搜")
+        XCTAssertEqual(DiscoverChannel.weibo.title, "热榜")
         XCTAssertEqual(DiscoverChannel.weibo.icon, "flame.fill")
         XCTAssertNil(GameSection.news.board)
         XCTAssertEqual(GameSection.free.board, .free)

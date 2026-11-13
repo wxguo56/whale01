@@ -74,6 +74,9 @@ elif args.run:
                 print('Logs unavailable: HTTP ' + str(error.code))
                 continue
             errors = [line for line in log.splitlines() if re.search(r'error:|Test Case .*failed|fatal error|XCTAssert|failed -|Executed [0-9]+ tests|Test Suite .*passed|Testing started|Test Case .*passed', line)]
+            if job['conclusion'] == 'failure':
+                failures = [line for line in log.splitlines() if re.search(r'error:|Test Case .*failed|fatal error|XCTAssert|failed -', line)]
+                print('\n'.join(failures[-40:]))
             print('\n'.join(errors[-60:]))
 else:
     from urllib.parse import quote

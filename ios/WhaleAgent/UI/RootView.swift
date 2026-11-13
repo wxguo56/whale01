@@ -14,6 +14,7 @@ struct RootView: View {
     @State private var discoverReturnTitle = "助手"
     @AppStorage("whale.appearance") private var appearance = "system"
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var systemTextSize
 
     var body: some View {
         TabView(selection: $page) {
@@ -31,6 +32,7 @@ struct RootView: View {
         .toolbarBackground(WhaleTheme.chrome, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .preferredColorScheme(colorScheme)
+        .dynamicTypeSize(preferredTextSize)
         .sheet(item: $model.presentedConfirmation) { item in ConfirmationSheet(model: model, item: item) }
         .sheet(isPresented: $showRecords) { RecordsView(model: model, showsClose: true, onClose: { showRecords = false }) }
         .sheet(isPresented: $showSettings) {
@@ -80,6 +82,12 @@ struct RootView: View {
     }
     private var colorScheme: ColorScheme? {
         appearance == "light" ? .light : appearance == "dark" ? .dark : nil
+    }
+    private var preferredTextSize: DynamicTypeSize {
+#if DEBUG
+        if ProcessInfo.processInfo.environment["WHALE_DEMO_LARGE_TEXT"] == "1" { return .accessibility3 }
+#endif
+        return systemTextSize
     }
 }
 
