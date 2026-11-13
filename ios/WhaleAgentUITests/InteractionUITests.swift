@@ -13,6 +13,8 @@ final class InteractionUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["助手"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.tabBars.buttons["待办"].exists)
         XCTAssertTrue(app.tabBars.buttons["发现"].exists)
+        app.tabBars.buttons["待办"].tap()
+        XCTAssertTrue(app.buttons["回到对话"].waitForExistence(timeout: 5))
         app.tabBars.buttons["发现"].tap()
         let capture = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         capture.name = "discovery-after-tab-tap"; capture.lifetime = .keepAlways; add(capture)

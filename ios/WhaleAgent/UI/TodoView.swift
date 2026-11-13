@@ -109,7 +109,8 @@ struct TodoView: View {
     private var reminderStatus: String { model.permissionsSnapshot["reminder"] ?? "unknown" }
     private var pendingItems: [TodoReminder] { items.filter { !$0.completed } }
     private var inProgressItems: [TodoReminder] {
-        let endOfToday = Calendar.current.startOfDay(for: Date()).addingTimeInterval(86_400)
+        let start = Calendar.current.startOfDay(for: Date())
+        let endOfToday = Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(86_400)
         return items.filter { item in
             guard !item.completed, let due = item.dueAt else { return false }
             return due < endOfToday
@@ -776,6 +777,8 @@ struct TodoView: View {
 
     private func reload(silent: Bool = false) async {
         guard !isLoading else { return }
+        model.refreshPermissions()
+        guard reminderStatus == "granted" else { items = []; return }
         isLoading = true
         if !silent { errorText = nil }
         defer { isLoading = false }
