@@ -2,13 +2,13 @@
   "project": "代号鲸鱼01",
   "date": "2026-11-13",
   "baseline": "d1dccd9",
-  "candidate": "8424b6f",
+  "candidate": "689c13d",
   "version": "0.6.4",
   "build": "112.1",
   "validation": {
     "backend": "89/89 通过",
     "nativePreviousCandidate": "e623416：52/52 通过",
-    "nativeFinalCandidate": "55/55 通过，零失败；包含 17 项新增原生回归",
+    "nativeFinalCandidate": "main 构建：55/55 通过，零失败；包含 17 项新增原生回归",
     "phone": "未进行本轮真机安装或验收",
     "ipa": "设备架构归档、身份校验、本机独立核验均通过",
     "ui": "iPhone 16 Pro 原生截图 1206×2622；首页极光游灵已撤下，原对话入口已恢复"
@@ -184,12 +184,18 @@
     }
   ],
   "ci": {
-    "native": "https://github.com/wxguo56/whale01/actions/runs/43378879697",
-    "ipa": "https://github.com/wxguo56/whale01/actions/runs/43378879572",
+    "native": "https://github.com/wxguo56/whale01/actions/runs/43381746408",
+    "ipa": "https://github.com/wxguo56/whale01/actions/runs/43381746322",
     "ui": "https://github.com/wxguo56/whale01/actions/runs/43377550281"
   },
-  "candidateFullSHA": "8424b6fe603eaa4c7f30263bb8c805120da09cac",
-  "ipaSHA256": "2fb52c960258ad03805c7fea66ba6f78727f3c3509006d400aeb12d7678d7f6e",
-  "ipaBytes": 3313395,
-  "distribution": "个人侧载；未进行真机安装；本构建不适合明文公开分发"
+  "candidateFullSHA": "689c13d89aecaebfeba2cdf5613256e88394f3aa",
+  "ipaSHA256": "f667188f68e3e0ea4fc9c8dfe21e57033560504309db3c80bd263f5bc1f96a3d",
+  "ipaBytes": 3313410,
+  "distribution": "个人侧载；未进行真机安装；本构建不适合明文公开分发",
+  "previousValidatedCandidate": "8424b6fe603eaa4c7f30263bb8c805120da09cac",
+  "publication": {
+    "main": "已按用户明确授权合入并推送",
+    "pullRequest": "https://github.com/wxguo56/whale01/pull/1",
+    "pullRequestState": "merged"
+  }
 }
