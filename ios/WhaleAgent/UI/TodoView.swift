@@ -90,7 +90,7 @@ struct TodoView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var voice = VoiceInputController()
 
-    @State private var filter: TodoFilter = .pending
+    @AppStorage("whale.todo.filter") private var filter: TodoFilter = .pending
     @State private var items: [TodoReminder] = []
     @State private var draft = ""
     @State private var isLoading = false

@@ -18,15 +18,26 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $page) {
-            ConversationTabView(model: model, bottomInset: 0,
-                onOpenRecords: { showRecords = true }, onOpenSettings: { showSettings = true },
-                onOpenMusic: { openDiscover(.music) }, onOpenTodo: { page = .records }, onOpenDiscover: openDiscover)
-                .safeAreaInset(edge: .bottom, spacing: 0) { ConversationComposerBar(model: model) }
-                .tabItem { Label("助手", systemImage: "bubble.left.and.bubble.right") }.tag(AppTab.conversation)
-            TodoView(model: model, embedded: true, onBackToChat: { page = .conversation }, bottomBarInset: 0)
-                .tabItem { Label("待办", systemImage: "checklist") }.tag(AppTab.records)
-            DiscoverHubView(model: model, onOpen: openDiscover, onSettings: { showSettings = true })
-                .tabItem { Label("发现", systemImage: "square.grid.2x2") }.tag(AppTab.discover)
+            // Keep only the visible tab's input/picker/accessibility subtree mounted.
+            // Durable drafts, playback and conversation state belong to the model/stores.
+            ZStack {
+                if page == .conversation {
+                    ConversationTabView(model: model, bottomInset: 0,
+                        onOpenRecords: { showRecords = true }, onOpenSettings: { showSettings = true },
+                        onOpenMusic: { openDiscover(.music) }, onOpenTodo: { page = .records }, onOpenDiscover: openDiscover)
+                        .safeAreaInset(edge: .bottom, spacing: 0) { ConversationComposerBar(model: model) }
+                }
+            }.tabItem { Label("助手", systemImage: "bubble.left.and.bubble.right") }.tag(AppTab.conversation)
+            ZStack {
+                if page == .records {
+                    TodoView(model: model, embedded: true, onBackToChat: { page = .conversation }, bottomBarInset: 0)
+                }
+            }.tabItem { Label("待办", systemImage: "checklist") }.tag(AppTab.records)
+            ZStack {
+                if page == .discover {
+                    DiscoverHubView(model: model, onOpen: openDiscover, onSettings: { showSettings = true })
+                }
+            }.tabItem { Label("发现", systemImage: "square.grid.2x2") }.tag(AppTab.discover)
         }
         .tint(WhaleTheme.accent)
         .toolbarBackground(WhaleTheme.chrome, for: .tabBar)

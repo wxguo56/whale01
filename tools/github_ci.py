@@ -46,7 +46,9 @@ if args.create_draft_pr:
     from urllib.parse import quote
     if not args.title or not args.body_file: raise SystemExit('--title and --body-file are required')
     existing = request('/pulls?state=open&base=main&head=' + quote('wxguo56:' + args.branch, safe=''))
-    pr = existing[0] if existing else request('/pulls', 'POST', {
+    pr = request('/pulls/' + str(existing[0]['number']), 'PATCH', {
+        'title': args.title, 'body': Path(args.body_file).read_text(encoding='utf-8')
+    }) if existing else request('/pulls', 'POST', {
         'title': args.title, 'head': args.branch, 'base': 'main', 'draft': True,
         'body': Path(args.body_file).read_text(encoding='utf-8')
     })
@@ -66,9 +68,9 @@ elif args.run:
         print(json.dumps([{k:item.get(k) for k in ['id','name','size_in_bytes','expired']} for item in items], ensure_ascii=False))
         raise SystemExit(0)
     jobs = request('/actions/runs/' + str(args.run) + '/jobs')
-    print(json.dumps({k: run.get(k) for k in ['id','name','status','conclusion','head_sha','html_url']}, ensure_ascii=False))
+    print(json.dumps({k: run.get(k) for k in ['id','name','status','conclusion','head_sha','html_url','created_at','updated_at']}, ensure_ascii=False))
     for job in jobs['jobs']:
-        print(json.dumps({'job':job['name'],'status':job['status'],'conclusion':job['conclusion'], 'steps':[{k:step.get(k) for k in ['name','status','conclusion']} for step in job['steps']]}, ensure_ascii=False))
+        print(json.dumps({'job':job['name'],'status':job['status'],'conclusion':job['conclusion'], 'steps':[{k:step.get(k) for k in ['name','status','conclusion','started_at','completed_at']} for step in job['steps']]}, ensure_ascii=False))
         if job['conclusion'] == 'failure' or args.logs:
             try: log = download('/actions/jobs/' + str(job['id']) + '/logs').decode('utf-8', errors='replace')
             except urllib.error.HTTPError as error:
