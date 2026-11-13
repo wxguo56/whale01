@@ -35,9 +35,9 @@ struct WhaleCompanionView: View {
             }
             .task { startIdle() }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active { startIdle() } else { floating = false; returnTask?.cancel(); busy = false }
+                if phase == .active { startIdle() } else { resetInteraction() }
             }
-            .onDisappear { returnTask?.cancel(); CompanionAudio.shared.stop() }
+            .onDisappear { resetInteraction() }
             .accessibilityLabel("鲸鱼伙伴 · \(label(listening ? .curious : mood))")
             .accessibilityHint("轻点会开心跳动；长按可预览表情与开启合成触摸音效。")
             .accessibilityAddTraits(.isButton)
@@ -46,6 +46,16 @@ struct WhaleCompanionView: View {
     private func startIdle() {
         guard !reduceMotion, scenePhase == .active else { return }
         withAnimation(.easeInOut(duration: 2.9).repeatForever(autoreverses: true)) { floating = true }
+    }
+    private func resetInteraction() {
+        returnTask?.cancel()
+        returnTask = nil
+        actionToken = UUID()
+        busy = false
+        jumping = false
+        floating = false
+        mood = .neutral
+        CompanionAudio.shared.stop()
     }
     private func react(_ expression: Mood, jump: Bool) {
         guard !busy else { return }
