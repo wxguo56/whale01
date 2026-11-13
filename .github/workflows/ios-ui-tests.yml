@@ -14,7 +14,7 @@ concurrency:
 jobs:
   test:
     name: Native unit and navigation UI regression
-    runs-on: macos-15
+    runs-on: macos-15-intel
     timeout-minutes: 25
     steps:
       - name: Checkout
