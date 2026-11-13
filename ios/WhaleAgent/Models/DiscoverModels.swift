@@ -44,6 +44,34 @@ enum DiscoverChannel: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
+enum HotBoard: String, CaseIterable, Identifiable, Hashable {
+    case weibo
+    case zhihu
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .weibo: return "微博热搜"
+        case .zhihu: return "知乎热榜"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .weibo: return "实时热搜 · 公开数据"
+        case .zhihu: return "热门讨论 · 公开数据"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .weibo: return "flame.fill"
+        case .zhihu: return "text.bubble.fill"
+        }
+    }
+}
+
 enum AIPaperCategory: String, CaseIterable, Identifiable, Hashable {
     case ai = "cs.AI"
     case machineLearning = "cs.LG"
@@ -588,6 +616,20 @@ struct KlinePoint: Decodable, Identifiable, Hashable {
 
     var id: String { date }
     var chartValue: Double { close ?? open ?? high ?? low ?? 0 }
+}
+
+struct StockProfile: Decodable, Hashable {
+    let symbol: String
+    let name: String
+    let industry: String?
+    let region: String?
+    let priceBook: Double?
+    let volumeRatio: Double?
+    let totalShares: Double?
+    let floatShares: Double?
+    let week52High: Double?
+    let week52Low: Double?
+    let roe: Double?
 }
 
 struct IntradayResponse: Decodable {

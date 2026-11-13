@@ -54,18 +54,20 @@ final class DirectContentClient: @unchecked Sendable {
         Feed(id: "ithome-gametech", name: "IT之家 · 游戏技术", url: "https://www.ithome.com/rss/", channels: ["ai"], section: "gametech", requireAIKeyword: false, allMatchPatterns: ["(游戏|玩家|电竞|主机|掌机|显卡|gpu|steam)", "(技术|引擎|渲染|gdc|ai|性能|画质|光追|云游戏|开发者)"]),
         Feed(id: "mydrivers-gametech", name: "快科技 · 游戏技术", url: "https://rss.mydrivers.com/rss.aspx?Tid=1", channels: ["ai"], section: "gametech", requireAIKeyword: false, allMatchPatterns: ["(游戏|玩家|电竞|主机|掌机|显卡|gpu|steam)", "(技术|引擎|渲染|gdc|ai|性能|画质|光追|云游戏|开发者)"]),
         Feed(id: "ithome", name: "IT之家", url: "https://www.ithome.com/rss/", channels: ["ai", "headline"], section: "tech", requireAIKeyword: true),
-        Feed(id: "36kr", name: "36氪", url: "https://36kr.com/feed", channels: ["ai", "headline"], section: "tech", requireAIKeyword: true),
 
-        // 时事：人民网按频道拆分，新浪、中新网补齐国内与国际
+        // 时事：中新网国内/国际/要闻每天滚动更新；人民网保留权威深度稿。
+        // 军事用 Google 新闻补时效，汽车用 IT之家与快科技的汽车关键词补时效。
+        Feed(id: "chinanews-china", name: "中国新闻网 · 国内", url: "https://www.chinanews.com.cn/rss/china.xml", channels: ["headline"], section: "domestic", requireAIKeyword: false),
+        Feed(id: "chinanews-world", name: "中国新闻网 · 国际", url: "https://www.chinanews.com.cn/rss/world.xml", channels: ["headline"], section: "world", requireAIKeyword: false),
+        Feed(id: "chinanews-top", name: "中国新闻网 · 要闻", url: "https://www.chinanews.com.cn/rss/importnews.xml", channels: ["headline"], section: "top", requireAIKeyword: false),
         Feed(id: "people-politics", name: "人民网 · 国内", url: "https://www.people.com.cn/rss/politics.xml", channels: ["headline"], section: "domestic", requireAIKeyword: false),
         Feed(id: "people-world", name: "人民网 · 国际", url: "https://www.people.com.cn/rss/world.xml", channels: ["headline"], section: "world", requireAIKeyword: false),
         Feed(id: "people-military", name: "人民网 · 军事", url: "https://www.people.com.cn/rss/military.xml", channels: ["headline"], section: "military", requireAIKeyword: false),
         Feed(id: "people-auto", name: "人民网 · 汽车", url: "https://www.people.com.cn/rss/auto.xml", channels: ["headline"], section: "auto", requireAIKeyword: false),
         Feed(id: "people-it", name: "人民网 · 科技", url: "https://www.people.com.cn/rss/it.xml", channels: ["headline"], section: "tech", requireAIKeyword: false),
-        Feed(id: "sina-china", name: "新浪新闻", url: "https://rss.sina.com.cn/news/china/focus15.xml", channels: ["headline"], section: "domestic", requireAIKeyword: false),
-        Feed(id: "sina-world", name: "新浪国际", url: "https://rss.sina.com.cn/news/world/focus15.xml", channels: ["headline"], section: "world", requireAIKeyword: false),
-        Feed(id: "sina-tech", name: "新浪科技", url: "https://rss.sina.com.cn/tech/rollnews.xml", channels: ["headline"], section: "tech", requireAIKeyword: false),
-        Feed(id: "chinanews", name: "中国新闻网", url: "https://www.chinanews.com.cn/rss/scroll-news.xml", channels: ["headline"], section: "domestic", requireAIKeyword: false),
+        Feed(id: "google-military", name: "Google 新闻 · 军事", url: "https://news.google.com/rss/search?q=%E5%86%9B%E4%BA%8B&hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["headline"], section: "military", requireAIKeyword: false),
+        Feed(id: "ithome-auto", name: "IT之家 · 汽车", url: "https://www.ithome.com/rss/", channels: ["headline"], section: "auto", requireAIKeyword: false, matchPattern: "(汽车|车型|比亚迪|特斯拉|新能源|电动车|自动驾驶|智驾|小米汽车|问界|理想|蔚来|小鹏|吉利|长安|奇瑞|奥迪|宝马|奔驰|丰田|大众|本田|日产|SUV|轿车|MPV|座舱|充电)"),
+        Feed(id: "mydrivers-auto", name: "快科技 · 汽车", url: "https://rss.mydrivers.com/rss.aspx?Tid=1", channels: ["headline"], section: "auto", requireAIKeyword: false, matchPattern: "(汽车|车型|比亚迪|特斯拉|新能源|电动车|自动驾驶|智驾|小米汽车|问界|理想|蔚来|小鹏|吉利|长安|奇瑞|奥迪|宝马|奔驰|丰田|大众|本田|日产|SUV|轿车|MPV|座舱|充电)"),
         Feed(id: "gnews-top", name: "Google 头条", url: "https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["headline"], section: "top", requireAIKeyword: false),
 
         // 游戏：国内外媒体分开，Steam 榜单走商店公开接口
@@ -152,12 +154,26 @@ final class DirectContentClient: @unchecked Sendable {
             // 厂商新闻更新最快，若只按时间取前 40 条，其它标签页会被挤空。
             // 这里在最新 40 条之外，为每个主题再补 12 条，保证每个分类都有内容。
             var selected = Array(rankedItems.prefix(safeLimit))
-            let selectedIDs = Set(selected.map(\.id))
+            var selectedIDs = Set(selected.map(\.id))
             let sections = ["game-ai", "coding", "gametech", "vendor", "media", "tech"]
             for sectionID in sections {
                 let extra = rankedItems
                     .filter { $0.section == sectionID && !selectedIDs.contains($0.id) }
                     .prefix(12)
+                for item in extra { selectedIDs.insert(item.id) }
+                selected.append(contentsOf: extra)
+            }
+            rankedItems = selected.sorted { $0.publishedAt > $1.publishedAt }
+        } else if channel == .headline, section == "all" {
+            // 时事源更新频率差异很大：只取最新 40 条会让军事、汽车等低频频道整栏空白。
+            // 最新 40 条之外，每个分栏再补 10 条，保证“国内/国际/军事/科技/汽车”都有真实内容。
+            var selected = Array(rankedItems.prefix(safeLimit))
+            var selectedIDs = Set(selected.map(\.id))
+            for sectionID in ["domestic", "world", "military", "tech", "auto"] {
+                let extra = rankedItems
+                    .filter { $0.section == sectionID && !selectedIDs.contains($0.id) }
+                    .prefix(10)
+                for item in extra { selectedIDs.insert(item.id) }
                 selected.append(contentsOf: extra)
             }
             rankedItems = selected.sorted { $0.publishedAt > $1.publishedAt }
@@ -588,6 +604,71 @@ final class DirectContentClient: @unchecked Sendable {
         )
     }
 
+    // MARK: - Zhihu hot list
+
+    func zhihuHot(limit: Int) async throws -> WeiboHotResponse {
+        let safeLimit = min(max(limit, 1), 50)
+        let endpoints = [
+            "https://api.zhihu.com/topstory/hot-list?limit=\(safeLimit)",
+            "https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=\(safeLimit)&desktop=true"
+        ]
+        var firstError: Error?
+        for endpoint in endpoints {
+            do {
+                return try await loadZhihuHot(endpoint: endpoint, limit: safeLimit)
+            } catch {
+                if firstError == nil { firstError = error }
+            }
+        }
+        let previous = (firstError as? LocalizedError)?.errorDescription ?? firstError?.localizedDescription ?? "未知错误"
+        throw DirectContentError.decode("知乎热榜暂时不可用：\(previous)")
+    }
+
+    private func loadZhihuHot(endpoint: String, limit: Int) async throws -> WeiboHotResponse {
+        guard let url = URL(string: endpoint) else {
+            throw DirectContentError.decode("知乎热榜地址无效")
+        }
+        var request = URLRequest(url: url)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "user-agent")
+        request.setValue("https://www.zhihu.com/", forHTTPHeaderField: "referer")
+        request.setValue("application/json, text/plain, */*", forHTTPHeaderField: "accept")
+        let (data, response) = try await session.data(for: request)
+        try Self.check(response)
+        guard let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let entries = payload["data"] as? [[String: Any]] else {
+            throw DirectContentError.decode("知乎热榜返回了无法识别的数据")
+        }
+
+        var items: [WeiboHotItem] = []
+        for (index, entry) in entries.prefix(limit).enumerated() {
+            guard let target = entry["target"] as? [String: Any] else { continue }
+            let title = Self.text(target["title"])
+            guard !title.isEmpty else { continue }
+            let id = Self.text(target["id"])
+            let type = Self.text(target["type"])
+            let link = Self.zhihuLink(type: type, id: id, raw: Self.text(target["url"]))
+            items.append(WeiboHotItem(
+                rank: index + 1,
+                id: "zhihu-\(id.isEmpty ? "\(index)" : id)",
+                word: title,
+                note: Self.text(target["excerpt"]),
+                category: "知乎热榜",
+                tag: index < 3 ? "热" : "",
+                hotValue: Self.zhihuHeatValue(Self.text(entry["detail_text"])),
+                link: link
+            ))
+        }
+        guard !items.isEmpty else {
+            throw DirectContentError.notFound("知乎热榜没有返回可用条目")
+        }
+        return WeiboHotResponse(
+            updatedAt: Self.isoNow(),
+            source: "知乎公开热榜接口",
+            note: "榜单随知乎实时变化，仅展示公开条目，不代表平台立场。",
+            items: items
+        )
+    }
+
     private static func weiboInt(_ raw: Any?) -> Int? {
         if let value = raw as? Int { return value }
         if let value = raw as? NSNumber { return value.intValue }
@@ -616,6 +697,30 @@ final class DirectContentClient: @unchecked Sendable {
         var components = URLComponents(string: "https://s.weibo.com/weibo")
         components?.queryItems = [URLQueryItem(name: "q", value: query)]
         return components?.url?.absoluteString ?? "https://s.weibo.com/"
+    }
+
+    static func zhihuHeatValue(_ detail: String) -> Int {
+        guard let match = capture("([0-9]+(?:\\.[0-9]+)?)\\s*(亿|万)?", in: detail), match.count >= 2 else {
+            return 0
+        }
+        let number = Double(match[1]) ?? 0
+        let unit = match.count > 2 ? match[2] : ""
+        if unit == "亿" { return Int(number * 100_000_000) }
+        if unit == "万" { return Int(number * 10_000) }
+        return Int(number)
+    }
+
+    static func zhihuLink(type: String, id: String, raw: String) -> String {
+        if (raw.contains("/questions/") || type == "question"), !id.isEmpty {
+            return "https://www.zhihu.com/question/\(id)"
+        }
+        if (raw.contains("/articles/") || type == "article"), !id.isEmpty {
+            return "https://zhuanlan.zhihu.com/p/\(id)"
+        }
+        if !raw.isEmpty, let url = URL(string: raw), url.host?.contains("zhihu.com") == true {
+            return raw
+        }
+        return "https://www.zhihu.com/hot"
     }
 
     // MARK: - Market
@@ -682,6 +787,40 @@ final class DirectContentClient: @unchecked Sendable {
             }
         }
         return result
+    }
+
+    func stockProfile(symbol input: String) async throws -> StockProfile {
+        guard let symbol = Self.normalizeSymbol(input) else {
+            throw DirectContentError.decode("无法识别股票代码 \(input)")
+        }
+        let secid = (symbol.market == "SH" ? "1." : "0.") + symbol.code
+        let fields = "f57,f58,f50,f84,f85,f127,f128,f167,f173,f174,f175"
+        guard let url = URL(string: "https://push2.eastmoney.com/api/qt/stock/get?secid=\(secid)&fields=\(fields)") else {
+            throw DirectContentError.decode("证券资料地址无效")
+        }
+        let json = try await fetchJSON(url, referer: "https://quote.eastmoney.com/")
+        guard let root = json as? [String: Any],
+              let data = root["data"] as? [String: Any] else {
+            throw DirectContentError.notFound("东方财富未返回 \(symbol.code) 的证券资料")
+        }
+        func value(_ key: String) -> Double? { Self.number(data[key]) }
+        func text(_ key: String) -> String? {
+            let raw = Self.text(data[key])
+            return raw.isEmpty ? nil : raw
+        }
+        return StockProfile(
+            symbol: symbol.symbol,
+            name: text("f58") ?? symbol.code,
+            industry: text("f127"),
+            region: text("f128"),
+            priceBook: value("f167").map { $0 / 100 },
+            volumeRatio: value("f50").map { $0 / 100 },
+            totalShares: value("f84"),
+            floatShares: value("f85"),
+            week52High: value("f174").map { $0 / 100 },
+            week52Low: value("f175").map { $0 / 100 },
+            roe: value("f173")
+        )
     }
 
     func indexes() async throws -> MarketQuoteResponse {

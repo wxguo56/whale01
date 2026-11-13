@@ -21,8 +21,8 @@ struct WhaleHomeCanvas: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                weatherCard
                 dailyQuote
+                weatherCard
                 categoryGrid
                 todayCard
                 if model.isBusy {
@@ -45,81 +45,50 @@ struct WhaleHomeCanvas: View {
 
     // MARK: - Daily quote
 
-    private static let dailyQuotes: [String] = [
-        "别急着一次翻过整座山，把今天这一步踩稳，路就会一点点亮起来。",
-        "你不需要时刻强大，只要在每一次想放弃的时候，再为自己多坚持一分钟。",
-        "真正的成长，不是永远顺风，而是风浪来了，你依然知道该往哪里走。",
-        "今天多做的每一点努力，都会在未来某个关键时刻，变成你手里的底牌。",
-        "允许自己慢一点，但别停下来。你走的每一步，都在把想要的生活拉近。",
-        "把焦虑换成行动，把犹豫换成出发。很多答案，走着走着就清楚了。",
-        "你已经在路上了，别总盯着还差多远，也看看自己已经走了多远。",
-        "先把自己照顾好，再去赢下今天。状态在线，机会才会看得见你。",
-        "困难不是来拦住你的，是来提醒你：这次跨过去，你会比昨天更强。",
-        "别把时间花在怀疑自己上，你真正需要做的，是把下一件事做好。",
-        "今天也要相信，认真生活的人不会被辜负。你的坚持，正在悄悄积攒好运。",
-        "把大目标拆成小行动，先完成眼前这一件。掌控感，就是这样一点点回来的。",
-        "不用和任何人比速度，你有自己的节奏，也有属于自己的终点。",
-        "你可以累，可以停一会儿，但别否定自己。能走到这里，你已经很了不起。",
-        "把注意力收回到当下，做好能做的事。今天稳住了，明天自然会更有底气。",
-        "愿你今天有破局的勇气，也有接受不完美的松弛。全力以赴，也允许喘息。",
-        "好运从来不是等来的，它藏在你每一次认真、每一次坚持、每一次不放弃里。",
-        "别怕现在辛苦，所有向上走的路都不轻松。你正在变成更厉害的人。",
-        "今天也要给自己一点信心：你处理过的难题，已经证明了你的能力。",
-        "先行动，再调整。别等万事俱备，很多机会只奖励第一个出发的人。",
-        "你值得拥有更好的生活，也值得为它认真努力。今天，再向它靠近一点。",
-        "把抱怨的时间拿来解决问题，把担心的时间拿来准备。你会越来越从容。",
-        "真正的安全感，来自你知道自己在变强。今天学一点、做一点，就是进步。",
-        "别让一时的情绪，替你做长期的决定。深呼吸，稳住节奏，你还有很长的路。",
-        "无论今天顺不顺，都别轻易给自己下结论。你只是还在路上，不是已经到终点。",
-        "把每一步走扎实，把每件事做完整。时间会把你的认真，变成看得见的成绩。",
-        "愿你今天清醒、坚定、有执行力，也保留一点热爱和浪漫。这样的你很有力量。",
-        "别小看每天的一点点进步，一年之后，它会变成你自己都惊讶的改变。",
-        "今天也要好好吃饭、好好睡觉、好好做事。把日子过稳，就是最了不起的能力。",
-        "不管现在多难，都请再相信自己一次。你熬过的夜，终会照亮你前行的路。"
-    ]
-
-    private static let slotOpeners: [String] = [
-        "夜深了", "凌晨了", "天快亮了", "早上好", "上午好", "快到中午",
-        "中午好", "午后好", "下午好", "傍晚好", "晚上好", "夜里好"
-    ]
-
     private var dailyQuote: some View {
         TimelineView(.periodic(from: Date(), by: 60)) { context in
-            let quote = Self.quote(at: context.date)
-            HStack(alignment: .top, spacing: 10) {
+            let quote = DailyQuote.text(at: context.date)
+            HStack(alignment: .top, spacing: 11) {
                 Button(action: onOpenConversation) {
-                    WhaleMarkView(size: 30)
+                    WhaleMarkView(size: 33)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("进入对话")
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 7) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text("BOSS · 正能量鸡汤")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .tracking(0.8)
+                        Text("BOSS")
+                            .font(.system(size: 9, weight: .heavy, design: .rounded))
+                            .tracking(0.6)
+                            .foregroundStyle(WhaleTheme.onAccent)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(WhaleTheme.accent, in: Capsule())
+                        Text("今日一句")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .tracking(0.5)
                             .foregroundStyle(WhaleTheme.accentDeep)
                         Spacer(minLength: 0)
-                        Text("30天不重样")
+                        Text("每天 4 次 · 30 天不重样")
                             .font(.system(size: 9, weight: .medium))
                             .foregroundStyle(WhaleTheme.muted.opacity(0.85))
                     }
                     Text(quote)
-                        .font(.system(size: 15, weight: .regular))
+                        .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(WhaleTheme.ink)
-                        .lineSpacing(3)
+                        .lineSpacing(3.5)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.vertical, 13)
             .background {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [WhaleTheme.accent.opacity(0.10), WhaleTheme.card.opacity(0.90)],
+                            colors: [WhaleTheme.accent.opacity(0.17), WhaleTheme.card.opacity(0.94)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -127,18 +96,10 @@ struct WhaleHomeCanvas: View {
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
+                    .strokeBorder(WhaleTheme.accent.opacity(0.24), lineWidth: 0.9)
             }
-            .shadow(color: .black.opacity(0.05), radius: 10, y: 4)
+            .shadow(color: .black.opacity(0.07), radius: 12, y: 5)
         }
-    }
-
-    private static func quote(at date: Date) -> String {
-        let calendar = Calendar.current
-        let dayCount = calendar.ordinality(of: .day, in: .era, for: date) ?? 0
-        let index = ((dayCount % dailyQuotes.count) + dailyQuotes.count) % dailyQuotes.count
-        let slot = min(slotOpeners.count - 1, calendar.component(.hour, from: date) / 2)
-        return "BOSS，\(slotOpeners[slot])。\(dailyQuotes[index])"
     }
 
     // MARK: - Music

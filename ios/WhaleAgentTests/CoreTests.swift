@@ -449,4 +449,48 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(quote?.marketCap, 2_000_000_000_000)
         XCTAssertNil(DirectContentClient.parseQuote(symbol: "sh600519", body: "1~2~3"))
     }
+
+    func testDailyQuotePoolCoversThirtyDaysWithoutRepeat() {
+        XCTAssertEqual(DailyQuote.pool.count, 120)
+        XCTAssertEqual(Set(DailyQuote.pool).count, 120)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Shanghai")!
+        let start = calendar.date(from: DateComponents(year: 2026, month: 11, day: 1, hour: 0))!
+        var indexes = Set<Int>()
+        for day in 0..<30 {
+            for slot in 0..<4 {
+                let date = calendar.date(byAdding: .hour, value: day * 24 + slot * 6, to: start)!
+                XCTAssertTrue(indexes.insert(DailyQuote.slotIndex(at: date, calendar: calendar)).inserted)
+            }
+        }
+        XCTAssertEqual(indexes.count, 120)
+    }
+
+    func testDailyQuoteStaysStableInsideSixHourSlot() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Shanghai")!
+        let ten = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 10))!
+        let eleven = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 11, minute: 59))!
+        let noon = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 12))!
+        XCTAssertEqual(DailyQuote.slotIndex(at: ten, calendar: calendar), DailyQuote.slotIndex(at: eleven, calendar: calendar))
+        XCTAssertNotEqual(DailyQuote.slotIndex(at: eleven, calendar: calendar), DailyQuote.slotIndex(at: noon, calendar: calendar))
+    }
+
+    func testZhihuHeatAndLinksUseRealPublicValues() {
+        XCTAssertEqual(DirectContentClient.zhihuHeatValue("432 万热度"), 4_320_000)
+        XCTAssertEqual(DirectContentClient.zhihuHeatValue("1.2 亿热度"), 120_000_000)
+        XCTAssertEqual(
+            DirectContentClient.zhihuLink(type: "question", id: "2104125774148146904", raw: "https://api.zhihu.com/questions/2104125774148146904"),
+            "https://www.zhihu.com/question/2104125774148146904"
+        )
+        XCTAssertEqual(
+            DirectContentClient.zhihuLink(type: "article", id: "123456", raw: "https://api.zhihu.com/articles/123456"),
+            "https://zhuanlan.zhihu.com/p/123456"
+        )
+    }
+
+    func testHotBoardsExposeWeiboAndZhihu() {
+        XCTAssertEqual(HotBoard.allCases.map(\.title), ["微博热搜", "知乎热榜"])
+        XCTAssertEqual(HotBoard.zhihu.icon, "text.bubble.fill")
+    }
 }

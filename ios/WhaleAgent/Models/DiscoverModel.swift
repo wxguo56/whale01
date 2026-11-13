@@ -12,13 +12,15 @@ final class DiscoverModel: ObservableObject {
     private static let gameNewsSectionKey = "whale.discover.gameNewsSection"
     private static let paperCategoryKey = "whale.discover.paperCategory"
     private static let gameSectionKey = "whale.discover.gameSection"
+    private static let hotBoardKey = "whale.discover.hotBoard"
     private var newsCache: [DiscoverChannel: (response: NewsFeedResponse, at: Date)] = [:]
     private var rankCache: [GameRankBoard: (response: GameRankResponse, at: Date)] = [:]
-    private var hotCache: (response: WeiboHotResponse, at: Date)?
+    private var hotCaches: [HotBoard: (response: WeiboHotResponse, at: Date)] = [:]
     private var paperCache: [AIPaperCategory: (response: AIPaperFeedResponse, at: Date)] = [:]
     private var steamCache: (response: SteamFeaturedResponse, at: Date)?
     private var loadedNewsChannel: DiscoverChannel?
     private var loadedRankBoard: GameRankBoard?
+    private var loadedHotBoard: HotBoard?
     private var searchTask: Task<Void, Never>?
     private var requestToken = UUID()
     private var watchlistCancellable: AnyCancellable?
@@ -63,6 +65,9 @@ final class DiscoverModel: ObservableObject {
     @Published private(set) var hotUpdatedAt: String?
     @Published private(set) var hotSource: String = ""
     @Published private(set) var hotNote: String = ""
+    @Published var hotBoard: HotBoard = .weibo {
+        didSet { defaults.set(hotBoard.rawValue, forKey: Self.hotBoardKey) }
+    }
 
     @Published private(set) var indexes: [StockQuote] = []
     @Published private(set) var watchQuotes: [StockQuote] = []
@@ -85,6 +90,7 @@ final class DiscoverModel: ObservableObject {
         headlineSection = saved.string(forKey: Self.headlineSectionKey) ?? "all"
         gameNewsSection = saved.string(forKey: Self.gameNewsSectionKey) ?? "all"
         paperCategory = AIPaperCategory(rawValue: saved.string(forKey: Self.paperCategoryKey) ?? "") ?? .ai
+        hotBoard = HotBoard(rawValue: saved.string(forKey: Self.hotBoardKey) ?? "") ?? .weibo
         gameSection = GameSection(rawValue: saved.string(forKey: Self.gameSectionKey) ?? "") ?? .news
         hydrateFromDisk()
         watchlistCancellable = store.$symbols.sink { [weak self] symbols in
@@ -169,7 +175,7 @@ final class DiscoverModel: ObservableObject {
         } else if channel == .game {
             await loadGameSection(gameSection, force: false)
         } else if channel == .weibo {
-            await loadWeiboHot(force: false)
+            await loadHot(force: false)
         } else if channel == .ai {
             await loadNews(channel: .ai, force: false)
         } else if channel == .headline || channel == .game {
@@ -184,7 +190,7 @@ final class DiscoverModel: ObservableObject {
         } else if next == .game {
             await loadGameSection(gameSection, force: false)
         } else if next == .weibo {
-            await loadWeiboHot(force: false)
+            await loadHot(force: false)
         } else if next == .ai {
             await loadNews(channel: .ai, force: false)
         } else if next == .headline || next == .game {
@@ -236,7 +242,7 @@ final class DiscoverModel: ObservableObject {
         } else if channel == .game {
             await loadGameSection(gameSection, force: true)
         } else if channel == .weibo {
-            await loadWeiboHot(force: true)
+            await loadHot(force: true)
         } else if channel == .ai {
             await loadNews(channel: .ai, force: true)
         } else if channel == .headline || channel == .game {
@@ -281,26 +287,60 @@ final class DiscoverModel: ObservableObject {
         await loadPapers(category: next, force: false)
     }
 
-    func loadWeiboHot(force: Bool) async {
-        if !force, let cached = hotCache, Date().timeIntervalSince(cached.at) < 180, hotState == .loaded {
+    func loadHot(force: Bool) async {
+        await loadHot(board: hotBoard, force: force)
+    }
+
+    func selectHotBoard(_ next: HotBoard) async {
+        guard next != hotBoard else { return }
+        withAnimation(.snappy(duration: 0.22)) { hotBoard = next }
+        await loadHot(board: next, force: false)
+    }
+
+    func stepHotBoard(by delta: Int) {
+        let all = HotBoard.allCases
+        guard let index = all.firstIndex(of: hotBoard) else { return }
+        let next = min(max(index + delta, 0), all.count - 1)
+        guard next != index else { return }
+        Task { await selectHotBoard(all[next]) }
+    }
+
+    private func loadHot(board: HotBoard, force: Bool) async {
+        if loadedHotBoard != board {
+            if let cached = hotCaches[board] {
+                apply(cached.response)
+            } else {
+                hotItems = []
+                hotUpdatedAt = nil
+                hotSource = ""
+                hotNote = ""
+                hotState = .idle
+            }
+            loadedHotBoard = board
+        }
+        if !force, let cached = hotCaches[board], Date().timeIntervalSince(cached.at) < 180, hotState == .loaded {
             apply(cached.response)
             return
         }
-        if let cached = hotCache {
+        if let cached = hotCaches[board] {
             apply(cached.response)
         }
         if hotItems.isEmpty { hotState = .loading }
         let token = UUID()
         requestToken = token
         do {
-            let response = try await client.weiboHot(limit: 50)
-            guard requestToken == token, channel == .weibo else { return }
-            hotCache = (response, Date())
-            DiscoverDiskCache.save(response, key: "weibo")
+            let response: WeiboHotResponse
+            switch board {
+            case .weibo: response = try await client.weiboHot(limit: 50)
+            case .zhihu: response = try await client.zhihuHot(limit: 50)
+            }
+            guard requestToken == token, channel == .weibo, hotBoard == board else { return }
+            hotCaches[board] = (response, Date())
+            DiscoverDiskCache.save(response, key: hotDiskKey(board))
             apply(response)
             hotState = .loaded
         } catch {
-            guard requestToken == token, channel == .weibo else { return }
+            guard requestToken == token, channel == .weibo, hotBoard == board else { return }
             if hotItems.isEmpty {
                 hotState = .failed(message(error))
             } else {
@@ -478,7 +518,10 @@ final class DiscoverModel: ObservableObject {
             rankCache[board] = (cached, .distantPast)
         }
         if let cached = DiscoverDiskCache.load(WeiboHotResponse.self, key: "weibo") {
-            hotCache = (cached, .distantPast)
+            hotCaches[.weibo] = (cached, .distantPast)
+        }
+        if let cached = DiscoverDiskCache.load(WeiboHotResponse.self, key: "zhihu") {
+            hotCaches[.zhihu] = (cached, .distantPast)
         }
         if let cached = DiscoverDiskCache.load(SteamFeaturedResponse.self, key: "steam") {
             steamCache = (cached, .distantPast)
@@ -507,8 +550,9 @@ final class DiscoverModel: ObservableObject {
                 newsState = .loaded
             }
         case .weibo:
-            if let cached = hotCache {
+            if let cached = hotCaches[hotBoard] {
                 apply(cached.response)
+                loadedHotBoard = hotBoard
                 hotState = .loaded
             }
         case .market, .music:
@@ -518,6 +562,10 @@ final class DiscoverModel: ObservableObject {
 
     private func newsDiskKey(_ channel: DiscoverChannel) -> String {
         channel == .ai ? "news-ai-topics-v3" : "news-\(channel.rawValue)"
+    }
+
+    private func hotDiskKey(_ board: HotBoard) -> String {
+        board == .weibo ? "weibo" : "zhihu"
     }
 
     private func apply(_ response: NewsFeedResponse, channel: DiscoverChannel) {
@@ -565,6 +613,8 @@ final class StockDetailModel: ObservableObject {
     @Published private(set) var fundFlow: [FundFlowPoint] = []
     @Published private(set) var fundFlowState: DiscoverLoadState = .idle
     @Published private(set) var fundFlowSource: String = ""
+    @Published private(set) var profile: StockProfile?
+    @Published private(set) var profileState: DiscoverLoadState = .idle
     @Published private(set) var updatedAt: String?
     @Published private(set) var source: String = ""
 
@@ -577,6 +627,7 @@ final class StockDetailModel: ObservableObject {
         if state == .idle { state = .loading }
         if chartState == .idle { chartState = .loading }
         if fundFlowState == .idle { fundFlowState = .loading }
+        if profileState == .idle { profileState = .loading }
         do {
             let response = try await client.quotes(symbols: [quote.symbol])
             if let next = response.quotes.first {
@@ -592,7 +643,8 @@ final class StockDetailModel: ObservableObject {
         async let intradayResult = try? client.intraday(symbol: quote.symbol)
         async let klineResult = try? client.kline(symbol: quote.symbol, days: 160)
         async let flowResult = try? client.fundFlow(symbol: quote.symbol, days: 6)
-        let (intradayResponse, klineResponse, flowResponse) = await (intradayResult, klineResult, flowResult)
+        async let profileResult = try? client.stockProfile(symbol: quote.symbol)
+        let (intradayResponse, klineResponse, flowResponse, profileResponse) = await (intradayResult, klineResult, flowResult, profileResult)
         if let intradayResponse {
             intraday = intradayResponse.points
         }
@@ -606,6 +658,12 @@ final class StockDetailModel: ObservableObject {
             fundFlowState = .loaded
         } else {
             fundFlowState = .failed("资金流暂时没有取到，稍后下拉重试")
+        }
+        if let profileResponse {
+            profile = profileResponse
+            profileState = .loaded
+        } else {
+            profileState = .failed("证券资料暂时没有取到，稍后下拉重试")
         }
     }
 }

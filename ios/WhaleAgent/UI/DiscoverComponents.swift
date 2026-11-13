@@ -745,6 +745,7 @@ struct GameRankRowCard: View {
 }
 
 struct WeiboHotHeader: View {
+    let board: HotBoard
     let source: String
     let updatedAt: String?
     let count: Int
@@ -752,19 +753,19 @@ struct WeiboHotHeader: View {
     var body: some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(WhaleTheme.weiboGradient)
+                .fill(board == .weibo ? WhaleTheme.weiboGradient : WhaleTheme.heroGradient)
                 .frame(width: 46, height: 46)
                 .overlay {
-                    Image(systemName: "flame.fill")
+                    Image(systemName: board.icon)
                         .font(.system(size: 19, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.94))
                 }
 
             VStack(alignment: .leading, spacing: 3) {
-                Text("微博热搜")
+                Text(board.title)
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(WhaleTheme.ink)
-                Text("来源：\(source.isEmpty ? "微博公开热搜接口" : source)")
+                Text("来源：\(source.isEmpty ? (board == .weibo ? "微博公开热搜接口" : "知乎公开热榜接口") : source)")
                     .font(.system(size: 10))
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(1)
@@ -779,10 +780,10 @@ struct WeiboHotHeader: View {
 
             Text("\(count) 条")
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundStyle(WhaleTheme.danger)
+                .foregroundStyle(board == .weibo ? WhaleTheme.danger : WhaleTheme.accent)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 5)
-                .background(WhaleTheme.danger.opacity(0.1), in: Capsule())
+                .background((board == .weibo ? WhaleTheme.danger : WhaleTheme.accent).opacity(0.1), in: Capsule())
         }
         .padding(13)
         .background(WhaleTheme.card.opacity(0.8), in: RoundedRectangle(cornerRadius: 18, style: .continuous))

@@ -611,15 +611,19 @@ struct WeiboChannelPage: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
                 DiscoverChannelHeader(channel: .weibo)
+                HotBoardBar(selection: model.hotBoard) { board in
+                    Task { await model.selectHotBoard(board) }
+                }
                 switch model.hotState {
                 case .loading where model.hotItems.isEmpty, .idle:
                     NewsSkeleton()
                 case .failed(let message) where model.hotItems.isEmpty:
                     DiscoverErrorState(message: message) {
-                        Task { await model.loadWeiboHot(force: true) }
+                        Task { await model.loadHot(force: true) }
                     }
                 default:
                     WeiboHotHeader(
+                        board: model.hotBoard,
                         source: model.hotSource,
                         updatedAt: model.hotUpdatedAt,
                         count: model.hotItems.count
@@ -645,10 +649,14 @@ struct WeiboChannelPage: View {
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 30)
+            .horizontalTabSwipe(
+                onPrevious: { model.stepHotBoard(by: -1) },
+                onNext: { model.stepHotBoard(by: 1) }
+            )
         }
         .scrollIndicators(.hidden)
         .background(ScrollOffsetMemory(key: "weibo"))
-        .refreshable { await model.loadWeiboHot(force: true) }
+        .refreshable { await model.loadHot(force: true) }
         .task { await model.loadInitial() }
         .sheet(item: $safari) { target in
             InAppSafari(url: target.url)
@@ -727,6 +735,44 @@ struct NewsSectionBar: View {
                 }
             }
         }
+    }
+}
+
+struct HotBoardBar: View {
+    let selection: HotBoard
+    let onSelect: (HotBoard) -> Void
+
+    var body: some View {
+        HStack(spacing: 7) {
+            ForEach(HotBoard.allCases) { board in
+                Button {
+                    onSelect(board)
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: board.icon)
+                            .font(.system(size: 10, weight: .semibold))
+                        Text(board.title)
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundStyle(selection == board ? WhaleTheme.onAccent : WhaleTheme.muted)
+                    .padding(.horizontal, 12)
+                    .frame(height: 30)
+                    .background {
+                        Capsule()
+                            .fill(selection == board ? WhaleTheme.accent : WhaleTheme.card.opacity(0.7))
+                            .overlay {
+                                Capsule().strokeBorder(
+                                    selection == board ? Color.clear : WhaleTheme.glassStroke,
+                                    lineWidth: 0.7
+                                )
+                            }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 2)
     }
 }
 
