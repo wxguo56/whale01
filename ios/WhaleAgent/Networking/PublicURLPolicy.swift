@@ -24,6 +24,13 @@ enum PublicURLPolicy {
             var parsed = in6_addr()
             guard inet_pton(AF_INET6, host, &parsed) == 1 else { return false }
             let bytes = withUnsafeBytes(of: &parsed) { Array($0) }
+            // DNS64 on IPv6-only mobile networks maps a public IPv4 target
+            // into this standard prefix. Validate the embedded IPv4 rather
+            // than rejecting every otherwise public mobile-network request.
+            let nat64Prefix: [UInt8] = [0x00, 0x64, 0xff, 0x9b] + Array(repeating: 0, count: 8)
+            if Array(bytes.prefix(12)) == nat64Prefix {
+                return isPublicAddress(bytes.suffix(4).map { String($0) }.joined(separator: "."))
+            }
             // Only global unicast, excluding special/documentation ranges.
             return bytes[0] & 0xe0 == 0x20 && !(bytes[0] == 0x20 && bytes[1] == 0x01 && bytes[2] == 0x0d && bytes[3] == 0xb8)
         }

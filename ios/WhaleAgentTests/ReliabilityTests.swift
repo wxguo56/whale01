@@ -69,6 +69,8 @@ final class ReliabilityTests: XCTestCase {
         }
         XCTAssertNoThrow(try PublicURLPolicy.validate(URL(string: "https://example.com/article")!))
         XCTAssertNoThrow(try PublicURLPolicy.validate(URL(string: "https://8.8.8.8")!))
+        XCTAssertTrue(PublicURLPolicy.isPublicAddress("64:ff9b::808:808"))
+        XCTAssertFalse(PublicURLPolicy.isPublicAddress("64:ff9b::a00:1"))
     }
 
     func testSensitiveCoordinatesNeverReachModelSummary() {
