@@ -64,7 +64,7 @@ export class ServerToolExecutor {
       updatedAt: result.updatedAt,
       sources: result.sources,
       unavailableSources: result.unavailableSources,
-      items: result.items.map((item) => ({
+      items: result.items.slice(0, Math.max(1, Math.min(12, Number(args.limit) || 8))).map((item) => ({
         title: item.title,
         summary: item.summary,
         source: item.source,
@@ -93,7 +93,8 @@ export class ServerToolExecutor {
     return success({
       query,
       source: "东方财富公开行情",
-      delayedMinutes: 15,
+      delayedMinutes: result.delayedMinutes ?? quotes.find(quote => quote.delayedMinutes != null)?.delayedMinutes ?? null,
+      updatedAt: result.updatedAt ?? quotes.map(quote => quote.fetchedAt).filter(Boolean).sort()[0] ?? null,
       ambiguous,
       quotes,
       matches: result.matches.slice(0, 5)

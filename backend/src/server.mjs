@@ -60,7 +60,7 @@ export function createHttpServer(runtime) {
       if (request.method === "GET" && url.pathname === "/v1/news") {
         const channel = url.searchParams.get("channel") ?? "ai";
         const limit = Number(url.searchParams.get("limit") ?? 20);
-        const result = await runtime.news.list({ channel, limit });
+        const result = await runtime.news.list({ channel, limit, force: url.searchParams.get("refresh") === "force" });
         sendJson(response, 200, result);
         return;
       }

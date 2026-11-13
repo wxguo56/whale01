@@ -23,7 +23,7 @@ enum TodoQuickParser {
 
     static func parseAdd(_ raw: String, now: Date = Date(), calendar: Calendar = .current) -> Added {
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.range(of: "^(修改|改成|改为|推迟|提前|取消|不要|别)|^把.+(改|推迟|提前)|每(天|周|月|年)", options: .regularExpression) != nil {
+        if text.range(of: "^(修改|改成|改为|推迟|提前|取消|不要|别|删除|删掉|移除|标记完成|恢复)|^把.+(改|推迟|提前)|每(天|周|月|年)", options: .regularExpression) != nil {
             return Added(title: text, dueAt: nil, validationError: "这句话涉及修改、取消或重复提醒，请到对话里说明目标；这里没有新增待办。")
         }
         let prefixActions = ["提醒我", "帮我记一下", "帮我记着", "记一下", "新增待办", "新建待办", "待办", "todo:", "todo："]
@@ -131,6 +131,7 @@ enum TodoQuickParser {
         let period = match.range(at: 1).location == NSNotFound ? (text.contains("今晚") || text.contains("明晚") ? "晚上" : "") : nsText.substring(with: match.range(at: 1))
         let hourText = nsText.substring(with: match.range(at: 2))
         guard var hour = chineseNumber(hourText) else { return nil }
+        guard !period.isEmpty || !(1...12).contains(hour) else { return nil }
         var minute = 0
         if match.range(at: 3).location != NSNotFound {
             let minuteText = nsText.substring(with: match.range(at: 3)).replacingOccurrences(of: "分", with: "").trimmingCharacters(in: .whitespaces)

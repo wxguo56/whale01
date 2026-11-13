@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readTextBounded } from "./boundedContent.mjs";
 
 const DEFAULT_FEEDS = [
   {
@@ -99,21 +100,23 @@ export class NewsService {
     this.cacheTtlMs = cacheTtlMs;
     this.timeoutMs = timeoutMs;
     this.cache = new Map();
+    this.feedCache = new Map();
+    this.feedPending = new Map();
   }
 
-  async list({ channel = "ai", limit = 20 } = {}) {
+  async list({ channel = "ai", limit = 20, force = false } = {}) {
     const normalizedChannel = ["ai", "headline", "game"].includes(channel) ? channel : null;
     if (!normalizedChannel) throw new NewsError("channel 只能是 ai、headline 或 game", "invalid_channel", 400);
     const safeLimit = clampInteger(limit, 1, 40, 20);
     const cacheKey = `${normalizedChannel}:${safeLimit}`;
     const cached = this.cache.get(cacheKey);
     const nowMs = this.now().getTime();
-    if (cached && nowMs - cached.cachedAt < this.cacheTtlMs) {
+    if (!force && cached && nowMs - cached.cachedAt < this.cacheTtlMs) {
       return { ...cached.value, cached: true };
     }
 
     const feeds = this.feeds.filter((feed) => feed.channels.includes(normalizedChannel));
-    const settled = await Promise.allSettled(feeds.map((feed) => this.#fetchFeed(feed, normalizedChannel)));
+    const settled = await Promise.allSettled(feeds.map((feed) => this.#fetchFeed(feed, normalizedChannel, force)));
     const items = [];
     const sources = [];
     const unavailableSources = [];
@@ -129,7 +132,7 @@ export class NewsService {
     });
 
     const unique = deduplicate(items)
-      .sort((left, right) => right.publishedAt.localeCompare(left.publishedAt))
+      .sort((left, right) => (right.publishedAt ?? "").localeCompare(left.publishedAt ?? "") || left.link.localeCompare(right.link))
       .slice(0, safeLimit)
       .map((item, index) => ({ ...item, rank: index + 1 }));
 
@@ -144,29 +147,43 @@ export class NewsService {
 
     const value = {
       channel: normalizedChannel,
-      updatedAt: this.now().toISOString(),
+      updatedAt: items.map(item => item.fetchedAt).sort()[0],
       cached: false,
-      sources: [...new Set(sources)],
-      unavailableSources: [...new Set(unavailableSources)],
+      sources: [...new Set(sources)].sort(),
+      unavailableSources: [...new Set(unavailableSources)].sort(),
       items: unique
     };
     this.cache.set(cacheKey, { cachedAt: nowMs, value });
     return value;
   }
 
-  async #fetchFeed(feed, channel) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-    try {
-      const response = await this.fetchImpl(feed.url, {
-        headers: {
-          accept: "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5",
-          "user-agent": "WhaleAgent/0.5"
-        },
-        signal: controller.signal
-      });
-      if (!response.ok) throw new Error(`${feed.name} HTTP ${response.status}`);
-      const xml = (await response.text()).slice(0, 2_000_000);
+  async #fetchXml(feed, force) {
+    const key = feed.url;
+    if (this.feedPending.has(key)) return this.feedPending.get(key);
+    const cached = this.feedCache.get(key);
+    if (!force && cached && this.now().getTime() - cached.at < this.cacheTtlMs) return cached;
+    const pending = (async () => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      try {
+        const response = await this.fetchImpl(feed.url, {
+          headers: { accept: "application/rss+xml,application/atom+xml,text/xml", "user-agent": "WhaleAgent/0.6" },
+          signal: controller.signal, cache: "no-store"
+        });
+        if (!response.ok) throw new Error(`${feed.name} HTTP ${response.status}`);
+        const xml = await readTextBounded(response);
+        const entry = { xml, at: this.now().getTime(), fetchedAt: this.now().toISOString() };
+        this.feedCache.set(key, entry);
+        return entry;
+      } finally { clearTimeout(timer); }
+    })();
+    this.feedPending.set(key, pending);
+    try { return await pending; }
+    finally { this.feedPending.delete(key); }
+  }
+
+  async #fetchFeed(feed, channel, force) {
+      const { xml, fetchedAt } = await this.#fetchXml(feed, force);
       const parsed = parseFeed(xml);
       const items = [];
       for (const entry of parsed) {
@@ -182,14 +199,12 @@ export class NewsService {
           summary,
           source: feed.name,
           link,
-          publishedAt: normalizeDate(entry.publishedAt, this.now()),
+          publishedAt: normalizeDate(entry.publishedAt),
+          fetchedAt,
           channel
         });
       }
       return items.slice(0, 30);
-    } finally {
-      clearTimeout(timer);
-    }
   }
 }
 
@@ -266,10 +281,9 @@ function safeCodePoint(code) {
   }
 }
 
-function normalizeDate(value, now) {
+function normalizeDate(value) {
   const parsed = Date.parse(value);
-  const date = Number.isNaN(parsed) ? now : new Date(parsed);
-  return date.toISOString();
+  return Number.isNaN(parsed) ? null : new Date(parsed).toISOString();
 }
 
 function truncate(text, length) {

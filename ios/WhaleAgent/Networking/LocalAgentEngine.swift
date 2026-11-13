@@ -17,6 +17,8 @@ enum LocalAgentConfig {
     static let endpoint = URL(string: "https://api.deepseek.com/chat/completions")!
 
     static var apiKey: String {
+        if let personal = DeepSeekKeyStore.value, !personal.isEmpty { return personal }
+        guard BuildIdentity.distribution != "public" else { return "" }
         let value = (Bundle.main.object(forInfoDictionaryKey: "DeepSeekAPIKey") as? String) ?? ""
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !trimmed.hasPrefix("$(") else { return "" }
@@ -36,7 +38,7 @@ enum LocalAgentError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingKey:
-            return "本机直连缺少 DeepSeek 密钥。请在开发设置中切换到云后端，或重新安装包含密钥的构建。"
+            return "本机直连缺少 DeepSeek 密钥。请在设置 → 服务连接中保存个人密钥，或切换到云后端。"
         case .unknownTurn:
             return "这一轮任务已经不存在，请重新发起。"
         case .invalidResponse:
@@ -82,9 +84,11 @@ struct DSFunctionCall: Codable, Sendable {
 private struct DSRequest: Encodable {
     let model: String
     let messages: [DSMessage]
-    let tools: [DSTool]
-    let tool_choice: String
+    let tools: [DSTool]?
+    let tool_choice: String?
     let stream: Bool
+    let max_tokens: Int
+    let temperature: Double
 }
 
 private struct DSTool: Encodable {
@@ -108,6 +112,7 @@ private struct DSResponse: Decodable {
     }
 
     let choices: [Choice]
+    let usage: ModelRequestMetrics.Usage?
 }
 
 private struct LocalTurn: Codable {
@@ -142,7 +147,7 @@ actor LocalAgentEngine: AgentTransport {
 
     func health() async throws -> HealthResponse {
         HealthResponse(
-            status: LocalAgentConfig.isConfigured ? "ok" : "missing_key",
+            status: LocalAgentConfig.isConfigured ? "configured" : "missing_key",
             modelMode: "deepseek-direct",
             executionMode: "ios",
             adapterConfigured: LocalAgentConfig.isConfigured,
@@ -171,7 +176,7 @@ actor LocalAgentEngine: AgentTransport {
             pending: [],
             batches: 0,
             permissions: permissions,
-            taskState: LocalTaskState(goal: text)
+            taskState: LocalTaskState(goal: text, constraints: ["timezone": TimeZone.current.identifier, "userConstraints": text])
         )
         if let clarification = RealDataGuard.preflightReply(for: text) {
             history.append(
@@ -183,7 +188,7 @@ actor LocalAgentEngine: AgentTransport {
             return makeResponse(status: "completed", turn: turn, reply: clarification, pending: [])
         }
 
-        let message = try await callModel(history: history, permissions: permissions)
+        let message = try await callModel(history: history, permissions: permissions, taskState: turn.taskState)
         return try await advance(message: message, history: &history, turn: &turn)
     }
 
@@ -258,7 +263,7 @@ actor LocalAgentEngine: AgentTransport {
 
         turns[turn.turnId] = turn
         saveTurns()
-        let message = try await callModel(history: history, permissions: turn.permissions)
+        let message = try await callModel(history: history, permissions: turn.permissions, taskState: turn.taskState)
         return try await advance(message: message, history: &history, turn: &turn)
     }
 
@@ -289,6 +294,9 @@ actor LocalAgentEngine: AgentTransport {
         turn: inout LocalTurn
     ) async throws -> AgentTurnResponse {
         if let calls = message.tool_calls, !calls.isEmpty {
+            if RealDataGuard.suppressesTools(latestTurnContext(history).userText) {
+                throw LocalAgentError.model("本轮是解释、假设或否定请求，已阻止模型执行工具。请明确说明需要执行的动作。")
+            }
             history.append(
                 DSMessage(role: "assistant", content: message.content, tool_calls: calls, tool_call_id: nil, name: nil)
             )
@@ -315,9 +323,15 @@ actor LocalAgentEngine: AgentTransport {
 
         let proposedReply = message.content?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let context = latestTurnContext(history)
-        let reply = RealDataGuard.intent(for: context.userText).map {
+        let intent = RealDataGuard.intent(for: context.userText)
+        var reply = intent.map {
             RealDataGuard.finalReply(for: $0, usedTools: context.tools, proposed: proposedReply)
         } ?? proposedReply
+        let evidenceMissing = intent != nil && reply != proposedReply
+        if evidenceMissing { turn.taskState?.remaining = ["取得本轮可核对的真实数据"] }
+        if turn.taskState?.hasUnresolvedResults == true {
+            reply = "这一轮有失败、取消或结果待核对的步骤，请查看执行记录。\n" + reply
+        }
         history.append(
             DSMessage(
                 role: "assistant",
@@ -331,7 +345,7 @@ actor LocalAgentEngine: AgentTransport {
         turns.removeValue(forKey: turn.turnId)
         saveTurns()
         return makeResponse(
-            status: turn.taskState?.hasUnresolvedResults == true ? "completed_with_limits" : "completed",
+            status: turn.taskState?.hasUnresolvedResults == true || evidenceMissing ? "completed_with_limits" : "completed",
             turn: turn,
             reply: reply.isEmpty ? "我这次没有生成可执行的动作。" : reply,
             pending: []
@@ -360,7 +374,10 @@ actor LocalAgentEngine: AgentTransport {
                let object = raw as? [String: Any],
                object["status"] as? String == "success" {
                 let payload = object["data"] as? [String: Any]
-                if (payload?["simulated"] as? Bool) != true {
+                // Resolve the call name even when reading backwards, before
+                // accepting a success status as live evidence.
+                let name = history.flatMap { $0.tool_calls ?? [] }.first { $0.id == callId }?.function.name ?? ""
+                if ToolEvidencePolicy.accepts(tool: name, data: payload) {
                     successfulIds.insert(callId)
                 }
             }
@@ -368,21 +385,25 @@ actor LocalAgentEngine: AgentTransport {
         return (userText, Set(successfulIds.compactMap { callNames[$0] }))
     }
 
-    private func callModel(history: [DSMessage], permissions: [String: String]) async throws -> DSMessage {
+    private func callModel(history: [DSMessage], permissions: [String: String], taskState: LocalTaskState? = nil) async throws -> DSMessage {
         var messages = [
             DSMessage(role: "system", content: systemPrompt(permissions: permissions, requestText: latestTurnContext(history).userText), tool_calls: nil, tool_call_id: nil, name: nil)
         ]
+        if let taskState {
+            let data = try JSONEncoder().encode(taskState)
+            messages.append(DSMessage(role: "system", content: "当前任务状态（目标和用户约束不能随历史截断丢失；失败步骤不代表完成）：" + (String(data: data, encoding: .utf8) ?? ""), tool_calls: nil, tool_call_id: nil, name: nil))
+        }
         let context = latestTurnContext(history)
         if let intent = RealDataGuard.intent(for: context.userText), let rule = RealDataGuard.toolInstruction(for: intent) {
             messages.append(DSMessage(role: "system", content: rule, tool_calls: nil, tool_call_id: nil, name: nil))
         }
         messages.append(contentsOf: Self.trimmedHistory(history, limit: 30))
-        let suppressTools = RealDataGuard.isDiscussion(context.userText) && RealDataGuard.intent(for: context.userText) == nil
+        let suppressTools = RealDataGuard.suppressesTools(context.userText)
 
         let requestBody = DSRequest(
             model: LocalAgentConfig.model,
             messages: messages,
-            tools: (suppressTools ? [] : tools).map { tool in
+            tools: suppressTools ? nil : tools.map { tool in
                 DSTool(
                     function: DSToolFunction(
                         name: tool.name,
@@ -391,8 +412,10 @@ actor LocalAgentEngine: AgentTransport {
                     )
                 )
             },
-            tool_choice: "auto",
-            stream: false
+            tool_choice: suppressTools ? nil : "auto",
+            stream: false,
+            max_tokens: 2048,
+            temperature: 0.3
         )
 
         var request = URLRequest(url: LocalAgentConfig.endpoint)
@@ -402,6 +425,12 @@ actor LocalAgentEngine: AgentTransport {
         request.setValue("Bearer \(LocalAgentConfig.apiKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONEncoder().encode(requestBody)
 
+        let requestId = UUID().uuidString
+        request.setValue(requestId, forHTTPHeaderField: "X-Request-ID")
+        let started = Date()
+        var usage: ModelRequestMetrics.Usage?
+        var succeeded = false
+        defer { ModelRequestMetrics.record(requestId: requestId, seconds: Date().timeIntervalSince(started), usage: usage, succeeded: succeeded) }
         let (data, response) = try await sendModelRequest(request)
         guard let http = response as? HTTPURLResponse else { throw LocalAgentError.invalidResponse }
         guard (200..<300).contains(http.statusCode) else {
@@ -411,6 +440,8 @@ actor LocalAgentEngine: AgentTransport {
         do {
             let decoded = try JSONDecoder().decode(DSResponse.self, from: data)
             guard let message = decoded.choices.first?.message else { throw LocalAgentError.invalidResponse }
+            usage = decoded.usage
+            succeeded = true
             return message
         } catch let error as LocalAgentError {
             throw error

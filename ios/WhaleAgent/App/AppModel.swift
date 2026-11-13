@@ -278,7 +278,7 @@ final class AppModel: ObservableObject {
     func health() async {
         do {
             let health = try await client.health()
-            backendOnline = health.status == "ok"
+            backendOnline = health.status == "ok" || health.status == "configured"
             backendExecutionMode = health.executionMode
             modelMode = health.modelMode
             toolCount = health.tools
@@ -287,10 +287,10 @@ final class AppModel: ObservableObject {
             if agentMode == "cloud" {
                 statusLine = health.status == "ok" ? "服务已连接" : "服务返回 \(health.status)"
             } else {
-                statusLine = health.status == "ok" ? "本机直连 DeepSeek" : "本机模型未配置"
+                statusLine = health.status == "configured" ? "DeepSeek 已配置 · 连接以实际请求为准" : "本机模型未配置"
             }
-            if agentMode != "cloud" && health.status != "ok" {
-                errorText = "本机直连缺少 DeepSeek 密钥，请重新安装包含密钥的构建，或切换到云后端。"
+            if agentMode != "cloud" && !health.adapterConfigured {
+                errorText = "请在设置 → 服务连接中保存个人 DeepSeek 密钥，或切换到云后端。"
             } else if agentMode == "cloud" && (health.executionMode == "mock" || health.modelMode == "mock") {
                 errorText = "云后端仍在演示模式（模型 \(health.modelMode)／执行 \(health.executionMode)），已停止真实操作。请配置真实 DeepSeek 并把 EXECUTION_MODE 设为 ios。"
             } else if errorText?.contains("演示执行模式") == true {

@@ -15,6 +15,7 @@ import {
   updateTaskFromToolResult
 } from "./taskPlan.mjs";
 import { parseReminderIntent, zonedParts } from "./time.mjs";
+import { isDiscussionRequest } from "./requestIntent.mjs";
 
 const COMPLETED = new Set(["completed", "completed_with_limits", "failed", "superseded", "cancelled"]);
 
@@ -135,7 +136,7 @@ export class Agent {
       timezone,
       permissions,
       capabilities,
-      allowedTools: allowedToolNames(capabilities),
+      allowedTools: isDiscussionRequest(text) ? [] : allowedToolNames(capabilities),
       status: "running",
       messages: [
         { role: "system", content: systemContent },
@@ -616,6 +617,7 @@ export class Agent {
   }
 
   #needsActionNudge(state, content = "") {
+    if (isDiscussionRequest(state.text)) return false;
     if (state.actionNudges >= 1) return false;
     if (state.task) {
       const hasSearch = state.task.observations.some((item) => item.tool === "search_places");

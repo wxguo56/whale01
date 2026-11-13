@@ -21,9 +21,33 @@ enum ToolModelSummary {
     }
 
     static func result(_ result: ToolResultPayload) -> ToolResultPayload {
-        ToolResultPayload(toolCallId: result.toolCallId, status: result.status,
-                          data: result.data.map { project($0) }, error: result.error,
+        var budget = 12000
+        return ToolResultPayload(toolCallId: result.toolCallId, status: result.status,
+                          data: result.data.map { bounded($0, budget: &budget) }, error: result.error,
                           deduplicated: result.deduplicated)
+    }
+
+    private static func bounded(_ value: JSONValue, budget: inout Int, depth: Int = 0) -> JSONValue {
+        guard budget > 0, depth < 10 else { return .string("模型摘要已截断；完整结果保留在本机") }
+        switch value {
+        case .object(let object):
+            var result: [String: JSONValue] = [:]
+            for key in object.keys.sorted() where !localOnly.contains(key) {
+                budget -= key.count
+                if budget <= 0 { result["truncatedForModel"] = .bool(true); break }
+                result[key] = bounded(object[key]!, budget: &budget, depth: depth + 1)
+            }
+            return .object(result)
+        case .array(let array):
+            var result: [JSONValue] = []
+            for item in array.prefix(20) where budget > 0 { result.append(bounded(item, budget: &budget, depth: depth + 1)) }
+            return .array(result)
+        case .string(let string):
+            let clipped = String(string.prefix(max(0, min(4000, budget))))
+            budget -= clipped.count
+            return .string(clipped)
+        default: budget -= 16; return value
+        }
     }
 }
 
@@ -31,6 +55,7 @@ struct LocalTaskState: Codable, Sendable {
     var goal: String
     var observations: [String: String] = [:]
     var remaining: [String] = []
+    var constraints: [String: String]? = nil
 
     var hasUnresolvedResults: Bool {
         observations.values.contains { $0 != "success" }
@@ -41,6 +66,7 @@ struct LocalTaskState: Codable, Sendable {
             "goal": .string(goal), "status": .string(status),
             "observations": .object(observations.mapValues(JSONValue.string)),
             "remaining": .array(remaining.map(JSONValue.string)),
+            "constraints": .object((constraints ?? [:]).mapValues(JSONValue.string)),
             "requiresReview": .bool(hasUnresolvedResults)
         ])
     }

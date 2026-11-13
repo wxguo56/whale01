@@ -223,7 +223,7 @@ struct SettingsView: View {
 
                 HStack(spacing: 7) {
                     WhaleStatusPill(
-                        text: model.backendOnline ? "在线" : "离线",
+                        text: model.agentMode == "cloud" ? (model.backendOnline ? "在线" : "离线") : (LocalAgentConfig.isConfigured ? "已配置" : "未配置"),
                         color: model.backendOnline ? WhaleTheme.success : WhaleTheme.warm
                     )
                     Image(systemName: "chevron.right")
@@ -708,6 +708,8 @@ private struct MemorySettingsView: View {
 
 private struct ServiceSettingsView: View {
     @ObservedObject var model: AppModel
+    @State private var personalKey = ""
+    @State private var keyMessage: String?
 
     var body: some View {
         ScrollView {
@@ -723,7 +725,8 @@ private struct ServiceSettingsView: View {
                         badge: "D",
                         badgeIcon: nil,
                         badgeTone: .blue,
-                        connected: deepSeekConnected
+                        connected: deepSeekConnected,
+                        statusText: model.agentMode == "cloud" ? nil : (LocalAgentConfig.isConfigured ? "已配置" : "未配置")
                     )
 
                     SettingsChrome.divider
@@ -734,7 +737,8 @@ private struct ServiceSettingsView: View {
                         badge: "讯",
                         badgeIcon: nil,
                         badgeTone: .mint,
-                        connected: XfyunConfig.isConfigured
+                        connected: XfyunConfig.isConfigured,
+                        statusText: XfyunConfig.isConfigured ? "已配置" : "系统听写"
                     )
 
                     SettingsChrome.divider
@@ -747,8 +751,34 @@ private struct ServiceSettingsView: View {
                         badge: "",
                         badgeIcon: "globe",
                         badgeTone: .blue,
-                        connected: networkConnected
+                        connected: networkConnected,
+                        statusText: model.agentMode == "cloud" ? nil : (networkConnected ? "曾请求成功" : "未验证")
                     )
+                }
+                SettingsChrome.card {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("个人 DeepSeek API 密钥").font(.headline)
+                        Text("保存在本机钥匙串。API 请求使用你的账户额度；保存密钥仅表示已配置。")
+                            .font(.footnote).foregroundStyle(WhaleTheme.muted)
+                        SecureField("填写新密钥", text: $personalKey)
+                            .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        HStack {
+                            Button("保存") {
+                                do {
+                                    try DeepSeekKeyStore.save(personalKey)
+                                    personalKey = ""
+                                    keyMessage = "已保存到本机钥匙串"
+                                    Task { await model.health() }
+                                } catch { keyMessage = error.localizedDescription }
+                            }.disabled(personalKey.isEmpty)
+                            Spacer()
+                            Button("删除个人密钥", role: .destructive) {
+                                do { try DeepSeekKeyStore.clear(); keyMessage = "已删除个人密钥"; Task { await model.health() } }
+                                catch { keyMessage = error.localizedDescription }
+                            }
+                        }
+                        if let keyMessage { Text(keyMessage).font(.footnote) }
+                    }.padding(.vertical, 12)
                 }
             }
             .padding(.horizontal, 16)
@@ -766,7 +796,7 @@ private struct ServiceSettingsView: View {
     }
 
     private var networkConnected: Bool {
-        model.agentMode == "cloud" ? model.backendOnline : LocalAgentConfig.isConfigured
+        model.agentMode == "cloud" ? model.backendOnline : ModelRequestMetrics.lastSuccessAt != nil
     }
 
     private func serviceRow(
@@ -775,7 +805,8 @@ private struct ServiceSettingsView: View {
         badge: String,
         badgeIcon: String?,
         badgeTone: SettingsTone,
-        connected: Bool
+        connected: Bool,
+        statusText: String? = nil
     ) -> some View {
         HStack(spacing: 12) {
             Group {
@@ -804,7 +835,7 @@ private struct ServiceSettingsView: View {
             Spacer(minLength: 8)
 
             StatusPill(
-                text: connected ? "已连接" : "未配置",
+                text: statusText ?? (connected ? "已连接" : "未配置"),
                 color: connected ? WhaleTheme.success : WhaleTheme.muted
             )
         }
@@ -825,6 +856,8 @@ private struct AdvancedSettingsView: View {
                     SettingsChrome.infoRow("首轮响应", TurnMetricsStore.summary)
                     SettingsChrome.divider
                     SettingsChrome.infoRow("设备操作", ToolMetricsStore.summary)
+                    SettingsChrome.divider
+                    SettingsChrome.infoRow("模型请求用量", ModelRequestMetrics.summary)
                     Text("分别记录模型首轮响应与设备执行耗时，不含用户确认等待。")
                         .font(.system(size: 11))
                         .foregroundStyle(WhaleTheme.muted)

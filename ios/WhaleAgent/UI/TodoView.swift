@@ -45,7 +45,11 @@ private enum TodoQuickCommand {
     case delete(String)
 
     static func parse(_ raw: String) -> TodoQuickCommand? {
-        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        for prefix in ["帮我", "请", "我要"] where text.hasPrefix(prefix) {
+            text = String(text.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            break
+        }
         guard !text.isEmpty else { return nil }
 
         let actions: [(String, (String) -> TodoQuickCommand)] = [
@@ -62,10 +66,7 @@ private enum TodoQuickCommand {
 
         for (prefix, make) in actions where text.hasPrefix(prefix) {
             var rest = String(text.dropFirst(prefix.count))
-            guard let first = rest.first, first.isWhitespace || first == "：" || first == ":" || first == "，" || first == "," else {
-                continue
-            }
-            rest = String(rest.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines)
+            rest = rest.trimmingCharacters(in: CharacterSet(charactersIn: " ：:，,\n"))
             if !rest.isEmpty { return make(rest) }
         }
 
@@ -199,6 +200,30 @@ struct TodoView: View {
             } message: {
                 Text(pendingDeletion?.title ?? "")
             }
+    }
+
+    private var header: some View {
+        HStack(spacing: 12) {
+            WhaleIconTile(systemName: "checklist", size: 46, tint: WhaleTheme.accent)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("事情待办")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(WhaleTheme.ink)
+                Text("系统提醒事项 · 实时同步")
+                    .font(.system(size: 12))
+                    .foregroundStyle(WhaleTheme.muted)
+            }
+            Spacer(minLength: 8)
+            Button {
+                if embedded { onBackToChat?() } else { dismiss() }
+            } label: {
+                Image(systemName: embedded ? "bubble.left.and.bubble.right" : "xmark")
+                    .font(.system(size: embedded ? 15 : 14, weight: .semibold))
+                    .foregroundStyle(WhaleTheme.ink)
+                    .whaleGlassCircle(size: 36)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(embedded ? "回到对话" : "关闭待办")
         }
     }
 

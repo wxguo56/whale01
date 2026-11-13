@@ -55,7 +55,8 @@ export class MarketService {
         const batch = await this.#tencentQuotes(stale);
         for (const [symbol, quote] of batch) {
           quoteMap.set(symbol, quote);
-          this.quoteCache.set(symbol, { cachedAt: nowMs, value: quote });
+          quote.fetchedAt = this.now().toISOString();
+          this.quoteCache.set(symbol, { cachedAt: this.now().getTime(), value: quote });
         }
       } catch (error) {
         errors.push({ symbols: stale.map((item) => item.symbol), message: error.message });
@@ -66,7 +67,8 @@ export class MarketService {
         try {
           const quote = await this.#eastmoneyQuote(symbol);
           quoteMap.set(symbol.symbol, quote);
-          this.quoteCache.set(symbol.symbol, { cachedAt: nowMs, value: quote });
+          quote.fetchedAt = this.now().toISOString();
+          this.quoteCache.set(symbol.symbol, { cachedAt: this.now().getTime(), value: quote });
         } catch (error) {
           errors.push({ symbol: symbol.symbol, message: error.message });
         }
@@ -85,8 +87,8 @@ export class MarketService {
     }
     const source = [...new Set(quotes.map((quote) => quote.source))].join(" / ");
     return {
-      updatedAt: this.now().toISOString(),
-      delayedMinutes: 15,
+      updatedAt: quotes.map(quote => quote.fetchedAt).filter(Boolean).sort()[0] ?? null,
+      delayedMinutes: null,
       source,
       quotes,
       errors
@@ -170,7 +172,7 @@ export class MarketService {
       name: String(qt?.[1] ?? symbol.code),
       days: safeDays,
       source: "腾讯财经公开行情",
-      delayedMinutes: 15,
+      delayedMinutes: null,
       points
     };
   }
@@ -203,7 +205,7 @@ export class MarketService {
       name: String(block?.qt?.[symbol.symbol]?.[1] ?? symbol.code),
       date: String(latest.date ?? ""),
       source: "腾讯财经公开行情",
-      delayedMinutes: 15,
+      delayedMinutes: null,
       points
     };
   }
@@ -271,7 +273,7 @@ export class MarketService {
       floatMarketCap: numeric(data.f117),
       timestamp: timestampFromUnix(data.f86, this.now),
       source: "东方财富公开行情",
-      delayedMinutes: 15
+      delayedMinutes: null
     };
   }
 
@@ -424,7 +426,7 @@ function parseTencentQuote(symbol, fields, now) {
     floatMarketCap: floatMarketCapYi === null ? null : floatMarketCapYi * 100_000_000,
     timestamp: parseTencentTime(fields[30]) ?? now().toISOString(),
     source: "腾讯财经公开行情",
-    delayedMinutes: 15
+    delayedMinutes: null
   };
 }
 

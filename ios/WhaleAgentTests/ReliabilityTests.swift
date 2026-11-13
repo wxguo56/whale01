@@ -77,6 +77,15 @@ final class ReliabilityTests: XCTestCase {
         XCTAssertEqual(result["placeId"], .string("opaque-ref"))
     }
 
+    func testLiveEvidenceRequiresSourceTimeAndUsefulPayload() {
+        let now = Date()
+        let current: [String: Any] = ["source": "public-feed", "updatedAt": ToolDate.iso(now), "items": [["title": "真实新闻"]]]
+        XCTAssertTrue(ToolEvidencePolicy.accepts(tool: "get_tech_news", data: current, now: now))
+        XCTAssertFalse(ToolEvidencePolicy.accepts(tool: "get_tech_news", data: ["source": "feed", "items": []], now: now))
+        XCTAssertFalse(ToolEvidencePolicy.accepts(tool: "get_tech_news", data: ["source": "feed", "updatedAt": ToolDate.iso(now.addingTimeInterval(-3600)), "items": ["旧新闻"]], now: now))
+        XCTAssertFalse(ToolEvidencePolicy.accepts(tool: "get_stock_quote", data: ["source": "quotes", "updatedAt": ToolDate.iso(now), "quotes": []], now: now))
+    }
+
     func testMemoryWriteFailureRollsBackAndReportsFailure() throws {
         let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try Data("file-not-directory".utf8).write(to: base)

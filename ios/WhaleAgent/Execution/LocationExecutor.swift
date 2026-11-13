@@ -164,6 +164,7 @@ final class LocationExecutor {
             "radiusMeters": explicitRadius.map { JSONValue.number(Double($0)) } ?? .null,
             "radiusApplied": .bool(explicitRadius != nil),
             "distanceType": .string("straight_line"),
+            "fetchedAt": .string(ToolDate.iso(Date())),
             "source": .string("mapkit"),
             "simulated": .bool(false),
             "note": .string("搜索中心只在本机使用，不回传原始坐标；distanceMeters 为搜索中心到候选的直线距离；radiusApplied=true 时已按半径过滤并排序。")
@@ -198,6 +199,7 @@ final class LocationExecutor {
             "placeId": .string(placeId),
             "mode": .string(mode),
             "opened": .bool(true),
+            "openedAt": .string(ToolDate.iso(Date())),
             "note": .string("仅表示已把地点交给地图，未开始路线或抵达"),
             "source": .string("mapkit"),
             "simulated": .bool(false)

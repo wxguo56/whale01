@@ -61,6 +61,11 @@ enum RealDataGuard {
         return containsAny(compact, ["不要查", "不用查", "别查", "不要导航", "不需要导航", "不要定位", "别定位", "不用定位", "别打开", "不要执行", "不要获取", "别搜索", "不要搜索", "先别", "暂时别", "取消查询", "停止查询", "这个词", "什么意思", "怎么解释", "是什么原理", "怎么实现", "能不能查", "可以查吗", "能查吗", "假如", "假设", "如果我要", "如果我说"])
     }
 
+    static func suppressesTools(_ text: String) -> Bool {
+        let clauses = text.components(separatedBy: CharacterSet(charactersIn: "，,。；;！？!?\n")).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        return !clauses.isEmpty && clauses.allSatisfy(isDiscussion)
+    }
+
     static func isHomeNavigation(_ text: String) -> Bool {
         let compact = text.replacingOccurrences(of: " ", with: "")
         let phrases = ["导航回家", "带我回家", "送我回家", "怎么回家", "回家怎么走", "回家路线", "回家的路线"]
@@ -100,7 +105,7 @@ enum RealDataGuard {
         case .weather:
             return "用户询问天气。必须调用 get_weather，并以本轮真实结果为准；没有结果就如实说明，不得凭常识回答。"
         case .nearbyPlaces:
-            return "用户询问附近地点。必须调用 search_places 并传 locationMode=current，以本轮真实结果为准；没有结果就如实说明，不得编造店名、距离或地址。"
+            return "用户询问附近地点。必须调用 search_places；用户明确地区时按该地区搜索，只有围绕手机当前位置时传 locationMode=current。以本轮真实结果为准，不编造店名、距离或地址。"
         case .news:
             return "实时资讯需要 get_tech_news 或 search_web/fetch_web_content 的本轮成功结果，注明来源和获取时间；不得把模型知识当最新新闻。"
         case .stock:

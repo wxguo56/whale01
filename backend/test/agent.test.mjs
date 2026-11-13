@@ -3,6 +3,20 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createTestRuntime, FIXED_NOW, TIMEZONE } from "./helpers.mjs";
+import { buildTaskPlan } from "../src/taskPlan.mjs";
+
+test("解释或否定请求不产生执行计划，也不向模型开放执行工具", async () => {
+  let exposed;
+  const { agent } = await createTestRuntime({ adapter: { chat: async ({ tools }) => {
+    exposed = tools;
+    return { content: "天气指一定区域的大气状态。", toolCalls: [] };
+  } } });
+  assert.equal(buildTaskPlan("假如我要导航回家"), null);
+  const result = await agent.start({ text: "天气这个词怎么解释", now: FIXED_NOW, timezone: TIMEZONE });
+  assert.equal(exposed.length, 0);
+  assert.equal(result.pending.length, 0);
+  assert.equal(result.events.some(event => event.type === "tool.requested"), false);
+});
 
 test("自动确认时完成创建提醒闭环", async () => {
   const { agent, dir } = await createTestRuntime();

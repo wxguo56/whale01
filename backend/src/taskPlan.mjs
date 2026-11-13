@@ -1,3 +1,4 @@
+import { executableText } from "./requestIntent.mjs";
 const NEARBY_PATTERN = /附近|周边|离我|当前位置|我这|旁边/;
 const MERCHANT_PATTERN = /店|餐厅|咖啡|烧烤|火锅|商场|超市|酒吧|饭店|馆|摊/;
 const PRICE_PATTERN = /价格|多少钱|人均|预算|贵不贵|性价比|菜单|收费/;
@@ -62,7 +63,7 @@ export function detectRegion(text) {
 }
 
 export function buildTaskPlan(text) {
-  const input = String(text ?? "").trim();
+  const input = executableText(text).trim();
   if (!input) return null;
 
   const nearby = NEARBY_PATTERN.test(input);

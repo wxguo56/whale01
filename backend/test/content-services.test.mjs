@@ -4,8 +4,46 @@ import { NewsService, parseFeed, cleanText } from "../src/news.mjs";
 import { MarketService, normalizeSymbol } from "../src/market.mjs";
 import { GameRankService } from "../src/gameRank.mjs";
 import { ServerToolExecutor } from "../src/serverTools.mjs";
+import { readTextBounded } from "../src/boundedContent.mjs";
 
 const NOW = new Date("2026-11-11T08:00:00.000Z");
+
+test("缺失发布时间不伪造刚刚，手动刷新保留真实获取时间", async () => {
+  let clock = NOW, calls = 0;
+  const service = new NewsService({ now: () => clock,
+    feeds: [{ id: "a", name: "源A", url: "https://a.test/rss", channels: ["ai"] }],
+    fetchImpl: async () => { calls++; return new Response('<rss><channel><item><title>AI 进展</title><link>https://example.com/a</link><description>真实摘要</description></item></channel></rss>'); }
+  });
+  const first = await service.list();
+  assert.equal(first.items[0].publishedAt, null);
+  clock = new Date(NOW.getTime() + 1000);
+  assert.equal((await service.list()).updatedAt, NOW.toISOString());
+  assert.equal(calls, 1);
+  assert.equal((await service.list({ force: true })).updatedAt, clock.toISOString());
+  assert.equal(calls, 2);
+});
+
+test("同地址并发新闻请求只下载一次，总数遵守各自上限", async () => {
+  let calls = 0;
+  const service = new NewsService({ now: () => NOW,
+    feeds: [{ id: "a", name: "源A", url: "https://a.test/rss", channels: ["ai"] }, { id: "b", name: "源B", url: "https://a.test/rss", channels: ["ai"] }],
+    fetchImpl: async () => { calls++; await new Promise(resolve => setTimeout(resolve, 10)); return new Response('<rss><channel><item><title>AI 进展</title><link>https://example.com/a</link></item></channel></rss>'); }
+  });
+  const results = await Promise.all([service.list({ limit: 1 }), service.list({ limit: 2 })]);
+  assert.equal(calls, 1);
+  assert.ok(results[0].items.length <= 1);
+  assert.ok(results[1].items.length <= 2);
+});
+
+test("流式下载达到字节上限立即取消，不依赖 Content-Length", async () => {
+  let cancelled = false;
+  const response = new Response(new ReadableStream({
+    pull(controller) { controller.enqueue(new Uint8Array(64)); },
+    cancel() { cancelled = true; }
+  }));
+  await assert.rejects(readTextBounded(response, 100), /budget/);
+  assert.equal(cancelled, true);
+});
 
 test("RSS/Atom 解析保留标题、链接、摘要与时间", () => {
   const rss = `<rss><channel><item><title><![CDATA[大模型新进展]]></title><link>https://example.com/a</link><description><![CDATA[<p>摘要 &amp; 内容</p>]]></description><pubDate>Tue, 11 Nov 2026 07:00:00 GMT</pubDate></item></channel></rss>`;
@@ -78,7 +116,8 @@ test("MarketService 解析真实行情响应并标注延迟", async () => {
     }), { status: 200 })
   });
   const result = await service.quotes(["sh600519"]);
-  assert.equal(result.delayedMinutes, 15);
+  assert.equal(result.delayedMinutes, null);
+  assert.equal(result.quotes[0].fetchedAt, NOW.toISOString());
   assert.equal(result.quotes[0].name, "贵州茅台");
   assert.equal(result.quotes[0].price, 1688.5);
   assert.equal(result.quotes[0].volume, 1_234_500);

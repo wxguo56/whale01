@@ -648,6 +648,7 @@ final class NativeToolRouter {
             "code": .string(response.code),
             "name": .string(response.name),
             "days": .number(Double(response.days)),
+            "fetchedAt": .string(ToolDate.iso(Date())),
             "source": .string(response.source),
             "delayedMinutes": response.delayedMinutes.map { .number(Double($0)) } ?? .null,
             "points": .array(response.points.map(klineJSON))
@@ -663,6 +664,7 @@ final class NativeToolRouter {
             "code": .string(response.code),
             "name": .string(response.name),
             "date": .string(response.date),
+            "fetchedAt": .string(ToolDate.iso(Date())),
             "source": .string(response.source),
             "delayedMinutes": response.delayedMinutes.map { .number(Double($0)) } ?? .null,
             "points": .array(response.points.map(intradayJSON))
@@ -677,6 +679,7 @@ final class NativeToolRouter {
             "source": .string(item.source),
             "link": .string(item.link),
             "publishedAt": item.publishedAt.map(JSONValue.string) ?? .null,
+            "fetchedAt": item.fetchedAt.map(JSONValue.string) ?? .null,
             "channel": .string(item.channel),
             "rank": jsonNumber(item.rank.map { Double($0) })
         ])
