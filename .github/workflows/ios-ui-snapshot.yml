@@ -2,6 +2,12 @@ name: iOS UI Snapshot
 
 on:
   workflow_dispatch:
+    inputs:
+      scope:
+        description: Capture the home screen or the full discover matrix
+        type: choice
+        options: [home, all]
+        default: home
 
 concurrency:
   group: ios-ui-snapshot-${{ github.ref }}
@@ -47,9 +53,11 @@ jobs:
             build
 
       - name: Boot simulator and capture screenshots
+        env:
+          SNAPSHOT_SCOPE: ${{ inputs.scope || 'all' }}
         run: |
           set -euo pipefail
-          DEVICE_ID=$(xcrun simctl list devices available -j | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; c=[x for rt in d.values() for x in rt if x["name"].startswith("iPhone")]; print(c[0]["udid"] if c else "")')
+          DEVICE_ID=$(xcrun simctl list devices available -j | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; c=[x for rt in d.values() for x in rt if x["name"].startswith("iPhone")]; c.sort(key=lambda x: x["name"] != "iPhone 16 Pro"); print(c[0]["udid"] if c else "")')
           test -n "$DEVICE_ID"
           echo "Using device $DEVICE_ID"
           xcrun simctl boot "$DEVICE_ID" || true
@@ -59,6 +67,14 @@ jobs:
             xcrun simctl privacy "$DEVICE_ID" grant "$service" com.whale01.agent || true
           done
           xcrun simctl location "$DEVICE_ID" set 30.2741,120.1551 || true
+          mkdir -p snapshots
+          if [ "$SNAPSHOT_SCOPE" = "home" ]; then
+            SIMCTL_CHILD_WHALE_DEMO_HOME=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+            sleep 12
+            xcrun simctl io "$DEVICE_ID" screenshot snapshots/home-companion.png
+            xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+            exit 0
+          fi
           SIMCTL_CHILD_WHALE_DEMO_DISCOVER=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
           sleep 8
           mkdir -p snapshots
