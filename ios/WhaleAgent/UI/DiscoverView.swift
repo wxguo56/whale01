@@ -25,14 +25,14 @@ struct DiscoverView: View {
                 NavigationStack(path: $path) {
                     ZStack {
                         WhaleBackdrop()
-                    if let model = models[selection] {
-                        DiscoverChannelPage(model: model, appModel: appModel)
-                            .id(selection)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                            .accessibilityElement(children: .contain)
-                            .accessibilityIdentifier("discover-content-" + selection.rawValue)
-                            .transition(.opacity)
-                    }
+                        if let model = models[selection] {
+                            DiscoverChannelPage(model: model, appModel: appModel)
+                                .id(selection)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                                .accessibilityElement(children: .contain)
+                                .accessibilityIdentifier("discover-content-" + selection.rawValue)
+                                .transition(.opacity)
+                        }
                     }
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: selection)
                     .background(Color.clear)
@@ -134,7 +134,7 @@ struct DiscoverChannelBar: View {
             }.scrollIndicators(.hidden).scrollClipDisabled()
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("discover-channel-selector")
-                        .onChange(of: selection) { _, channel in
+                .onChange(of: selection) { _, channel in
                     withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { proxy.scrollTo(channel, anchor: .center) }
                 }
                 .onAppear { proxy.scrollTo(selection, anchor: .center) }

@@ -126,6 +126,7 @@ struct NewsFeatureCard: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8) }
+        .whaleSoftElevation()
     }
 }
 
@@ -167,6 +168,7 @@ struct NewsRowCard: View {
         .padding(.horizontal, 14)
         .background(WhaleTheme.card.opacity(0.72), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+        .whaleSoftElevation()
     }
 
     private var channelIcon: String {
@@ -257,6 +259,7 @@ struct MarketIndexCard: View {
         .padding(13)
         .background(WhaleTheme.card.opacity(0.82), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+        .whaleSoftElevation()
     }
 }
 
@@ -307,6 +310,7 @@ struct QuoteRowCard: View {
         .padding(.horizontal, 15)
         .background(WhaleTheme.card.opacity(0.74), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+        .whaleSoftElevation()
     }
 }
 
@@ -445,6 +449,7 @@ struct MarketSearchField: View {
         .frame(height: 44)
         .background(WhaleTheme.field.opacity(0.82), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 15, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+        .whaleSoftElevation()
     }
 }
 
@@ -644,6 +649,7 @@ struct GameRankHeader: View {
         .padding(13)
         .background(WhaleTheme.card.opacity(0.8), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+        .whaleSoftElevation()
     }
 }
 
@@ -705,6 +711,7 @@ struct GameRankRowCard: View {
         .padding(.horizontal, 12)
         .background(WhaleTheme.card.opacity(0.72), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+        .whaleSoftElevation()
     }
 }
 
@@ -752,6 +759,7 @@ struct WeiboHotHeader: View {
         .padding(13)
         .background(WhaleTheme.card.opacity(0.8), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+        .whaleSoftElevation()
     }
 }
 
@@ -813,5 +821,6 @@ struct WeiboHotRowCard: View {
         .padding(.horizontal, 12)
         .background(WhaleTheme.card.opacity(0.72), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+        .whaleSoftElevation()
     }
 }

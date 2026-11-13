@@ -798,6 +798,7 @@ struct SteamHeader: View {
         .padding(13)
         .background(WhaleTheme.card.opacity(0.8), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+        .whaleSoftElevation()
     }
 }
 
@@ -868,5 +869,6 @@ struct SteamRowCard: View {
         .padding(.horizontal, 12)
         .background(WhaleTheme.card.opacity(0.72), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
+        .whaleSoftElevation()
     }
 }
