@@ -8,6 +8,9 @@ parser.add_argument('--logs', action='store_true')
 parser.add_argument('--download-artifact', type=int)
 parser.add_argument('--out')
 parser.add_argument('--artifacts', action='store_true')
+parser.add_argument('--create-draft-pr', action='store_true')
+parser.add_argument('--title')
+parser.add_argument('--body-file')
 args = parser.parse_args()
 env = {**os.environ, 'GIT_TERMINAL_PROMPT': '0'}
 credential = subprocess.run(['git', 'credential', 'fill'], input='protocol=https\nhost=github.com\n\n', text=True, capture_output=True, env=env, timeout=30)
@@ -36,7 +39,17 @@ def request(path, method='GET', body=None):
     with urllib.request.urlopen(req, timeout=30) as result:
         data = result.read()
     return json.loads(data) if data else None
-if args.download_artifact:
+if args.create_draft_pr:
+    from pathlib import Path
+    from urllib.parse import quote
+    if not args.title or not args.body_file: raise SystemExit('--title and --body-file are required')
+    existing = request('/pulls?state=open&base=main&head=' + quote('wxguo56:' + args.branch, safe=''))
+    pr = existing[0] if existing else request('/pulls', 'POST', {
+        'title': args.title, 'head': args.branch, 'base': 'main', 'draft': True,
+        'body': Path(args.body_file).read_text(encoding='utf-8')
+    })
+    print(json.dumps({k:pr.get(k) for k in ['number','html_url','draft','state']}, ensure_ascii=False))
+elif args.download_artifact:
     from pathlib import Path
     if not args.out: raise SystemExit('--out is required')
     Path(args.out).write_bytes(download('/actions/artifacts/' + str(args.download_artifact) + '/zip'))
