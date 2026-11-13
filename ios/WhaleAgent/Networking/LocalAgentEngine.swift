@@ -34,6 +34,7 @@ enum LocalAgentError: LocalizedError {
     case invalidResponse
     case http(Int, String)
     case model(String)
+    case requestInProgress
 
     var errorDescription: String? {
         switch self {
@@ -47,6 +48,8 @@ enum LocalAgentError: LocalizedError {
             return "DeepSeek HTTP \(status)：\(body.prefix(300))"
         case .model(let message):
             return message
+        case .requestInProgress:
+            return "这一批结果正在处理，请稍后重试；不会重复执行已经完成的动作。"
         }
     }
 }
@@ -122,6 +125,7 @@ private struct LocalTurn: Codable {
     var batches: Int
     var permissions: [String: String]
     var taskState: LocalTaskState?
+    var resultBatch: ToolResultBatch? = nil
 }
 
 actor LocalAgentEngine: AgentTransport {
@@ -129,10 +133,13 @@ actor LocalAgentEngine: AgentTransport {
     private let tools: [ToolContract.Tool]
     private let toolMap: [String: ToolContract.Tool]
     private var turns: [String: LocalTurn]
+    private let receipts: TurnReceiptStore
+    private var processingTurns: Set<String> = []
 
     private static let turnsKey = "whale.local.turns"
 
-    init() {
+    init(receipts: TurnReceiptStore = TurnReceiptStore()) {
+        self.receipts = receipts
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = 120
         configuration.timeoutIntervalForResource = 180
@@ -193,31 +200,42 @@ actor LocalAgentEngine: AgentTransport {
     }
 
     func submitToolResults(turnId: String, results: [ToolResultPayload]) async throws -> AgentTurnResponse {
+        if let completed = await receipts.response(for: turnId) { return completed }
+        guard processingTurns.insert(turnId).inserted else { throw LocalAgentError.requestInProgress }
+        defer { processingTurns.remove(turnId) }
         guard var turn = turns[turnId] else { throw LocalAgentError.unknownTurn }
         var history = loadHistory(turn.conversationId)
-
-        if !hasAssistantToolCalls(history, matching: turn.pending) {
-            let calls = turn.pending.map { item in
-                DSToolCall(
-                    id: item.toolCallId,
-                    type: "function",
-                    function: DSFunctionCall(name: item.tool, arguments: encodeArguments(item.arguments))
-                )
-            }
-            history.append(DSMessage(role: "assistant", content: nil, tool_calls: calls, tool_call_id: nil, name: nil))
-        }
-
-        let existingToolIds = Set(
-            history.compactMap { $0.role == "tool" ? $0.tool_call_id : nil }
-        )
         let expectedIds = Set(turn.pending.map(\.toolCallId))
-        var seenIds = existingToolIds
-        let novelResults = results.filter { expectedIds.contains($0.toolCallId) && seenIds.insert($0.toolCallId).inserted }
-        for result in novelResults {
-            turn.taskState?.observations[result.toolCallId] = result.status
+        var batch = turn.resultBatch ?? ToolResultBatch(expected: turn.pending.map(\.toolCallId))
+        if turn.resultBatch == nil {
+            let existing = history.filter { $0.role == "tool" }.compactMap { message -> ToolResultPayload? in
+                guard let text = message.content, let data = text.data(using: .utf8) else { return nil }
+                return try? JSONDecoder().decode(ToolResultPayload.self, from: data)
+            }
+            _ = batch.collect(existing)
         }
+        let novelResults = batch.collect(results)
+        turn.resultBatch = batch
+        let seenIds = batch.receivedIDs
+        for result in batch.orderedResults { turn.taskState?.observations[result.toolCallId] = result.status }
         turn.taskState?.remaining = turn.pending.filter { !seenIds.contains($0.toolCallId) }.map(\.tool)
-        for result in novelResults {
+        if !batch.isComplete {
+            turns[turn.turnId] = turn
+            saveTurns()
+            return makeResponse(status: "awaiting_tool_results", turn: turn, reply: nil, pending: turn.pending.filter { !seenIds.contains($0.toolCallId) })
+        }
+        // Rebuild a complete protocol block once the batch is assembled. The
+        // conversation sanitizer must never drop the only copy of a partial
+        // result; that copy is now held in the persisted LocalTurn batch.
+        history.removeAll { message in
+            if message.role == "tool", let id = message.tool_call_id { return expectedIds.contains(id) }
+            return message.role == "assistant" && (message.tool_calls ?? []).contains { expectedIds.contains($0.id) }
+        }
+        let calls = turn.pending.map { item in
+            DSToolCall(id: item.toolCallId, type: "function", function: DSFunctionCall(name: item.tool, arguments: encodeArguments(item.arguments)))
+        }
+        history.append(DSMessage(role: "assistant", content: nil, tool_calls: calls, tool_call_id: nil, name: nil))
+        for result in batch.orderedResults {
             history.append(
                 DSMessage(
                     role: "tool",
@@ -230,24 +248,20 @@ actor LocalAgentEngine: AgentTransport {
         }
         saveHistory(history, for: turn.conversationId)
 
-        if !expectedIds.isSubset(of: seenIds) {
-            turns[turn.turnId] = turn
-            saveTurns()
-            return makeResponse(status: "awaiting_tool_results", turn: turn, reply: nil, pending: turn.pending.filter { !seenIds.contains($0.toolCallId) })
-        }
-
         if !novelResults.isEmpty {
             turn.batches += 1
         }
         if turn.batches >= 6 {
-            turns.removeValue(forKey: turn.turnId)
-            saveTurns()
-            return makeResponse(
+            let response = makeResponse(
                 status: "completed_with_limits",
                 turn: turn,
                 reply: "这一轮已达到 6 批工具的执行预算，任务尚需核对。我保留了目标和执行记录，请查看未完成事项后继续。",
                 pending: []
             )
+            await receipts.record(response)
+            turns.removeValue(forKey: turn.turnId)
+            saveTurns()
+            return response
         }
 
         let context = latestTurnContext(history)
@@ -268,6 +282,7 @@ actor LocalAgentEngine: AgentTransport {
     }
 
     func turnSnapshot(turnId: String) async throws -> AgentTurnResponse {
+        if let completed = await receipts.response(for: turnId) { return completed }
         guard let turn = turns[turnId] else {
             return AgentTurnResponse(
                 contractVersion: "1.0",
@@ -282,10 +297,12 @@ actor LocalAgentEngine: AgentTransport {
                 task: nil
             )
         }
-        let status = turn.pending.contains(where: \.requiresConfirmation)
+        let received = turn.resultBatch?.receivedIDs ?? []
+        let remaining = turn.pending.filter { !received.contains($0.toolCallId) }
+        let status = remaining.contains(where: \.requiresConfirmation)
             ? "awaiting_confirmation"
             : "awaiting_tool_results"
-        return makeResponse(status: status, turn: turn, reply: nil, pending: turn.pending)
+        return makeResponse(status: status, turn: turn, reply: nil, pending: remaining)
     }
 
     private func advance(
@@ -311,6 +328,7 @@ actor LocalAgentEngine: AgentTransport {
                 )
             }
             turn.pending = pending
+            turn.resultBatch = nil
             turn.taskState?.remaining = pending.map(\.tool)
             turns[turn.turnId] = turn
             saveHistory(history, for: turn.conversationId)
@@ -342,14 +360,16 @@ actor LocalAgentEngine: AgentTransport {
             )
         )
         saveHistory(history, for: turn.conversationId)
-        turns.removeValue(forKey: turn.turnId)
-        saveTurns()
-        return makeResponse(
+        let response = makeResponse(
             status: turn.taskState?.hasUnresolvedResults == true || evidenceMissing ? "completed_with_limits" : "completed",
             turn: turn,
             reply: reply.isEmpty ? "我这次没有生成可执行的动作。" : reply,
             pending: []
         )
+        await receipts.record(response)
+        turns.removeValue(forKey: turn.turnId)
+        saveTurns()
+        return response
     }
 
     private func latestTurnContext(_ history: [DSMessage]) -> (userText: String, tools: Set<String>) {

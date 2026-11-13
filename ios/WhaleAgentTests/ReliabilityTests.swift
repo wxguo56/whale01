@@ -154,4 +154,35 @@ final class ReliabilityTests: XCTestCase {
         XCTAssertEqual(roundTrip.goal, state.goal)
         XCTAssertEqual(roundTrip.remaining, state.remaining)
     }
+
+    func testPartialToolBatchSurvivesRestartAndIgnoresForeignOrDuplicateResults() throws {
+        var batch = ToolResultBatch(expected: ["call-a", "call-b"])
+        let first = ToolResultPayload(toolCallId: "call-a", status: "success", data: .object(["recordId": .string("saved-a")]))
+        XCTAssertEqual(batch.collect([first]).count, 1)
+        XCTAssertFalse(batch.isComplete)
+        batch = try JSONDecoder().decode(ToolResultBatch.self, from: JSONEncoder().encode(batch))
+        let foreign = ToolResultPayload(toolCallId: "foreign", status: "success")
+        let second = ToolResultPayload(toolCallId: "call-b", status: "failed", error: ToolErrorPayload(code: "offline", message: "离线"))
+        XCTAssertEqual(batch.collect([foreign, first, second]).count, 1)
+        XCTAssertTrue(batch.isComplete)
+        XCTAssertEqual(batch.orderedResults.map(\.toolCallId), ["call-a", "call-b"])
+        XCTAssertEqual(batch.orderedResults.first?.data?.objectValue?["recordId"], .string("saved-a"))
+    }
+
+    func testCompletedReceiptAnswersSnapshotAndRepeatedDeliveryWithoutModelCall() async throws {
+        let suite = "whale.receipt.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let response = AgentTurnResponse(contractVersion: "1.0", turnId: "receipt-test", conversationId: "test-conversation",
+                                         status: "completed", reply: "已完成并保留回执", modelMode: "deepseek-direct",
+                                         executionMode: "ios", events: [], pending: [], task: nil)
+        await TurnReceiptStore(defaults: defaults).record(response)
+        let restored = TurnReceiptStore(defaults: defaults)
+        let engine = LocalAgentEngine(receipts: restored)
+        let snapshot = try await engine.turnSnapshot(turnId: response.turnId)
+        let repeated = try await engine.submitToolResults(turnId: response.turnId, results: [])
+        XCTAssertEqual(snapshot.status, "completed")
+        XCTAssertEqual(repeated.reply, response.reply)
+        XCTAssertTrue(repeated.pending.isEmpty)
+    }
 }
