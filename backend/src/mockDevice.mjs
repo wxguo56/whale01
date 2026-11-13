@@ -1,6 +1,22 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { permissionKeysForTool } from "./capabilities.mjs";
+import { addDaysToDate, offsetMinutesAt, zonedParts } from "./time.mjs";
+
+// Resolve a calendar wall time in the requested zone, independent of the host.
+// Re-evaluate the offset at the resulting instant so each day handles DST.
+function calendarInstant(date, hour, minute, timeZone) {
+  const wall = Date.UTC(date.year, date.month - 1, date.day, hour, minute);
+  let instant = wall;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const resolved = wall - offsetMinutesAt(new Date(instant), timeZone) * 60_000;
+    if (resolved === instant) break;
+    instant = resolved;
+  }
+  const actual = zonedParts(new Date(instant), timeZone);
+  return actual.year === date.year && actual.month === date.month && actual.day === date.day
+    && actual.hour === hour && actual.minute === minute ? instant : NaN;
+}
 
 const MUSIC_LIBRARY = [
   { trackId: "music_demo_1", title: "夜航", artist: "鲸鱼示例乐队", album: "演示曲库 A", durationSec: 214 },
@@ -374,16 +390,17 @@ export class MockDeviceExecutor {
     const stored = this.calendarPath ? await this.#readJson(this.calendarPath, []) : [];
     const events = [...DEMO_CALENDAR, ...stored].filter((event) => args.includeAllDay === true || !event.isAllDay);
     const slots = [];
-    const cursor = new Date(rangeStart);
-    cursor.setHours(0, 0, 0, 0);
+    const timeZone = args.timezone ?? "UTC";
+    let cursor;
+    try { cursor = zonedParts(new Date(rangeStart), timeZone); }
+    catch { return this.#failure("invalid_timezone", "时区无法识别"); }
     let inspectedDays = 0;
-    while (cursor.getTime() < rangeEnd && slots.length < limit && inspectedDays < 14) {
-      const windowStart = new Date(cursor);
-      windowStart.setHours(startHour, startMinute, 0, 0);
-      const windowEnd = new Date(cursor);
-      windowEnd.setHours(endHour, endMinute, 0, 0);
-      const clippedStart = Math.max(windowStart.getTime(), rangeStart);
-      const clippedEnd = Math.min(windowEnd.getTime(), rangeEnd);
+    while (slots.length < limit && inspectedDays < 14) {
+      const windowStart = calendarInstant(cursor, startHour, startMinute, timeZone);
+      const windowEnd = calendarInstant(cursor, endHour, endMinute, timeZone);
+      if (windowStart >= rangeEnd) break;
+      const clippedStart = Math.max(windowStart, rangeStart);
+      const clippedEnd = Math.min(windowEnd, rangeEnd);
       if (clippedStart < clippedEnd) {
         const busy = events
           .map((event) => ({
@@ -403,7 +420,7 @@ export class MockDeviceExecutor {
           this.#appendMockSlots(freeStart, clippedEnd, duration, slots, limit);
         }
       }
-      cursor.setDate(cursor.getDate() + 1);
+      cursor = addDaysToDate(cursor, 1);
       inspectedDays += 1;
     }
 

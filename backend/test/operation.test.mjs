@@ -149,6 +149,24 @@ test("空档查询跳过占用时段并标注模拟来源", async () => {
   assert.ok(result.data.slots.every((slot) => Date.parse(slot.endAt) > Date.parse(slot.startAt)));
 });
 
+test("空档查询按用户时区避开占用并跨夏令时换日", async () => {
+  const executor = new MockDeviceExecutor({});
+  const shanghai = await executor.execute({ tool: "find_free_slots", arguments: {
+    startAt: "2026-11-10T16:00:00+08:00", endAt: "2026-11-10T18:00:00+08:00",
+    timezone: "Asia/Shanghai", dayStart: "16:00", dayEnd: "18:00", durationMinutes: 60
+  } });
+  assert.equal(shanghai.status, "success");
+  assert.deepEqual(shanghai.data.slots.map(slot => slot.startAt), ["2026-11-10T09:00:00.000Z"]);
+  const newYork = await executor.execute({ tool: "find_free_slots", arguments: {
+    startAt: "2026-10-31T09:00:00-04:00", endAt: "2026-11-01T10:00:00-05:00",
+    timezone: "America/New_York", dayStart: "09:00", dayEnd: "10:00", durationMinutes: 60
+  } });
+  assert.equal(newYork.status, "success");
+  assert.deepEqual(newYork.data.slots.map(slot => slot.startAt), [
+    "2026-10-31T13:00:00.000Z", "2026-11-01T14:00:00.000Z"
+  ]);
+});
+
 test("空档查询拒绝反向时间范围", async () => {
   const executor = new MockDeviceExecutor({});
   const result = await executor.execute({
