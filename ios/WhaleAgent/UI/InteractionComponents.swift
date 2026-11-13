@@ -1,7 +1,7 @@
 import SwiftUI
 
 private struct ReadableFont: ViewModifier {
-    @ScaledMetric(relativeTo: .body) private var size: CGFloat
+    @ScaledMetric(relativeTo: .body) private var size: CGFloat = 17
     let weight: Font.Weight
     let design: Font.Design
     init(size: CGFloat, weight: Font.Weight, design: Font.Design) {
