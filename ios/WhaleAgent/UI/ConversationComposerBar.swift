@@ -43,7 +43,7 @@ struct ConversationComposerBar: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(WhaleTheme.chrome)
+        .background(WhaleChromeBackground())
         .photosPicker(
             isPresented: $showPhotoPicker,
             selection: $photoItem,
@@ -170,7 +170,8 @@ struct ConversationComposerBar: View {
                     .whaleFont(size: 16, weight: .semibold)
                     .foregroundStyle(WhaleTheme.buttonInk)
                     .frame(width: 44, height: 44)
-                    .background(WhaleTheme.accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(WhaleTheme.composerSendGradient, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .whaleSoftElevation(selected: true)
             }
             .buttonStyle(.plain)
             .disabled(model.isBusy || isDraftEmpty || finishingVoice)

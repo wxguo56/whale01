@@ -5,6 +5,7 @@ final class InteractionUITests: XCTestCase {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchEnvironment["WHALE_DEMO_HOME"] = "1"
+        app.launchEnvironment["WHALE_DEMO_INITIAL_CHANNEL"] = "ai"
         app.launch()
         return app
     }
@@ -21,11 +22,47 @@ final class InteractionUITests: XCTestCase {
         XCTAssertTrue(app.buttons["discover-channel-game"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["discover-channel-weibo"].exists)
         app.buttons["discover-channel-game"].tap()
-        XCTAssertTrue(app.buttons["返回发现"].waitForExistence(timeout: 10))
-        app.buttons["返回发现"].tap()
-        XCTAssertTrue(app.buttons["discover-channel-game"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.otherElements["discover-content-game"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.tabBars.buttons["发现"].isHittable)
+        XCTAssertFalse(app.buttons["返回发现"].exists)
         app.tabBars.buttons["助手"].tap()
         XCTAssertTrue(app.staticTexts["常用操作"].waitForExistence(timeout: 5))
+    }
+    func testChannelSwitchesKeepNavigationAndSelectorFramesFixed() {
+        let app = launch()
+        app.tabBars.buttons["发现"].tap()
+        let navigation = app.otherElements["discover-fixed-header"]
+        XCTAssertTrue(navigation.waitForExistence(timeout: 10))
+        let navFrame = navigation.frame
+        let tabsFrame = app.tabBars.firstMatch.frame
+        let selectorY = app.buttons["discover-channel-ai"].frame.minY
+        for channel in ["game", "headline", "market", "ai"] {
+            app.buttons["discover-channel-" + channel].tap()
+            XCTAssertTrue(app.otherElements["discover-content-" + channel].waitForExistence(timeout: 10))
+            XCTAssertEqual(navigation.frame.minY, navFrame.minY, accuracy: 1)
+            XCTAssertEqual(navigation.frame.height, navFrame.height, accuracy: 1)
+            XCTAssertEqual(app.tabBars.firstMatch.frame.minY, tabsFrame.minY, accuracy: 1)
+            XCTAssertEqual(app.buttons["discover-channel-ai"].frame.minY, selectorY, accuracy: 1)
+            XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "assistant-composer").firstMatch.exists)
+            attach("fixed-shell-" + channel)
+        }
+    }
+    func testNewsSectionSelectorStaysPinnedWhileContentScrollsAndChanges() {
+        let app = launch()
+        app.tabBars.buttons["发现"].tap()
+        let all = app.buttons["discover-section-ai-all"]
+        XCTAssertTrue(all.waitForExistence(timeout: 10))
+        let baseline = all.frame.minY
+        app.otherElements["discover-content-ai"].swipeUp()
+        XCTAssertEqual(all.frame.minY, baseline, accuracy: 1)
+        app.buttons["discover-section-ai-coding"].tap()
+        XCTAssertEqual(all.frame.minY, baseline, accuracy: 1)
+        XCTAssertTrue(app.tabBars.buttons["助手"].isHittable)
+        attach("pinned-ai-coding")
+    }
+    private func attach(_ name: String) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
     func testDraftSurvivesTabSwitchAndAppRelaunchWithoutSending() {
         let app = launch()

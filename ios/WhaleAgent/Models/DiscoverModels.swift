@@ -10,6 +10,17 @@ enum DiscoverChannel: String, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
+    var tabTitle: String {
+        switch self {
+        case .ai: return "AI科技"
+        case .market: return "A股"
+        case .game: return "游戏"
+        case .music: return "音乐"
+        case .headline: return "新闻"
+        case .weibo: return "热榜"
+        }
+    }
+
     var title: String {
         switch self {
         case .ai: return "AI科技"

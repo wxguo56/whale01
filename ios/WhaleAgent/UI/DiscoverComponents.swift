@@ -574,47 +574,28 @@ struct StockSeedLoaderView: View {
 struct GameSectionSegment: View {
     @Binding var selection: GameSection
     var onSelect: ((GameSection) -> Void)?
-    @Namespace private var animation
-
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal) {
-                HStack(spacing: 4) {
+                HStack(spacing: 7) {
                     ForEach(GameSection.allCases) { section in
                         Button {
-                            if let onSelect {
-                                onSelect(section)
-                            } else {
-                                withAnimation(.snappy(duration: 0.22)) { selection = section }
-                            }
+                            if let onSelect { onSelect(section) }
+                            else { selection = section }
                         } label: {
-                            Text(section.title)
-                                .whaleFont(size: 13, weight: .semibold)
-                                .foregroundStyle(selection == section ? WhaleTheme.ink : WhaleTheme.muted)
-                                .padding(.horizontal, 13)
-                                .frame(height: 30)
-                                .background {
-                                    if selection == section {
-                                        Capsule()
-                                            .fill(WhaleTheme.card.opacity(0.92))
-                                            .matchedGeometryEffect(id: "game.section", in: animation)
-                                            .overlay { Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.7) }
-                                    }
-                                }
-                        }
-                        .buttonStyle(.plain)
-                        .id(section)
+                            Text(section.title).whaleFont(size: 13, weight: .semibold)
+                                .whaleRaisedPill(selected: selection == section)
+                        }.buttonStyle(.plain).id(section)
+                            .accessibilityAddTraits(selection == section ? .isSelected : [])
+                            .accessibilityIdentifier("discover-game-" + section.rawValue)
                     }
+                }.padding(.vertical, 8)
+            }.scrollIndicators(.hidden).scrollClipDisabled()
+                .onChange(of: selection) { _, next in
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { proxy.scrollTo(next, anchor: .center) }
                 }
-                .padding(3)
-                .background(WhaleTheme.field.opacity(0.6), in: Capsule())
-            }
-            .scrollIndicators(.hidden)
-            .onChange(of: selection) { _, next in
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    proxy.scrollTo(next, anchor: .center)
-                }
-            }
+                .onAppear { proxy.scrollTo(selection, anchor: .center) }
         }
     }
 }

@@ -9,10 +9,8 @@ struct RootView: View {
     @State private var showRecords = false
     @State private var showSettings = false
     @State private var settingsDetailOpen = false
-    @State private var showDiscover = false
     @State private var composerDraft = ""
-    @State private var discoverChannel: DiscoverChannel = .ai
-    @State private var discoverReturnTitle = "助手"
+    @AppStorage("whale.discover.selectedChannel") private var discoverChannel: DiscoverChannel = .ai
     @AppStorage("whale.appearance") private var appearance = "system"
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var systemTextSize
@@ -36,7 +34,7 @@ struct RootView: View {
             }.tabItem { Label("待办", systemImage: "checklist") }.tag(AppTab.records)
             ZStack {
                 if page == .discover {
-                    DiscoverHubView(model: model, onOpen: openDiscover, onSettings: { showSettings = true })
+                    DiscoverView(selection: $discoverChannel, appModel: model, onSettings: { showSettings = true })
                 }
             }.tabItem { Label("发现", systemImage: "square.grid.2x2") }.tag(AppTab.discover)
         }
@@ -51,13 +49,10 @@ struct RootView: View {
             SettingsView(model: model, isDetailOpen: $settingsDetailOpen, onBackToChat: { showSettings = false })
                 .presentationDragIndicator(.visible)
         }
-        .fullScreenCover(isPresented: $showDiscover) {
-            DiscoverView(initialChannel: discoverChannel, appModel: model, returnTitle: discoverReturnTitle)
-                .id(discoverChannel)
-        }
         .task {
 #if DEBUG
             let environment = ProcessInfo.processInfo.environment
+            if let raw = environment["WHALE_DEMO_INITIAL_CHANNEL"], let channel = DiscoverChannel(rawValue: raw) { discoverChannel = channel }
             if environment["WHALE_DEMO_HOME"] == "1" || environment["WHALE_DEMO_WEATHER"] == "1" { page = .conversation }
             if environment["WHALE_DEMO_TODO"] == "1" { page = .records }
             if environment["WHALE_DEMO_HUB"] == "1" { page = .discover }
@@ -85,12 +80,12 @@ struct RootView: View {
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
         .onReceive(NotificationCenter.default.publisher(for: .whaleOpenChat)) { _ in
-            showDiscover = false; showRecords = false; showSettings = false; page = .conversation
+            showRecords = false; showSettings = false; page = .conversation
         }
     }
     private func openDiscover(_ channel: DiscoverChannel) {
-        discoverReturnTitle = page == .discover ? "发现" : "助手"
-        discoverChannel = channel; showDiscover = true
+        discoverChannel = channel
+        page = .discover
     }
     private var colorScheme: ColorScheme? {
         appearance == "light" ? .light : appearance == "dark" ? .dark : nil

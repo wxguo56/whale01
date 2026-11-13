@@ -62,7 +62,7 @@ struct WhaleHomeCanvas: View {
             }.frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 24)
         }.scrollIndicators(.hidden).scrollDismissesKeyboard(.interactively)
-            .background(WhaleTheme.background)
+            .background(WhaleBackdrop())
             .task { await loadWeatherIfNeeded(); await loadHomeTodos(); await model.refreshDashboard() }
             .onChange(of: model.permissionsSnapshot) { _, _ in Task { await loadWeatherIfNeeded(); await loadHomeTodos() } }
             .sheet(isPresented: $showWeatherDetail) {
@@ -95,6 +95,7 @@ struct WhaleHomeCanvas: View {
             Label(action.title, systemImage: action.icon).font(.subheadline.weight(.medium))
                 .padding(.horizontal, 12).frame(minHeight: 44)
                 .background(WhaleTheme.accentSoft, in: RoundedRectangle(cornerRadius: 12))
+                .whaleSoftElevation()
         }.buttonStyle(.plain).foregroundStyle(WhaleTheme.accentDeep)
     }
     private func perform(_ action: QuickAction) {

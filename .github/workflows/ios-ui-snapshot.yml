@@ -6,7 +6,7 @@ on:
       scope:
         description: Capture the home screen or the full discover matrix
         type: choice
-        options: [home, interaction, all]
+        options: [home, interaction, discover, all]
         default: home
 
 concurrency:
@@ -43,8 +43,8 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
-            MARKETING_VERSION=0.7.0 \
-            CURRENT_PROJECT_VERSION="113.${{ github.run_attempt }}" \
+            MARKETING_VERSION=0.7.1 \
+            CURRENT_PROJECT_VERSION="114.${{ github.run_attempt }}" \
             WHALE_API_TOKEN="${{ secrets.WHALE_API_TOKEN }}" \
             DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
             CODE_SIGNING_ALLOWED=NO \
@@ -68,6 +68,29 @@ jobs:
           done
           xcrun simctl location "$DEVICE_ID" set 30.2741,120.1551 || true
           mkdir -p snapshots
+          if [ "$SNAPSHOT_SCOPE" = "discover" ]; then
+            SIMCTL_CHILD_WHALE_DEMO_HOME=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+            sleep 5
+            xcrun simctl io "$DEVICE_ID" screenshot snapshots/depth-home.png
+            xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+            for channel in ai game market headline weibo; do
+              env "SIMCTL_CHILD_WHALE_DEMO_CHANNEL=$channel" xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+              sleep 6
+              xcrun simctl io "$DEVICE_ID" screenshot "snapshots/fixed-shell-${channel}.png"
+              xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+            done
+            xcrun simctl ui "$DEVICE_ID" appearance dark
+            SIMCTL_CHILD_WHALE_DEMO_CHANNEL=ai xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+            sleep 4
+            xcrun simctl io "$DEVICE_ID" screenshot snapshots/fixed-shell-dark.png
+            xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+            xcrun simctl ui "$DEVICE_ID" appearance light
+            SIMCTL_CHILD_WHALE_DEMO_CHANNEL=ai SIMCTL_CHILD_WHALE_DEMO_LARGE_TEXT=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+            sleep 4
+            xcrun simctl io "$DEVICE_ID" screenshot snapshots/fixed-shell-large-text.png
+            xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+            exit 0
+          fi
           if [ "$SNAPSHOT_SCOPE" = "interaction" ]; then
             for state in HOME HUB TODO SETTINGS; do
               env "SIMCTL_CHILD_WHALE_DEMO_${state}=1" xcrun simctl launch "$DEVICE_ID" com.whale01.agent

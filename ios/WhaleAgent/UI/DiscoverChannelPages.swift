@@ -46,11 +46,7 @@ struct AIChannelPage: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
-                    DiscoverChannelHeader(channel: .ai)
-                        .id("ai-top")
-                    NewsSectionBar(channel: .ai, selection: model.aiSection) { section in
-                        Task { await model.selectNewsSection(section, for: .ai) }
-                    }
+                    Color.clear.frame(height: 1).id("ai-top")
                     VStack(alignment: .leading, spacing: 12) {
                         newsHero
                         moreNews
@@ -66,6 +62,11 @@ struct AIChannelPage: View {
                 .padding(.bottom, 30)
             }
             .scrollIndicators(.hidden)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                NewsSectionBar(channel: .ai, selection: model.aiSection) { section in
+                    Task { await model.selectNewsSection(section, for: .ai) }
+                }.padding(.horizontal, 16).padding(.bottom, 6)
+            }
             .background(ScrollOffsetMemory(key: "ai-\(model.aiSection)"))
             .refreshable { await model.refresh() }
             .onChange(of: model.aiSection) { _, _ in
@@ -388,10 +389,7 @@ struct GameChannelPage: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 11) {
-                    NewsSectionBar(channel: .game, selection: model.gameNewsSection) { section in
-                        Task { await model.selectNewsSection(section, for: .game) }
-                    }
-                    .id("game-news-top")
+                    Color.clear.frame(height: 1).id("game-news-top")
                     newsBody
                     NewsSourceFooter(model: model, extra: "游戏频道来自游戏媒体公开 RSS，不是微信公众号。")
                 }
@@ -399,6 +397,11 @@ struct GameChannelPage: View {
                 .padding(.bottom, 30)
             }
             .scrollIndicators(.hidden)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                NewsSectionBar(channel: .game, selection: model.gameNewsSection) { section in
+                    Task { await model.selectNewsSection(section, for: .game) }
+                }.padding(.horizontal, 16).padding(.bottom, 6)
+            }
             .background(ScrollOffsetMemory(key: "game-news"))
             .refreshable { await model.refresh() }
             .onChange(of: model.gameNewsSection) { _, _ in
@@ -562,11 +565,7 @@ struct HeadlineChannelPage: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 11) {
-                    DiscoverChannelHeader(channel: .headline)
-                        .id("headline-top")
-                    NewsSectionBar(channel: .headline, selection: model.headlineSection) { section in
-                        Task { await model.selectNewsSection(section, for: .headline) }
-                    }
+                    Color.clear.frame(height: 1).id("headline-top")
                     VStack(alignment: .leading, spacing: 11) {
                         if model.newsState == .loading && model.newsItems.isEmpty {
                             NewsSkeleton()
@@ -606,6 +605,11 @@ struct HeadlineChannelPage: View {
                 .padding(.bottom, 30)
             }
             .scrollIndicators(.hidden)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                NewsSectionBar(channel: .headline, selection: model.headlineSection) { section in
+                    Task { await model.selectNewsSection(section, for: .headline) }
+                }.padding(.horizontal, 16).padding(.bottom, 6)
+            }
             .background(ScrollOffsetMemory(key: "headline-\(model.headlineSection)"))
             .refreshable { await model.refresh() }
             .onChange(of: model.headlineSection) { _, _ in
@@ -626,9 +630,6 @@ struct WeiboChannelPage: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
                 DiscoverChannelHeader(channel: .weibo)
-                HotBoardBar(selection: model.hotBoard) { board in
-                    Task { await model.selectHotBoard(board) }
-                }
                 switch model.hotState {
                 case .loading where model.hotItems.isEmpty, .idle:
                     NewsSkeleton()
@@ -670,6 +671,11 @@ struct WeiboChannelPage: View {
             )
         }
         .scrollIndicators(.hidden)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HotBoardBar(selection: model.hotBoard) { board in
+                Task { await model.selectHotBoard(board) }
+            }.padding(.horizontal, 16).padding(.bottom, 6)
+        }
         .background(ScrollOffsetMemory(key: "weibo"))
         .refreshable { await model.loadHot(force: true) }
         .task { await model.loadInitial() }
@@ -712,43 +718,27 @@ struct NewsSectionBar: View {
     let channel: DiscoverChannel
     let selection: String
     let onSelect: (String) -> Void
-
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal) {
                 HStack(spacing: 7) {
                     ForEach(channel.newsSections) { option in
-                        Button {
-                            onSelect(option.id)
-                        } label: {
-                            Text(option.title)
-                                .whaleFont(size: 13, weight: .semibold)
-                                .foregroundStyle(selection == option.id ? WhaleTheme.onAccent : WhaleTheme.muted)
-                                .padding(.horizontal, 13)
-                                .frame(height: 30)
-                                .background {
-                                    Capsule()
-                                        .fill(selection == option.id ? WhaleTheme.accent : WhaleTheme.card.opacity(0.7))
-                                        .overlay {
-                                            Capsule().strokeBorder(
-                                                selection == option.id ? Color.clear : WhaleTheme.glassStroke,
-                                                lineWidth: 0.7
-                                            )
-                                        }
-                                }
-                        }
-                        .buttonStyle(.plain)
-                        .id(option.id)
+                        Button { onSelect(option.id) } label: {
+                            Text(option.title).whaleFont(size: 13, weight: .semibold)
+                                .whaleRaisedPill(selected: selection == option.id)
+                        }.buttonStyle(.plain).id(option.id)
+                            .accessibilityAddTraits(selection == option.id ? .isSelected : [])
+                            .accessibilityIdentifier("discover-section-" + channel.rawValue + "-" + option.id)
                     }
+                }.padding(.vertical, 8)
+            }.scrollIndicators(.hidden).scrollClipDisabled()
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("discover-sections-" + channel.rawValue)
+                .onChange(of: selection) { _, next in
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { proxy.scrollTo(next, anchor: .center) }
                 }
-                .padding(.vertical, 2)
-            }
-            .scrollIndicators(.hidden)
-            .onChange(of: selection) { _, next in
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    proxy.scrollTo(next, anchor: .center)
-                }
-            }
+                .onAppear { proxy.scrollTo(selection, anchor: .center) }
         }
     }
 }
@@ -756,38 +746,18 @@ struct NewsSectionBar: View {
 struct HotBoardBar: View {
     let selection: HotBoard
     let onSelect: (HotBoard) -> Void
-
     var body: some View {
         HStack(spacing: 7) {
             ForEach(HotBoard.allCases) { board in
-                Button {
-                    onSelect(board)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: board.icon)
-                            .whaleFont(size: 13, weight: .semibold)
-                        Text(board.title)
-                            .whaleFont(size: 13, weight: .semibold)
-                    }
-                    .foregroundStyle(selection == board ? WhaleTheme.onAccent : WhaleTheme.muted)
-                    .padding(.horizontal, 12)
-                    .frame(height: 30)
-                    .background {
-                        Capsule()
-                            .fill(selection == board ? WhaleTheme.accent : WhaleTheme.card.opacity(0.7))
-                            .overlay {
-                                Capsule().strokeBorder(
-                                    selection == board ? Color.clear : WhaleTheme.glassStroke,
-                                    lineWidth: 0.7
-                                )
-                            }
-                    }
-                }
-                .buttonStyle(.plain)
+                Button { onSelect(board) } label: {
+                    Label(board.title, systemImage: board.icon).whaleFont(size: 13, weight: .semibold)
+                        .whaleRaisedPill(selected: selection == board)
+                }.buttonStyle(.plain)
+                    .accessibilityAddTraits(selection == board ? .isSelected : [])
+                    .accessibilityIdentifier("discover-hot-" + board.rawValue)
             }
             Spacer(minLength: 0)
-        }
-        .padding(.vertical, 2)
+        }.padding(.vertical, 8)
     }
 }
 

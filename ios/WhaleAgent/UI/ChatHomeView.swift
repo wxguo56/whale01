@@ -97,7 +97,7 @@ struct ConversationTabView: View {
             Button(action: onOpenSettings) { Image(systemName: "gearshape").whaleTouchTarget() }
                 .accessibilityLabel("设置")
         }.foregroundStyle(WhaleTheme.accent).padding(.horizontal, 16).padding(.vertical, 4)
-            .background(WhaleTheme.chrome)
+            .background(WhaleChromeBackground())
     }
 
     private var statusText: String {

@@ -37,7 +37,7 @@ enum WhaleTheme {
     static let field = Color(light: 0xEAF3F0, dark: 0x0C1D1B)
     static let chrome = Color(light: 0xF7FBFA, dark: 0x091714)
     static let onAccent = Color(light: 0x062521, dark: 0x04211E)
-    static let buttonInk = Color(light: 0xFFFFFF, dark: 0x04211E)
+    static let buttonInk = Color(light: 0x062521, dark: 0x04211E)
     static let glassStroke = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
             ? UIColor.white.withAlphaComponent(0.16)
@@ -140,13 +140,52 @@ extension View {
     func whalePrimaryButton() -> some View {
         self
             .font(.headline)
-            .foregroundStyle(WhaleTheme.ink)
+            .foregroundStyle(WhaleTheme.onAccent)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 52)
             .background(
-                WhaleTheme.accentSoft,
+                WhaleTheme.composerSendGradient,
                 in: RoundedRectangle(cornerRadius: WhaleTheme.controlRadius, style: .continuous)
             )
+            .whaleSoftElevation()
+    }
+
+    func whaleSoftElevation(selected: Bool = false) -> some View {
+        modifier(SoftElevation(selected: selected))
+    }
+
+    func whaleRaisedPill(selected: Bool) -> some View {
+        modifier(RaisedPillStyle(selected: selected))
+    }
+}
+
+private struct SoftElevation: ViewModifier {
+    let selected: Bool
+    @Environment(\.colorScheme) private var scheme
+    func body(content: Content) -> some View {
+        content
+            .shadow(color: .black.opacity(scheme == .dark ? 0.24 : 0.075), radius: selected ? 10 : 8, x: 0, y: 4)
+            .shadow(color: WhaleTheme.accent.opacity(selected ? 0.14 : 0.045), radius: selected ? 16 : 12, x: 0, y: 7)
+    }
+}
+
+private struct RaisedPillStyle: ViewModifier {
+    let selected: Bool
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    func body(content: Content) -> some View {
+        content.foregroundStyle(selected ? WhaleTheme.onAccent : WhaleTheme.ink)
+            .padding(.horizontal, 10).frame(minHeight: 44).fixedSize(horizontal: true, vertical: false)
+            .background {
+                if selected { Capsule().fill(WhaleTheme.composerSendGradient) }
+                else if reduceTransparency { Capsule().fill(WhaleTheme.cardSolid) }
+                else {
+                    Capsule().fill(.ultraThinMaterial)
+                        .overlay(Capsule().fill(WhaleTheme.card.opacity(0.6)))
+                }
+            }
+            .overlay(Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8))
+            .whaleSoftElevation(selected: selected)
+            .contentShape(Capsule())
     }
 }
 
@@ -158,11 +197,19 @@ struct GlassCardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(padding)
-            .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(WhaleTheme.card))
+            .background {
+                if reduceTransparency {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous).fill(WhaleTheme.cardSolid)
+                } else {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous).fill(.ultraThinMaterial)
+                        .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(WhaleTheme.card.opacity(0.62)))
+                }
+            }
             .overlay {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(WhaleTheme.line, lineWidth: 0.8)
+                    .strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
             }
+            .whaleSoftElevation()
     }
 }
 
@@ -172,7 +219,15 @@ struct WhaleBackdrop: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        WhaleTheme.background.ignoresSafeArea()
+        ZStack {
+            WhaleTheme.pageGradient
+            Circle().fill(WhaleTheme.accent.opacity(colorScheme == .dark ? 0.18 : 0.20))
+                .frame(width: 360, height: 360).blur(radius: 82).offset(x: -150, y: -300)
+            Circle().fill(WhaleTheme.moon.opacity(colorScheme == .dark ? 0.13 : 0.12))
+                .frame(width: 320, height: 320).blur(radius: 92).offset(x: 168, y: -150)
+            Ellipse().fill(WhaleTheme.accentDeep.opacity(colorScheme == .dark ? 0.13 : 0.08))
+                .frame(width: 420, height: 240).blur(radius: 110).offset(x: 80, y: 360)
+        }.ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
     }
 }
 
@@ -217,7 +272,10 @@ struct WhaleChromeBackground: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        WhaleTheme.chrome
+        ZStack {
+            if !reduceTransparency { Rectangle().fill(.ultraThinMaterial) }
+            Rectangle().fill(WhaleTheme.chrome.opacity(reduceTransparency ? 1 : 0.82))
+        }
     }
 }
 
@@ -295,6 +353,7 @@ struct GlassChipStyle: ViewModifier {
             .overlay {
                 Capsule().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
             }
+            .whaleSoftElevation()
     }
 }
 
@@ -310,6 +369,7 @@ extension View {
             .overlay {
                 Circle().strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8)
             }
+            .whaleSoftElevation()
     }
 }
 
