@@ -707,6 +707,7 @@ struct StockChart: View {
             }
             .chartYScale(domain: domain)
             .frame(height: 148)
+            .clipped()
             .padding(.horizontal, 2)
             .animation(.easeInOut(duration: 0.2), value: dayRange)
 
@@ -736,6 +737,7 @@ struct StockChart: View {
         .chartXAxis(.hidden)
         .chartYAxis(.hidden)
         .frame(height: 34)
+        .clipped()
         .padding(.horizontal, 2)
         .overlay(alignment: .topLeading) {
             Text("成交量")
