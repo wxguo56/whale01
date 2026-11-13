@@ -105,6 +105,10 @@ jobs:
           sleep 24
           xcrun simctl io "$DEVICE_ID" screenshot snapshots/stock-detail.png
           xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
+          SIMCTL_CHILD_WHALE_DEMO_CHANNEL=market SIMCTL_CHILD_WHALE_DEMO_STOCK=1 SIMCTL_CHILD_WHALE_DEMO_STOCK_DAY=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
+          sleep 24
+          xcrun simctl io "$DEVICE_ID" screenshot snapshots/stock-day.png
+          xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
           SIMCTL_CHILD_WHALE_DEMO_CHANNEL=game SIMCTL_CHILD_WHALE_DEMO_GAME_SECTION=steamTop xcrun simctl launch "$DEVICE_ID" com.whale01.agent
           sleep 16
           xcrun simctl io "$DEVICE_ID" screenshot snapshots/steam-top.png

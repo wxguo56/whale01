@@ -51,7 +51,7 @@ struct AIChannelPage: View {
                 .padding(.bottom, 30)
             }
             .scrollIndicators(.hidden)
-            .background(ScrollOffsetMemory(key: "ai"))
+            .background(ScrollOffsetMemory(key: "ai-\(model.aiSection)"))
             .refreshable { await model.refresh() }
             .onChange(of: model.aiSection) { _, _ in
                 withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("ai-top", anchor: .top) }
@@ -591,7 +591,7 @@ struct HeadlineChannelPage: View {
                 .padding(.bottom, 30)
             }
             .scrollIndicators(.hidden)
-            .background(ScrollOffsetMemory(key: "headline"))
+            .background(ScrollOffsetMemory(key: "headline-\(model.headlineSection)"))
             .refreshable { await model.refresh() }
             .onChange(of: model.headlineSection) { _, _ in
                 withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("headline-top", anchor: .top) }

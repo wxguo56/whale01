@@ -51,6 +51,11 @@ struct StockDetailView: View {
         .background(SwipeBackEnabler().frame(width: 1, height: 1))
         .task {
             await model.load()
+#if DEBUG
+            if ProcessInfo.processInfo.environment["WHALE_DEMO_STOCK_DAY"] == "1" {
+                chartMode = .day
+            }
+#endif
             if model.intraday.isEmpty && !model.kline.isEmpty {
                 chartMode = .day
             }

@@ -20,6 +20,7 @@ final class DirectContentClient: @unchecked Sendable {
         let requireAIKeyword: Bool
         var matchPattern: String? = nil
         var allMatchPatterns: [String] = []
+        var excludePattern: String? = nil
     }
 
     struct MarketSymbol {
@@ -66,8 +67,8 @@ final class DirectContentClient: @unchecked Sendable {
         Feed(id: "people-auto", name: "人民网 · 汽车", url: "https://www.people.com.cn/rss/auto.xml", channels: ["headline"], section: "auto", requireAIKeyword: false),
         Feed(id: "people-it", name: "人民网 · 科技", url: "https://www.people.com.cn/rss/it.xml", channels: ["headline"], section: "tech", requireAIKeyword: false),
         Feed(id: "google-military", name: "Google 新闻 · 军事", url: "https://news.google.com/rss/search?q=%E5%86%9B%E4%BA%8B&hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["headline"], section: "military", requireAIKeyword: false),
-        Feed(id: "ithome-auto", name: "IT之家 · 汽车", url: "https://www.ithome.com/rss/", channels: ["headline"], section: "auto", requireAIKeyword: false, matchPattern: "(汽车|车型|比亚迪|特斯拉|新能源|电动车|自动驾驶|智驾|小米汽车|问界|理想|蔚来|小鹏|吉利|长安|奇瑞|奥迪|宝马|奔驰|丰田|大众|本田|日产|SUV|轿车|MPV|座舱|充电)"),
-        Feed(id: "mydrivers-auto", name: "快科技 · 汽车", url: "https://rss.mydrivers.com/rss.aspx?Tid=1", channels: ["headline"], section: "auto", requireAIKeyword: false, matchPattern: "(汽车|车型|比亚迪|特斯拉|新能源|电动车|自动驾驶|智驾|小米汽车|问界|理想|蔚来|小鹏|吉利|长安|奇瑞|奥迪|宝马|奔驰|丰田|大众|本田|日产|SUV|轿车|MPV|座舱|充电)"),
+        Feed(id: "ithome-auto", name: "IT之家 · 汽车", url: "https://www.ithome.com/rss/", channels: ["headline"], section: "auto", requireAIKeyword: false, matchPattern: "(汽车|车型|比亚迪|特斯拉|新能源车|电动车|自动驾驶|智驾|小米汽车|问界|理想汽车|蔚来|小鹏|吉利|长安|奇瑞|奥迪|宝马|奔驰|丰田|大众|本田|日产|极氪|零跑|岚图|阿维塔|五菱|长城|哈弗|领克|红旗|SUV|轿车|MPV|座舱|充电桩|换电|续航|试驾|车机)", excludePattern: "(Switch|任天堂|PlayStation|PS5|Xbox|Steam Deck|掌机|扩展坞|显卡|笔记本|平板|耳机|手机壳|键盘|鼠标|路由器)"),
+        Feed(id: "mydrivers-auto", name: "快科技 · 汽车", url: "https://rss.mydrivers.com/rss.aspx?Tid=1", channels: ["headline"], section: "auto", requireAIKeyword: false, matchPattern: "(汽车|车型|比亚迪|特斯拉|新能源车|电动车|自动驾驶|智驾|小米汽车|问界|理想汽车|蔚来|小鹏|吉利|长安|奇瑞|奥迪|宝马|奔驰|丰田|大众|本田|日产|极氪|零跑|岚图|阿维塔|五菱|长城|哈弗|领克|红旗|SUV|轿车|MPV|座舱|充电桩|换电|续航|试驾|车机)", excludePattern: "(Switch|任天堂|PlayStation|PS5|Xbox|Steam Deck|掌机|扩展坞|显卡|笔记本|平板|耳机|手机壳|键盘|鼠标|路由器)"),
         Feed(id: "gnews-top", name: "Google 头条", url: "https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans", channels: ["headline"], section: "top", requireAIKeyword: false),
 
         // 游戏：国内外媒体分开，Steam 榜单走商店公开接口
@@ -270,6 +271,10 @@ final class DirectContentClient: @unchecked Sendable {
             }
             if let pattern = feed.matchPattern,
                haystack.range(of: pattern, options: [.regularExpression, .caseInsensitive]) == nil {
+                continue
+            }
+            if let pattern = feed.excludePattern,
+               haystack.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil {
                 continue
             }
             if !feed.allMatchPatterns.isEmpty {
