@@ -34,6 +34,9 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Generate source identity
+        run: python3 tools/build_identity.py
+
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate
@@ -55,10 +58,8 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
-          MARKETING_VERSION=0.6.2 \
-            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
-            WHALE_API_TOKEN="${{ secrets.WHALE_API_TOKEN }}" \
-            DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
+          MARKETING_VERSION=0.6.4 \
+            CURRENT_PROJECT_VERSION="112.${{ github.run_attempt }}" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \

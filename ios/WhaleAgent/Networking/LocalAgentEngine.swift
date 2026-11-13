@@ -116,6 +116,7 @@ private struct LocalTurn: Codable {
     var pending: [PendingTool]
     var batches: Int
     var permissions: [String: String]
+    var taskState: LocalTaskState?
 }
 
 actor LocalAgentEngine: AgentTransport {
@@ -169,7 +170,8 @@ actor LocalAgentEngine: AgentTransport {
             conversationId: conversation,
             pending: [],
             batches: 0,
-            permissions: permissions
+            permissions: permissions,
+            taskState: LocalTaskState(goal: text)
         )
         if let clarification = RealDataGuard.preflightReply(for: text) {
             history.append(
@@ -181,27 +183,7 @@ actor LocalAgentEngine: AgentTransport {
             return makeResponse(status: "completed", turn: turn, reply: clarification, pending: [])
         }
 
-        let realDataIntent = RealDataGuard.intent(for: text)
-        var message = try await callModel(history: history, permissions: permissions)
-        if let realDataIntent,
-           (message.tool_calls ?? []).isEmpty,
-           !RealDataGuard.isClarifying(message.content ?? "") {
-            history.append(
-                DSMessage(
-                    role: "assistant",
-                    content: message.content,
-                    tool_calls: nil,
-                    tool_call_id: nil,
-                    name: nil
-                )
-            )
-            if let instruction = RealDataGuard.toolInstruction(for: realDataIntent) {
-                history.append(
-                    DSMessage(role: "system", content: instruction, tool_calls: nil, tool_call_id: nil, name: nil)
-                )
-            }
-            message = try await callModel(history: history, permissions: permissions)
-        }
+        let message = try await callModel(history: history, permissions: permissions)
         return try await advance(message: message, history: &history, turn: &turn)
     }
 
@@ -223,7 +205,13 @@ actor LocalAgentEngine: AgentTransport {
         let existingToolIds = Set(
             history.compactMap { $0.role == "tool" ? $0.tool_call_id : nil }
         )
-        let novelResults = results.filter { !existingToolIds.contains($0.toolCallId) }
+        let expectedIds = Set(turn.pending.map(\.toolCallId))
+        var seenIds = existingToolIds
+        let novelResults = results.filter { expectedIds.contains($0.toolCallId) && seenIds.insert($0.toolCallId).inserted }
+        for result in novelResults {
+            turn.taskState?.observations[result.toolCallId] = result.status
+        }
+        turn.taskState?.remaining = turn.pending.filter { !seenIds.contains($0.toolCallId) }.map(\.tool)
         for result in novelResults {
             history.append(
                 DSMessage(
@@ -237,16 +225,22 @@ actor LocalAgentEngine: AgentTransport {
         }
         saveHistory(history, for: turn.conversationId)
 
+        if !expectedIds.isSubset(of: seenIds) {
+            turns[turn.turnId] = turn
+            saveTurns()
+            return makeResponse(status: "awaiting_tool_results", turn: turn, reply: nil, pending: turn.pending.filter { !seenIds.contains($0.toolCallId) })
+        }
+
         if !novelResults.isEmpty {
             turn.batches += 1
         }
-        if turn.batches > 3 {
+        if turn.batches >= 6 {
             turns.removeValue(forKey: turn.turnId)
             saveTurns()
             return makeResponse(
                 status: "completed_with_limits",
                 turn: turn,
-                reply: "这一轮已经执行了 3 批工具。为了不再重复写入，我先停在这里；你可以查看记录后继续。",
+                reply: "这一轮已达到 6 批工具的执行预算，任务尚需核对。我保留了目标和执行记录，请查看未完成事项后继续。",
                 pending: []
             )
         }
@@ -309,6 +303,7 @@ actor LocalAgentEngine: AgentTransport {
                 )
             }
             turn.pending = pending
+            turn.taskState?.remaining = pending.map(\.tool)
             turns[turn.turnId] = turn
             saveHistory(history, for: turn.conversationId)
             saveTurns()
@@ -336,7 +331,7 @@ actor LocalAgentEngine: AgentTransport {
         turns.removeValue(forKey: turn.turnId)
         saveTurns()
         return makeResponse(
-            status: "completed",
+            status: turn.taskState?.hasUnresolvedResults == true ? "completed_with_limits" : "completed",
             turn: turn,
             reply: reply.isEmpty ? "我这次没有生成可执行的动作。" : reply,
             pending: []
@@ -375,14 +370,19 @@ actor LocalAgentEngine: AgentTransport {
 
     private func callModel(history: [DSMessage], permissions: [String: String]) async throws -> DSMessage {
         var messages = [
-            DSMessage(role: "system", content: systemPrompt(permissions: permissions), tool_calls: nil, tool_call_id: nil, name: nil)
+            DSMessage(role: "system", content: systemPrompt(permissions: permissions, requestText: latestTurnContext(history).userText), tool_calls: nil, tool_call_id: nil, name: nil)
         ]
+        let context = latestTurnContext(history)
+        if let intent = RealDataGuard.intent(for: context.userText), let rule = RealDataGuard.toolInstruction(for: intent) {
+            messages.append(DSMessage(role: "system", content: rule, tool_calls: nil, tool_call_id: nil, name: nil))
+        }
         messages.append(contentsOf: Self.trimmedHistory(history, limit: 30))
+        let suppressTools = RealDataGuard.isDiscussion(context.userText) && RealDataGuard.intent(for: context.userText) == nil
 
         let requestBody = DSRequest(
             model: LocalAgentConfig.model,
             messages: messages,
-            tools: tools.map { tool in
+            tools: (suppressTools ? [] : tools).map { tool in
                 DSTool(
                     function: DSToolFunction(
                         name: tool.name,
@@ -432,7 +432,7 @@ actor LocalAgentEngine: AgentTransport {
         }
     }
 
-    private func systemPrompt(permissions: [String: String]) -> String {
+    private func systemPrompt(permissions: [String: String], requestText: String) -> String {
         let baseline = loadText("assistant-system.v1") ?? "你是鲸鱼，一个中文日常事务助手。"
         let rules = loadText("direct-agent-rules") ?? ""
         let now = ISO8601DateFormatter().string(from: Date())
@@ -444,7 +444,7 @@ actor LocalAgentEngine: AgentTransport {
             .sorted { $0.key < $1.key }
             .map { "- \($0.key)：\($0.value)" }
             .joined(separator: "\n")
-        let memoryText = MemoryStore.shared.snapshotText()
+        let memoryText = MemoryStore.shared.snapshotText(matching: requestText)
 
         return """
         \(baseline)
@@ -487,7 +487,7 @@ actor LocalAgentEngine: AgentTransport {
             executionMode: "ios",
             events: [],
             pending: pending,
-            task: nil
+            task: turn.taskState?.payload(status: status)
         )
     }
 
@@ -546,7 +546,7 @@ actor LocalAgentEngine: AgentTransport {
     }
 
     private func encodeResult(_ result: ToolResultPayload) -> String {
-        let data = (try? JSONEncoder().encode(result)) ?? Data("{}".utf8)
+        let data = (try? JSONEncoder().encode(ToolModelSummary.result(result))) ?? Data("{}".utf8)
         return String(data: data, encoding: .utf8) ?? "{}"
     }
 

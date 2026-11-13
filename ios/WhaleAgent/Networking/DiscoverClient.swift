@@ -44,24 +44,25 @@ final class DiscoverClient {
         session = URLSession(configuration: configuration)
     }
 
-    func news(channel: DiscoverChannel, section: String = "all", limit: Int = 20) async throws -> NewsFeedResponse {
+    func news(channel: DiscoverChannel, section: String = "all", limit: Int = 20, force: Bool = false) async throws -> NewsFeedResponse {
         guard channel == .ai || channel == .headline || channel == .game else {
             throw DiscoverClientError.invalidURL
         }
         if channel == .ai {
-            return try await DirectContentClient.shared.news(channel: channel, section: section, limit: limit)
+            return try await DirectContentClient.shared.news(channel: channel, section: section, limit: limit, force: force)
         }
         if !hasBackend {
-            return try await DirectContentClient.shared.news(channel: channel, section: section, limit: limit)
+            return try await DirectContentClient.shared.news(channel: channel, section: section, limit: limit, force: force)
         }
         do {
             return try await get("/v1/news", query: [
                 URLQueryItem(name: "channel", value: channel.rawValue),
                 URLQueryItem(name: "section", value: section),
-                URLQueryItem(name: "limit", value: String(limit))
+                URLQueryItem(name: "limit", value: String(limit)),
+                URLQueryItem(name: "refresh", value: force ? "force" : "cached")
             ])
         } catch {
-            return try await DirectContentClient.shared.news(channel: channel, section: section, limit: limit)
+            return try await DirectContentClient.shared.news(channel: channel, section: section, limit: limit, force: force)
         }
     }
 
@@ -113,7 +114,7 @@ final class DiscoverClient {
 
     func quotes(symbols: [String]) async throws -> MarketQuoteResponse {
         guard !symbols.isEmpty else {
-            return MarketQuoteResponse(updatedAt: "", delayedMinutes: 15, source: "", quotes: [], errors: [])
+            return MarketQuoteResponse(updatedAt: "", delayedMinutes: nil, source: "", quotes: [], errors: [])
         }
         if !hasBackend {
             return try await DirectContentClient.shared.quotes(symbols: symbols)

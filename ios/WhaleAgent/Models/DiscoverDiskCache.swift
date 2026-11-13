@@ -4,6 +4,7 @@ import Foundation
 /// payload immediately after a cold launch instead of showing empty skeletons.
 struct DiscoverDiskCache {
     private static let folderName = "WhaleDiscoverCache"
+    private static let writes = DispatchQueue(label: "whale.discover.cache", qos: .utility)
 
     private static var directory: URL? {
         guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return nil }
@@ -23,12 +24,20 @@ struct DiscoverDiskCache {
     static func save<T: Encodable>(_ value: T, key: String) {
         guard let url = directory?.appendingPathComponent(fileName(key)),
               let data = try? JSONEncoder().encode(value) else { return }
-        DispatchQueue.global(qos: .utility).async {
-            try? data.write(to: url, options: .atomic)
+        writes.async {
+            do { try data.write(to: url, options: .atomic) }
+            catch {
+                NotificationCenter.default.post(name: .whaleCacheWriteFailed, object: nil,
+                                                userInfo: ["key": key])
+            }
         }
     }
 
     private static func fileName(_ key: String) -> String {
         key.replacingOccurrences(of: "/", with: "-") + ".json"
     }
+}
+
+extension Notification.Name {
+    static let whaleCacheWriteFailed = Notification.Name("whale.cache.writeFailed")
 }

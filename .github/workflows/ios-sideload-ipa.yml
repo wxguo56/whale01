@@ -24,6 +24,9 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Generate source identity
+        run: python3 tools/build_identity.py
+
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate
@@ -39,8 +42,8 @@ jobs:
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -archivePath build/WhaleAgent.xcarchive \
-          MARKETING_VERSION=0.6.3 \
-            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+          MARKETING_VERSION=0.6.4 \
+            CURRENT_PROJECT_VERSION="112.${{ github.run_attempt }}" \
             WHALE_API_TOKEN="${{ secrets.WHALE_API_TOKEN }}" \
             DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
             CODE_SIGNING_ALLOWED=NO \
@@ -59,6 +62,9 @@ jobs:
           cd build
           zip -qry WhaleAgent-Sideload.ipa Payload
           unzip -l WhaleAgent-Sideload.ipa | head -20
+
+      - name: Verify candidate identity
+        run: python3 tools/verify_ipa.py ios/build/WhaleAgent-Sideload.ipa --sha "$GITHUB_SHA"
 
       - name: Encrypt IPA for public storage
         working-directory: ios
@@ -90,6 +96,7 @@ jobs:
             ios/build/WhaleAgent-Sideload.ipa.enc
             ios/build/WhaleAgent-pass.enc
             ios/build/WhaleAgent-Sideload.sha256
+            ios/build/WhaleAgent-Sideload.manifest.json
 
       - name: Show build identity
         working-directory: ios

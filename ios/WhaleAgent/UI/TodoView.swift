@@ -78,157 +78,6 @@ private enum TodoQuickCommand {
     }
 }
 
-private enum TodoQuickParser {
-    struct Added {
-        let title: String
-        let dueAt: Date?
-    }
-
-    private struct DayMatch {
-        let date: Date
-        let tokens: [String]
-        let isWeekday: Bool
-        let defaultHour: Int?
-        let defaultMinute: Int?
-    }
-
-    private struct TimeMatch {
-        let hour: Int
-        let minute: Int
-        let tokens: [String]
-    }
-
-    static func parseAdd(_ raw: String, now: Date = Date(), calendar: Calendar = .current) -> Added {
-        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        let prefixActions = ["提醒我", "帮我记一下", "帮我记着", "记一下", "新增待办", "新建待办", "待办", "todo:", "todo："]
-        for prefix in prefixActions where text.lowercased().hasPrefix(prefix.lowercased()) {
-            text = String(text.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
-            break
-        }
-        text = text.trimmingCharacters(in: CharacterSet(charactersIn: "：:，,。. "))
-        guard !text.isEmpty else { return Added(title: raw, dueAt: nil) }
-
-        if let day = resolveDay(in: text, now: now, calendar: calendar),
-           let time = resolveTime(in: text) ?? day.defaultHour.map({ TimeMatch(hour: $0, minute: day.defaultMinute ?? 0, tokens: []) }) {
-            var components = calendar.dateComponents([.year, .month, .day], from: day.date)
-            components.hour = time.hour
-            components.minute = time.minute
-            components.second = 0
-            if var date = calendar.date(from: components) {
-                if date <= now, day.isWeekday {
-                    date = calendar.date(byAdding: .day, value: 7, to: date) ?? date
-                }
-                if date > now {
-                    var title = text
-                    for token in day.tokens + time.tokens + ["提醒我"] {
-                        title = title.replacingOccurrences(of: token, with: " ")
-                    }
-                    title = title.trimmingCharacters(in: CharacterSet(charactersIn: " ，,。.:："))
-                    return Added(title: title.isEmpty ? text : title, dueAt: date)
-                }
-            }
-        }
-
-        let cleaned = text.replacingOccurrences(of: "提醒我", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return Added(title: cleaned.isEmpty ? text : cleaned, dueAt: nil)
-    }
-
-    private static func resolveDay(in text: String, now: Date, calendar: Calendar) -> DayMatch? {
-        let start = calendar.startOfDay(for: now)
-        let relative: [(String, Int)] = [("大后天", 3), ("后天", 2), ("明天", 1), ("今天", 0)]
-        for (token, offset) in relative where text.contains(token) {
-            guard let date = calendar.date(byAdding: .day, value: offset, to: start) else { continue }
-            return DayMatch(date: date, tokens: [token], isWeekday: false, defaultHour: nil, defaultMinute: nil)
-        }
-
-        if text.contains("今晚") {
-            return DayMatch(date: start, tokens: ["今晚"], isWeekday: false, defaultHour: 20, defaultMinute: 0)
-        }
-        if text.contains("明早") {
-            guard let date = calendar.date(byAdding: .day, value: 1, to: start) else { return nil }
-            return DayMatch(date: date, tokens: ["明早"], isWeekday: false, defaultHour: 8, defaultMinute: 0)
-        }
-        if text.contains("明晚") {
-            guard let date = calendar.date(byAdding: .day, value: 1, to: start) else { return nil }
-            return DayMatch(date: date, tokens: ["明晚"], isWeekday: false, defaultHour: 20, defaultMinute: 0)
-        }
-
-        let weekdays: [(String, Int)] = [
-            ("一", 2), ("二", 3), ("三", 4), ("四", 5),
-            ("五", 6), ("六", 7), ("日", 1), ("天", 1)
-        ]
-        for (character, weekday) in weekdays {
-            for prefix in ["下周", "周", "星期", "礼拜"] {
-                let token = prefix + character
-                guard text.contains(token) else { continue }
-                let current = calendar.component(.weekday, from: now)
-                var delta = (weekday - current + 7) % 7
-                if prefix == "下周" { delta += 7 }
-                guard let date = calendar.date(byAdding: .day, value: delta, to: start) else { continue }
-                return DayMatch(date: date, tokens: [token], isWeekday: true, defaultHour: nil, defaultMinute: nil)
-            }
-        }
-        return nil
-    }
-
-    private static func resolveTime(in text: String) -> TimeMatch? {
-        let nsText = text as NSString
-        let fullRange = NSRange(location: 0, length: nsText.length)
-
-        if let regex = try? NSRegularExpression(pattern: "(上午|早上|中午|下午|傍晚|晚上|夜里)?\\s*([0-9]{1,2})\\s*[:：]\\s*([0-9]{2})"),
-           let match = regex.firstMatch(in: text, range: fullRange) {
-            let period = match.range(at: 1).location == NSNotFound ? "" : nsText.substring(with: match.range(at: 1))
-            var hour = Int(nsText.substring(with: match.range(at: 2))) ?? -1
-            let minute = Int(nsText.substring(with: match.range(at: 3))) ?? -1
-            adjustPeriod(&hour, period: period)
-            guard (0...23).contains(hour), (0...59).contains(minute) else { return nil }
-            return TimeMatch(hour: hour, minute: minute, tokens: [nsText.substring(with: match.range)])
-        }
-
-        let pattern = "(上午|早上|中午|下午|傍晚|晚上|夜里)?\\s*([0-9]{1,2}|[一二三四五六七八九十]{1,3})\\s*[点时](半|[0-9]{1,2}\\s*分)?"
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: text, range: fullRange) else { return nil }
-
-        let period = match.range(at: 1).location == NSNotFound ? "" : nsText.substring(with: match.range(at: 1))
-        let hourText = nsText.substring(with: match.range(at: 2))
-        guard var hour = chineseNumber(hourText) else { return nil }
-        var minute = 0
-        if match.range(at: 3).location != NSNotFound {
-            let minuteText = nsText.substring(with: match.range(at: 3)).replacingOccurrences(of: "分", with: "").trimmingCharacters(in: .whitespaces)
-            minute = minuteText == "半" ? 30 : (Int(minuteText) ?? 0)
-        }
-        adjustPeriod(&hour, period: period)
-        guard (0...23).contains(hour), (0...59).contains(minute) else { return nil }
-        return TimeMatch(hour: hour, minute: minute, tokens: [nsText.substring(with: match.range)])
-    }
-
-    private static func adjustPeriod(_ hour: inout Int, period: String) {
-        switch period {
-        case "下午", "傍晚", "晚上", "夜里":
-            if hour < 12 { hour += 12 }
-        case "中午":
-            if hour < 11 { hour += 12 }
-        default:
-            break
-        }
-    }
-
-    private static func chineseNumber(_ text: String) -> Int? {
-        if let value = Int(text) { return value }
-        let map: [Character: Int] = [
-            "一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
-            "六": 6, "七": 7, "八": 8, "九": 9, "十": 10
-        ]
-        let characters = Array(text)
-        if characters.count == 1 { return map[characters[0]] }
-        if characters.count == 2 {
-            if characters[0] == "十" { return 10 + (map[characters[1]] ?? 0) }
-            if characters[1] == "十" { return (map[characters[0]] ?? 0) * 10 }
-        }
-        return nil
-    }
-}
-
 struct TodoView: View {
     @ObservedObject var model: AppModel
     var embedded: Bool = false
@@ -246,6 +95,7 @@ struct TodoView: View {
     @State private var busyIds: Set<String> = []
     @State private var errorText: String?
     @State private var toast: String?
+    @State private var pendingDeletion: TodoReminder?
     @FocusState private var composerFocused: Bool
 
     private var reminderStatus: String { model.permissionsSnapshot["reminder"] ?? "unknown" }
@@ -331,51 +181,24 @@ struct TodoView: View {
                     Task { await reload() }
                 }
             }
-            .onChange(of: voice.isRecording) { wasRecording, isRecording in
-                guard wasRecording, !isRecording, voice.errorText == nil else { return }
-                let preview = voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !preview.isEmpty else { return }
-                Task {
-                    try? await Task.sleep(nanoseconds: 600_000_000)
-                    guard !voice.isRecording else { return }
-                    let text = voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !text.isEmpty else { return }
-                    draft = text
-                    submitText(text)
+            .onChange(of: voice.transcript) { _, text in
+                if !text.isEmpty { draft = text }
+            }
+            .onChange(of: voice.finalResult) { _, result in
+                guard let result, voice.errorText == nil, !result.text.isEmpty else { return }
+                draft = result.text
+                submitText(result.text)
+            }
+            .onDisappear { voice.cancel() }
+            .alert("删除这条待办？", isPresented: Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } })) {
+                Button("取消", role: .cancel) { pendingDeletion = nil }
+                Button("删除", role: .destructive) {
+                    if let item = pendingDeletion { performDelete(item) }
+                    pendingDeletion = nil
                 }
+            } message: {
+                Text(pendingDeletion?.title ?? "")
             }
-            .onDisappear { voice.stop() }
-        }
-
-    private var header: some View {
-        HStack(spacing: 12) {
-            WhaleIconTile(systemName: "checklist", size: 46, tint: WhaleTheme.accent)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text("事情待办")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundStyle(WhaleTheme.ink)
-                Text("系统提醒事项 · 实时同步")
-                    .font(.system(size: 12))
-                    .foregroundStyle(WhaleTheme.muted)
-            }
-
-            Spacer(minLength: 8)
-
-            Button {
-                if embedded {
-                    onBackToChat?()
-                } else {
-                    dismiss()
-                }
-            } label: {
-                Image(systemName: embedded ? "bubble.left.and.bubble.right" : "xmark")
-                    .font(.system(size: embedded ? 15 : 14, weight: .semibold))
-                    .foregroundStyle(WhaleTheme.ink)
-                    .whaleGlassCircle(size: 36)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(embedded ? "回到对话" : "关闭待办")
         }
     }
 
@@ -710,7 +533,7 @@ struct TodoView: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .disabled(isSubmitting)
+                .disabled(isSubmitting || voice.isFinalizing)
                 .accessibilityLabel(voice.isRecording ? "停止语音输入" : "语音新增待办")
 
                 TextField("写一件事，或点麦克风说", text: $draft)
@@ -811,6 +634,9 @@ struct TodoView: View {
                     showToast(message)
                 } else {
                     let parsed = TodoQuickParser.parseAdd(raw)
+                    if let message = parsed.validationError {
+                        throw ToolExecutionError(code: "needs_clarification", message: message)
+                    }
                     let title = parsed.title.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !title.isEmpty else {
                         throw ToolExecutionError(code: "empty_reminder", message: "写点具体内容再添加。")
@@ -847,9 +673,8 @@ struct TodoView: View {
             return "已恢复 · \(target.title)"
         case .delete(let keyword):
             let target = try uniqueMatch(keyword, in: items, missing: "没有找到「\(keyword)」。")
-            try await model.deleteTodoReminder(target)
-            removeLocal(target.id)
-            return "已删除 · \(target.title)"
+            pendingDeletion = target
+            return "请核对要删除的待办"
         }
     }
 
@@ -886,6 +711,10 @@ struct TodoView: View {
     }
 
     private func delete(_ item: TodoReminder) {
+        pendingDeletion = item
+    }
+
+    private func performDelete(_ item: TodoReminder) {
         guard !busyIds.contains(item.id) else { return }
         busyIds.insert(item.id)
         errorText = nil

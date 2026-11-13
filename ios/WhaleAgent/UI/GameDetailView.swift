@@ -365,7 +365,7 @@ struct GameDetailView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 26)
-        case .loaded:
+        case .loaded, .cached, .stale, .partial:
             EmptyView()
         }
     }

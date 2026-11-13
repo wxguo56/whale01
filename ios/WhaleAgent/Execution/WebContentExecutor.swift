@@ -4,12 +4,13 @@ import Foundation
 /// source material only: callers must not treat a snippet as the page body.
 struct WebContentExecutor {
     private let session: URLSession
+    private let redirectGuard = PublicRedirectGuard()
 
     init() {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = 25
         configuration.timeoutIntervalForResource = 40
-        configuration.waitsForConnectivity = true
+        configuration.waitsForConnectivity = false
         session = URLSession(configuration: configuration)
     }
 
@@ -103,7 +104,27 @@ struct WebContentExecutor {
         )
         request.setValue("text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5", forHTTPHeaderField: "Accept")
         do {
-            return try await session.data(for: request)
+            try await PublicURLPolicy.validateResolved(url)
+            let (bytes, response) = try await session.bytes(for: request, delegate: redirectGuard)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                throw ToolExecutionError(code: "http_error", message: "网页请求或重定向未通过校验。")
+            }
+            let allowedTypes = ["text/html", "application/xhtml+xml", "text/plain", "application/json"]
+            guard let mime = response.mimeType?.lowercased(), allowedTypes.contains(mime) else {
+                throw ToolExecutionError(code: "unsupported_content", message: "网页工具只读取 HTML 或文本；图片、视频和下载文件请通过文件导入。")
+            }
+            let cap = 2 * 1024 * 1024
+            guard response.expectedContentLength <= cap else {
+                throw ToolExecutionError(code: "content_too_large", message: "网页超过 2 MB，已停止读取。")
+            }
+            var data = Data()
+            for try await byte in bytes {
+                guard data.count < cap else { throw ToolExecutionError(code: "content_too_large", message: "网页超过 2 MB，已停止读取。") }
+                data.append(byte)
+            }
+            return (data, response)
+        } catch let error as ToolExecutionError {
+            throw error
         } catch {
             throw ToolExecutionError(code: "fetch_failed", message: "网页请求失败：\(error.localizedDescription)")
         }
@@ -121,7 +142,7 @@ struct WebContentExecutor {
             let title = stripHTML(titleMatch[2])
             guard !title.isEmpty else { continue }
             let url = rawURL.hasPrefix("/") ? "https://www.bing.com\(rawURL)" : rawURL
-            guard url.hasPrefix("http") else { continue }
+            guard let parsed = URL(string: url), (try? PublicURLPolicy.validate(parsed)) != nil else { continue }
             let snippet = firstMatch(snippetPattern, in: block).map { stripHTML($0[1]) } ?? ""
             results.append(.object([
                 "title": .string(title),

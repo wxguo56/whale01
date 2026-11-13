@@ -23,6 +23,12 @@ final class DiscoverModel: ObservableObject {
     private var loadedHotBoard: HotBoard?
     private var searchTask: Task<Void, Never>?
     private var requestToken = UUID()
+    private var searchToken = UUID()
+    private var marketToken = UUID()
+    @Published private(set) var indexesUpdatedAt: String?
+    @Published private(set) var watchUpdatedAt: String?
+    @Published private(set) var cacheWarning: String?
+    private var cacheObserver: AnyCancellable?
     private var watchlistCancellable: AnyCancellable?
 
     @Published var channel: DiscoverChannel
@@ -93,18 +99,35 @@ final class DiscoverModel: ObservableObject {
         hotBoard = HotBoard(rawValue: saved.string(forKey: Self.hotBoardKey) ?? "") ?? .weibo
         gameSection = GameSection(rawValue: saved.string(forKey: Self.gameSectionKey) ?? "") ?? .news
         hydrateFromDisk()
+        cacheObserver = NotificationCenter.default.publisher(for: .whaleCacheWriteFailed)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.cacheWarning = "本次数据已显示，但离线缓存未保存；下次启动需要联网。" }
         watchlistCancellable = store.$symbols.sink { [weak self] symbols in
             guard let self, symbols != self.watchlist else { return }
+            self.marketToken = UUID()
             self.watchlist = symbols
+            self.watchQuotes.removeAll { !symbols.contains($0.symbol) }
+            self.watchFlows = self.watchFlows.filter { symbols.contains($0.key) }
             if self.channel == .market {
                 Task { await self.loadMarket(force: true) }
             }
         }
     }
 
+    var dataNotice: String? {
+        if let cacheWarning { return cacheWarning }
+        switch channel {
+        case .ai, .headline: return newsState.notice
+        case .market: return marketState.notice
+        case .game: return (gameSection.board != nil ? rankState : gameSection.steamKind != nil ? steamState : newsState).notice
+        case .weibo: return hotState.notice
+        case .music: return nil
+        }
+    }
+
     var aiNews: [NewsItem] {
         newsItems.filter { item in
-            guard DiscoverChannel.ai.matches(section: aiSection, itemSection: item.section) else { return false }
+            guard DiscoverChannel.ai.matches(section: aiSection, itemSection: item.section, topics: item.topics) else { return false }
             // 旧缓存可能残留英文标题或只有标题的条目，展示层再兜底一次。
             guard item.displaySummary.count >= 10 else { return false }
             return item.displayTitle.unicodeScalars.contains { scalar in
@@ -114,11 +137,11 @@ final class DiscoverModel: ObservableObject {
     }
 
     var headlineNews: [NewsItem] {
-        newsItems.filter { DiscoverChannel.headline.matches(section: headlineSection, itemSection: $0.section) }
+        newsItems.filter { DiscoverChannel.headline.matches(section: headlineSection, itemSection: $0.section, topics: $0.topics) }
     }
 
     var gameNews: [NewsItem] {
-        newsItems.filter { DiscoverChannel.game.matches(section: gameNewsSection, itemSection: $0.section) }
+        newsItems.filter { DiscoverChannel.game.matches(section: gameNewsSection, itemSection: $0.section, topics: $0.topics) }
     }
 
     func selectNewsSection(_ section: String, for channel: DiscoverChannel) async {
@@ -214,6 +237,8 @@ final class DiscoverModel: ObservableObject {
     }
 
     func loadSteam(kind: SteamKind, force: Bool) async {
+        let token = UUID()
+        requestToken = token
         if !force, let cached = steamCache, Date().timeIntervalSince(cached.at) < 300, steamState == .loaded, steam != nil {
             return
         }
@@ -223,12 +248,14 @@ final class DiscoverModel: ObservableObject {
         if steam == nil { steamState = .loading }
         do {
             let response = try await client.steamFeatured()
+            guard requestToken == token, channel == .game, gameSection.steamKind == kind else { return }
             steamCache = (response, Date())
             DiscoverDiskCache.save(response, key: "steam")
             steam = response
             steamState = .loaded
         } catch {
-            steamState = steam == nil ? .failed(message(error)) : .loaded
+            guard requestToken == token, channel == .game, gameSection.steamKind == kind else { return }
+            steamState = steam == nil ? .failed(message(error)) : .stale(message(error))
         }
     }
 
@@ -275,7 +302,7 @@ final class DiscoverModel: ObservableObject {
             papersState = .loaded
         } catch {
             guard requestToken == token, channel == .ai, paperCategory == category else { return }
-            papersState = papers.isEmpty ? .failed(message(error)) : .loaded
+            papersState = papers.isEmpty ? .failed(message(error)) : .stale(message(error))
         }
     }
 
@@ -344,13 +371,12 @@ final class DiscoverModel: ObservableObject {
             if hotItems.isEmpty {
                 hotState = .failed(message(error))
             } else {
-                hotState = .loaded
+                hotState = .stale(message(error))
             }
         }
     }
 
     func loadRank(_ board: GameRankBoard, force: Bool) async {
-        if !force, loadedRankBoard == board, rankState == .loaded { return }
         if let cached = rankCache[board] {
             if Date().timeIntervalSince(cached.at) < 300, !force {
                 apply(cached.response, board: board)
@@ -378,7 +404,7 @@ final class DiscoverModel: ObservableObject {
             if rankItems.isEmpty {
                 rankState = .failed(message(error))
             } else {
-                rankState = .loaded
+                rankState = .stale(message(error))
             }
         }
     }
@@ -401,61 +427,71 @@ final class DiscoverModel: ObservableObject {
         }
         if newsItems.isEmpty { newsState = .loading }
         do {
-            let response = try await client.news(channel: channel, limit: 40)
+            let response = try await client.news(channel: channel, limit: 40, force: force)
             guard requestToken == token, self.channel == channel else { return }
-            newsCache[channel] = (response, Date())
+            newsCache[channel] = (response, DiscoverFormat.date(from: response.updatedAt) ?? .distantPast)
             DiscoverDiskCache.save(response, key: newsDiskKey(channel))
             apply(response, channel: channel)
-            newsState = .loaded
+            newsState = (response.unavailableSources ?? []).isEmpty ? .loaded : .partial((response.unavailableSources ?? []).joined(separator: "、"))
         } catch {
             guard requestToken == token, self.channel == channel else { return }
             if newsItems.isEmpty {
                 newsState = .failed(message(error))
             } else {
-                newsState = .loaded
+                newsState = .stale(message(error))
             }
         }
     }
 
     func loadMarket(force: Bool) async {
-        if watchlist.isEmpty && marketState == .loaded && !force { return }
+        let token = UUID()
+        marketToken = token
+        let symbols = watchlist
         if indexes.isEmpty && watchQuotes.isEmpty { marketState = .loading }
         var messages: [String] = []
-
         do {
             let response = try await client.indexes()
+            guard marketToken == token else { return }
             indexes = response.quotes
-            marketUpdatedAt = response.updatedAt
+            indexesUpdatedAt = response.updatedAt
             marketSource = response.source
+            messages += (response.errors ?? []).map(\.message)
         } catch {
+            guard marketToken == token else { return }
             messages.append(message(error))
         }
-
-        if !watchlist.isEmpty {
+        if !symbols.isEmpty {
             do {
-                let response = try await client.quotes(symbols: watchlist)
-                watchQuotes = response.quotes
-                marketUpdatedAt = response.updatedAt
+                let response = try await client.quotes(symbols: symbols)
+                guard marketToken == token, watchlist == symbols else { return }
+                watchQuotes = response.quotes.filter { watchlist.contains($0.symbol) }
+                watchUpdatedAt = response.updatedAt
                 marketSource = response.source
-                watchFlows = await client.todayFundFlows(symbols: watchlist)
+                messages += (response.errors ?? []).map(\.message)
+                let flows = await client.todayFundFlows(symbols: symbols)
+                guard marketToken == token, watchlist == symbols else { return }
+                watchFlows = flows.filter { watchlist.contains($0.key) }
             } catch {
+                guard marketToken == token, watchlist == symbols else { return }
                 messages.append(message(error))
-                watchFlows = [:]
             }
         } else {
             watchQuotes = []
             watchFlows = [:]
+            watchUpdatedAt = nil
         }
-
-        if indexes.isEmpty && watchQuotes.isEmpty, let first = messages.first {
-            marketState = .failed(first)
-        } else {
-            marketState = .loaded
-        }
+        guard marketToken == token else { return }
+        let dates = [indexesUpdatedAt, symbols.isEmpty ? nil : watchUpdatedAt].compactMap { $0 }.compactMap(DiscoverFormat.date)
+        marketUpdatedAt = dates.min().map(ToolDate.iso)
+        if !messages.isEmpty {
+            marketState = indexes.isEmpty && watchQuotes.isEmpty ? .failed(messages.joined(separator: "；")) : .partial(messages.joined(separator: "；"))
+        } else { marketState = .loaded }
     }
 
     func scheduleSearch() {
+        searchToken = UUID()
         searchTask?.cancel()
+        let token = searchToken
         let text = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
             searchResults = []
@@ -465,11 +501,12 @@ final class DiscoverModel: ObservableObject {
         searchTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 350_000_000)
             guard !Task.isCancelled, let self else { return }
-            await self.runSearch(text)
+            await self.runSearch(text, token: token)
         }
     }
 
     func clearSearch() {
+        searchToken = UUID()
         searchTask?.cancel()
         searchQuery = ""
         searchResults = []
@@ -478,13 +515,11 @@ final class DiscoverModel: ObservableObject {
 
     func addToWatchlist(_ symbol: String) {
         guard store.add(symbol) else { return }
-        Task { await loadMarket(force: true) }
     }
 
     func removeFromWatchlist(_ symbol: String) {
         guard store.remove(symbol) else { return }
         watchQuotes.removeAll { $0.symbol == symbol.lowercased() }
-        Task { await loadMarket(force: true) }
     }
 
     func isWatched(_ symbol: String) -> Bool {
@@ -495,14 +530,16 @@ final class DiscoverModel: ObservableObject {
         (watchQuotes + indexes).first { $0.symbol == symbol.lowercased() }
     }
 
-    private func runSearch(_ text: String) async {
+    private func runSearch(_ text: String, token: UUID) async {
+        guard searchToken == token, !Task.isCancelled else { return }
         searchState = .loading
         do {
             let response = try await client.search(text)
-            guard searchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == text else { return }
+            guard searchToken == token, !Task.isCancelled, searchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == text else { return }
             searchResults = response.results
             searchState = response.results.isEmpty ? .failed("没有找到「\(text)」匹配的 A 股或指数") : .loaded
         } catch {
+            guard searchToken == token, !Task.isCancelled, searchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == text else { return }
             searchResults = []
             searchState = .failed(message(error))
         }
@@ -531,29 +568,29 @@ final class DiscoverModel: ObservableObject {
         case .ai:
             if let cached = newsCache[.ai] {
                 apply(cached.response, channel: .ai)
-                newsState = .loaded
+                newsState = .cached
             }
         case .headline:
             if let cached = newsCache[.headline] {
                 apply(cached.response, channel: .headline)
-                newsState = .loaded
+                newsState = .cached
             }
         case .game:
             if let board = gameSection.board, let cached = rankCache[board] {
                 apply(cached.response, board: board)
-                rankState = .loaded
+                rankState = .cached
             } else if gameSection.steamKind != nil, let cached = steamCache {
                 steam = cached.response
-                steamState = .loaded
+                steamState = .cached
             } else if let cached = newsCache[.game] {
                 apply(cached.response, channel: .game)
-                newsState = .loaded
+                newsState = .cached
             }
         case .weibo:
             if let cached = hotCaches[hotBoard] {
                 apply(cached.response)
                 loadedHotBoard = hotBoard
-                hotState = .loaded
+                hotState = .cached
             }
         case .market, .music:
             break
@@ -561,7 +598,7 @@ final class DiscoverModel: ObservableObject {
     }
 
     private func newsDiskKey(_ channel: DiscoverChannel) -> String {
-        channel == .ai ? "news-ai-topics-v3" : "news-\(channel.rawValue)"
+        channel == .ai ? "news-ai-topics-v4" : "news-\(channel.rawValue)"
     }
 
     private func hotDiskKey(_ board: HotBoard) -> String {

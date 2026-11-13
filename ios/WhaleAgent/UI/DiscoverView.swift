@@ -24,7 +24,7 @@ struct DiscoverView: View {
                 }
             }
             .overlay(alignment: .leading) {
-                edgeBackZone
+                if path.isEmpty { edgeBackZone }
             }
             .overlay(alignment: .topTrailing) {
                 if path.isEmpty {
@@ -110,7 +110,7 @@ struct DiscoverView: View {
                     .onEnded { value in
                         guard value.translation.width > 60,
                               abs(value.translation.height) < 90 else { return }
-                        dismiss()
+                        if path.isEmpty { dismiss() } else { path.removeLast() }
                     }
             )
             .accessibilityHidden(true)

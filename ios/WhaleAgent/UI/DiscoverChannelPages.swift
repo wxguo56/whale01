@@ -5,6 +5,21 @@ struct DiscoverChannelPage: View {
     @ObservedObject var appModel: AppModel
 
     var body: some View {
+        VStack(spacing: 0) {
+            if let notice = model.dataNotice {
+                Label(notice, systemImage: "clock.arrow.circlepath")
+                    .font(.system(size: 11))
+                    .foregroundStyle(WhaleTheme.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16).padding(.vertical, 8)
+                    .background(WhaleTheme.soft)
+                    .accessibilityLabel(notice)
+            }
+            content
+        }
+    }
+
+    @ViewBuilder private var content: some View {
         switch model.channel {
         case .ai:
             AIChannelPage(model: model)
@@ -155,7 +170,7 @@ struct MarketChannelPage: View {
             DiscoverErrorState(message: message) {
                 model.scheduleSearch()
             }
-        case .loaded:
+        case .loaded, .cached, .stale, .partial:
             ForEach(model.searchResults) { result in
                 NavigationLink(value: DiscoverRoute.search(result)) {
                     HStack(spacing: 12) {

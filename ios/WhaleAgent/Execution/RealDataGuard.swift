@@ -6,6 +6,9 @@ enum RealDataIntent: Equatable {
     case navigation
     case weather
     case nearbyPlaces
+    case news
+    case stock
+    case merchantPrice
 
     var requiredTool: String? {
         switch self {
@@ -17,6 +20,9 @@ enum RealDataIntent: Equatable {
             return "get_weather"
         case .nearbyPlaces:
             return "search_places"
+        case .news: return "get_tech_news"
+        case .stock: return "get_stock_quote"
+        case .merchantPrice: return "search_merchant_prices"
         }
     }
 }
@@ -24,6 +30,13 @@ enum RealDataIntent: Equatable {
 enum RealDataGuard {
     static func intent(for text: String) -> RealDataIntent? {
         let compact = text.replacingOccurrences(of: " ", with: "")
+        // Topic mentions are not permission to execute. Evaluate clauses so a
+        // negated weather request does not swallow a subsequent stock query.
+        let clauses = compact.components(separatedBy: CharacterSet(charactersIn: "，,。；;！？!?\n"))
+        if clauses.count > 1 {
+            return clauses.compactMap { intent(for: $0) }.first
+        }
+        guard !isDiscussion(compact), !compact.isEmpty else { return nil }
         if isHomeNavigation(compact) { return .homeNavigation }
         if containsAny(compact, ["我在哪", "我现在在哪", "当前位置", "这是哪里", "这里是哪", "我的位置"]) {
             return .currentLocation
@@ -37,7 +50,15 @@ enum RealDataGuard {
         if containsAny(compact, ["附近", "周边", "离我", "我这", "旁边"]) {
             return .nearbyPlaces
         }
+        if containsAny(compact, ["新闻", "热搜", "资讯"]), containsAny(compact, ["今天", "最新", "现在", "查", "看看", "有什么"]) { return .news }
+        if containsAny(compact, ["股票", "股价", "行情", "茅台", "上证", "深证"]), containsAny(compact, ["现在", "今天", "多少", "查", "行情", "涨", "跌"]) { return .stock }
+        if containsAny(compact, ["人均", "套餐价格", "菜单价", "餐厅价格"]) { return .merchantPrice }
         return nil
+    }
+
+    static func isDiscussion(_ text: String) -> Bool {
+        let compact = text.replacingOccurrences(of: " ", with: "")
+        return containsAny(compact, ["不要查", "不用查", "别查", "不要导航", "不需要导航", "不要定位", "别定位", "不用定位", "别打开", "不要执行", "不要获取", "别搜索", "不要搜索", "先别", "暂时别", "取消查询", "停止查询", "这个词", "什么意思", "怎么解释", "是什么原理", "怎么实现", "能不能查", "可以查吗", "能查吗", "假如", "假设", "如果我要", "如果我说"])
     }
 
     static func isHomeNavigation(_ text: String) -> Bool {
@@ -80,12 +101,20 @@ enum RealDataGuard {
             return "用户询问天气。必须调用 get_weather，并以本轮真实结果为准；没有结果就如实说明，不得凭常识回答。"
         case .nearbyPlaces:
             return "用户询问附近地点。必须调用 search_places 并传 locationMode=current，以本轮真实结果为准；没有结果就如实说明，不得编造店名、距离或地址。"
+        case .news:
+            return "实时资讯需要 get_tech_news 或 search_web/fetch_web_content 的本轮成功结果，注明来源和获取时间；不得把模型知识当最新新闻。"
+        case .stock:
+            return "股价需要 get_stock_quote/get_stock_kline/get_stock_intraday 的真实成功结果，注明报价时间；search_stock 不是报价证据，延迟未知不得标成实时。"
+        case .merchantPrice:
+            return "商户价格需要 search_merchant_prices 的成功结果；注明门店匹配状态、来源和获取时间，不把搜索摘要当核实价格。"
         }
     }
 
     static func finalReply(for intent: RealDataIntent, usedTools: Set<String>, proposed: String) -> String {
-        if isClarifying(proposed) { return proposed }
+        if isClarifying(proposed, for: intent) { return proposed }
         if let required = intent.requiredTool, usedTools.contains(required) { return proposed }
+        if intent == .news, !usedTools.isDisjoint(with: ["search_web", "fetch_web_content"]) { return proposed }
+        if intent == .stock, !usedTools.isDisjoint(with: ["get_stock_kline", "get_stock_intraday"]) { return proposed }
 
         switch intent {
         case .homeNavigation:
@@ -104,13 +133,20 @@ enum RealDataGuard {
             return "这次没有拿到真实天气数据，不能给出天气结论。请稍后重试或检查联网。"
         case .nearbyPlaces:
             return "这次没有拿到真实附近地点数据，不能给出附近结果。请检查定位权限后再试。"
+        case .news: return "这次没有取得可核对的最新资讯，暂时不能给出实时新闻结论。请稍后重试。"
+        case .stock: return "这次没有取得真实行情，不能确认股价或涨跌。请稍后重试。"
+        case .merchantPrice: return "这次没有取得门店价格证据，不能确认人均或套餐价格。请提供门店名称或来源链接。"
         }
     }
 
-    static func isClarifying(_ reply: String) -> Bool {
+    static func isClarifying(_ reply: String, for intent: RealDataIntent? = nil) -> Bool {
         let trimmed = reply.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
-        return trimmed.contains("？") || trimmed.contains("?") || trimmed.contains("请告诉我") || trimmed.contains("请补充")
+        // Only a request for a missing slot may bypass evidence. A trailing
+        // question after a fabricated temperature/price/route must never pass.
+        let asksForSlot = containsAny(trimmed, ["哪个城市", "哪座城市", "哪个地方", "什么地方", "具体地址", "具体地点", "去哪里", "哪家店", "哪个门店", "哪只股票", "哪个股票", "股票代码", "哪个主题", "什么主题", "哪一天", "哪天", "哪个日期"])
+        let assertsFact = trimmed.range(of: "[0-9０-９]|度|摄氏|元|公里|分钟|已规划|已经找到|已经打开|现在.*(晴|雨|雪)|今天.*(晴|雨|雪)|股价|上涨|下跌", options: .regularExpression) != nil
+        return asksForSlot && !assertsFact && trimmed.count <= 120
     }
 
     private static func containsAny(_ text: String, _ values: [String]) -> Bool {

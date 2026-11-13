@@ -172,6 +172,7 @@ final class EventKitExecutor {
     }
 
     func updateCalendarEvent(arguments: [String: JSONValue]) throws -> JSONValue {
+        try validateCalendarPreview(arguments)
         let eventId = try arguments.requiredString("eventId")
         guard let event = store.event(withIdentifier: eventId) else {
             throw ToolExecutionError(code: "event_not_found", message: "没有找到这条日程，请先查询确认")
@@ -274,12 +275,51 @@ final class EventKitExecutor {
         throw ToolExecutionError(code: "reminder_not_found", message: "没有找到匹配的提醒，请先查询确认，不要直接新建")
     }
 
-    func reminderExists(recordId: String) -> Bool {
-        store.calendarItem(withIdentifier: recordId) is EKReminder
+    func reminderPresence(recordId: String) -> SystemRecordPresence {
+        guard !recordId.isEmpty, EKEventStore.authorizationStatus(for: .reminder) == .fullAccess else { return .unobservable }
+        return store.calendarItem(withIdentifier: recordId) is EKReminder ? .present : .missing
     }
 
-    func calendarEventExists(eventId: String) -> Bool {
-        store.event(withIdentifier: eventId) != nil
+    func calendarEventPresence(eventId: String) -> SystemRecordPresence {
+        guard !eventId.isEmpty, EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return .unobservable }
+        return store.event(withIdentifier: eventId) != nil ? .present : .missing
+    }
+
+    func calendarPreview(arguments: [String: JSONValue]) throws -> CalendarWritePreview {
+        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
+            throw ToolExecutionError(code: "calendar_read_required", message: "需要日历完整访问权限才能在写入前核对冲突。")
+        }
+        let existing = arguments.optionalString("eventId").flatMap { store.event(withIdentifier: $0) }
+        if arguments.optionalString("eventId") != nil, existing == nil {
+            throw ToolExecutionError(code: "event_not_found", message: "没有找到待修改的日程，请重新查询。")
+        }
+        let start = arguments.optionalString("startAt").flatMap(ToolDate.parse) ?? existing?.startDate
+        let end = arguments.optionalString("endAt").flatMap(ToolDate.parse) ?? existing?.endDate
+        guard let start, let end, end > start, end.timeIntervalSince(start) <= 366 * 86400 else {
+            throw ToolExecutionError(code: "invalid_time_range", message: "请提供有效的起止时间；单条日程最长一年。")
+        }
+        let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
+        let conflicts = store.events(matching: predicate).filter {
+            $0.eventIdentifier != existing?.eventIdentifier && $0.startDate < end && $0.endDate > start
+        }.sorted { ($0.eventIdentifier ?? "") < ($1.eventIdentifier ?? "") }
+        let title = arguments.optionalString("title") ?? existing?.title ?? "日程"
+        var lines = ["\(title) · \(start.formatted(date: .abbreviated, time: .shortened)) → \(end.formatted(date: .abbreviated, time: .shortened))"]
+        if let existing {
+            lines.append("修改前：\(existing.title ?? "日程") · \(existing.startDate.formatted(date: .abbreviated, time: .shortened)) → \(existing.endDate.formatted(date: .abbreviated, time: .shortened))")
+            if existing.hasRecurrenceRules { lines.append("重复日程：本次仅修改这一次，不修改后续系列。") }
+        } else if arguments.optionalObject("recurrence") != nil {
+            lines.append("重复日程：本次核对首次时段，后续重复仍可能存在冲突。")
+        }
+        lines.append(conflicts.isEmpty ? "未发现时间冲突" : "发现 \(conflicts.count) 个重叠日程：" + conflicts.prefix(5).map { $0.title ?? "日程" }.joined(separator: "、"))
+        let fields = [title, ToolDate.iso(start), ToolDate.iso(end), existing?.title ?? "", existing.map { ToolDate.iso($0.startDate) } ?? "", existing.map { ToolDate.iso($0.endDate) } ?? ""] + conflicts.map { "\($0.eventIdentifier ?? "")|\($0.title ?? "")|\(ToolDate.iso($0.startDate))|\(ToolDate.iso($0.endDate))" }
+        return CalendarWritePreview(detail: lines.joined(separator: "\n"), conflictCount: conflicts.count, fingerprint: CalendarWritePreview.hash(fields))
+    }
+
+    private func validateCalendarPreview(_ arguments: [String: JSONValue]) throws {
+        let current = try calendarPreview(arguments: arguments)
+        guard arguments.optionalString("_calendarPreviewFingerprint") == current.fingerprint else {
+            throw ToolExecutionError(code: "calendar_preview_changed", message: "日历内容或冲突已变化，本次未写入；请重新核对确认。")
+        }
     }
 
     private func reminderPayload(_ reminder: EKReminder, timezone: String) -> [String: JSONValue] {
@@ -464,6 +504,7 @@ final class EventKitExecutor {
     }
 
     func createCalendarEvent(arguments: [String: JSONValue], operationId: String) throws -> JSONValue {
+        try validateCalendarPreview(arguments)
         let title = try arguments.requiredString("title")
         let start = try ToolDate.requiredDate(arguments, key: "startAt")
         let end = try ToolDate.requiredDate(arguments, key: "endAt")

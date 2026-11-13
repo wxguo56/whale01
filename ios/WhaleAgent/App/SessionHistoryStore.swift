@@ -36,6 +36,7 @@ struct TaskRecord: Codable, Identifiable, Equatable, Sendable {
     var reply: String?
     let createdAt: Date
     var updatedAt: Date
+    var executionState: JSONValue? = nil
 }
 
 actor TaskRecordStore {

@@ -1018,6 +1018,9 @@ struct DeveloperSettingsView: View {
                 LabeledContent("工具数量", value: "\(model.toolCount)")
                 LabeledContent("鉴权", value: model.authRequired ? "已开启" : "未开启")
                 LabeledContent("构建", value: model.versionText)
+                LabeledContent("源码", value: BuildIdentity.source)
+                LabeledContent("打包时间", value: BuildIdentity.builtAt)
+                LabeledContent("工具目录", value: BuildIdentity.toolSummary)
                 LabeledContent("Bundle ID", value: model.bundleIdentifier)
                 Button("重新检查服务") {
                     Task { await model.health() }

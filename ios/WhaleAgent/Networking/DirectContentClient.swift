@@ -8,8 +8,7 @@ final class DirectContentClient: @unchecked Sendable {
     static let shared = DirectContentClient()
 
     private let session: URLSession
-    private var feedCache: [String: (data: Data, at: Date)] = [:]
-    private let feedCacheLock = NSLock()
+    private let feedStore = FeedDataStore()
 
     private struct Feed {
         let id: String
@@ -93,7 +92,7 @@ final class DirectContentClient: @unchecked Sendable {
 
     // MARK: - News
 
-    func news(channel: DiscoverChannel, section: String = "all", limit: Int) async throws -> NewsFeedResponse {
+    func news(channel: DiscoverChannel, section: String = "all", limit: Int, force: Bool = false) async throws -> NewsFeedResponse {
         guard channel == .ai || channel == .headline || channel == .game else {
             throw DirectContentError.decode("该频道没有新闻列表")
         }
@@ -108,21 +107,23 @@ final class DirectContentClient: @unchecked Sendable {
         var items: [NewsItem] = []
         var sources: [String] = []
         var unavailable: [String] = []
+        var fetchedDates: [Date] = []
 
-        await withTaskGroup(of: (String, [NewsItem]?, String?).self) { group in
+        await withTaskGroup(of: (String, [NewsItem]?, Date?).self) { group in
             for feed in feeds {
                 group.addTask {
                     do {
-                        let loaded = try await self.loadFeed(feed, channel: channel)
-                        return (feed.name, loaded, nil)
+                        let loaded = try await self.loadFeed(feed, channel: channel, force: force)
+                        return (feed.name, loaded.items, loaded.fetchedAt)
                     } catch {
-                        return (feed.name, nil, (error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
+                        return (feed.name, nil, nil)
                     }
                 }
             }
             for await result in group {
                 if let loaded = result.1 {
                     sources.append(result.0)
+                    if let at = result.2 { fetchedDates.append(at) }
                     items.append(contentsOf: loaded)
                 } else {
                     unavailable.append(result.0)
@@ -135,52 +136,8 @@ final class DirectContentClient: @unchecked Sendable {
             throw DirectContentError.notFound(detail)
         }
 
-        var seenLinks = Set<String>()
-        var seenTitles = Set<String>()
-        var rankedItems = items
-            .filter { item in
-                // 分标签去重：同一篇稿子可以同时属于“游戏科技”和“厂商动态”，
-                // 但每个标签内部不能重复；“全部”仍按链接全局去重。
-                let scope = section == "all" ? "" : (item.section ?? "") + "|"
-                let titleKey = scope + item.title.replacingOccurrences(of: "\\s+", with: "", options: .regularExpression).lowercased()
-                let linkKey = scope + item.link
-                if seenLinks.contains(linkKey) || seenTitles.contains(titleKey) { return false }
-                seenLinks.insert(linkKey)
-                seenTitles.insert(titleKey)
-                return true
-            }
-            .sorted { $0.publishedAt > $1.publishedAt }
-
-        if channel == .ai, section == "all" {
-            // 厂商新闻更新最快，若只按时间取前 40 条，其它标签页会被挤空。
-            // 这里在最新 40 条之外，为每个主题再补 12 条，保证每个分类都有内容。
-            var selected = Array(rankedItems.prefix(safeLimit))
-            var selectedIDs = Set(selected.map(\.id))
-            let sections = ["game-ai", "coding", "gametech", "vendor", "media", "tech"]
-            for sectionID in sections {
-                let extra = rankedItems
-                    .filter { $0.section == sectionID && !selectedIDs.contains($0.id) }
-                    .prefix(12)
-                for item in extra { selectedIDs.insert(item.id) }
-                selected.append(contentsOf: extra)
-            }
-            rankedItems = selected.sorted { $0.publishedAt > $1.publishedAt }
-        } else if channel == .headline, section == "all" {
-            // 时事源更新频率差异很大：只取最新 40 条会让军事、汽车等低频频道整栏空白。
-            // 最新 40 条之外，每个分栏再补 10 条，保证“国内/国际/军事/科技/汽车”都有真实内容。
-            var selected = Array(rankedItems.prefix(safeLimit))
-            var selectedIDs = Set(selected.map(\.id))
-            for sectionID in ["domestic", "world", "military", "tech", "auto"] {
-                let extra = rankedItems
-                    .filter { $0.section == sectionID && !selectedIDs.contains($0.id) }
-                    .prefix(10)
-                for item in extra { selectedIDs.insert(item.id) }
-                selected.append(contentsOf: extra)
-            }
-            rankedItems = selected.sorted { $0.publishedAt > $1.publishedAt }
-        } else {
-            rankedItems = Array(rankedItems.prefix(safeLimit))
-        }
+        let coverage = section == "all" ? (channel == .ai ? ["game-ai", "coding", "gametech", "vendor", "tech"] : channel == .headline ? ["domestic", "world", "military", "tech", "auto"] : ["cn", "global"]) : []
+        let rankedItems = NewsSelection.select(items, limit: safeLimit, topics: coverage)
 
         let unique = rankedItems
             .enumerated()
@@ -194,33 +151,25 @@ final class DirectContentClient: @unchecked Sendable {
                     publishedAt: item.publishedAt,
                     channel: item.channel,
                     rank: index + 1,
-                    section: item.section
+                    section: item.section,
+                    topics: item.topics,
+                    fetchedAt: item.fetchedAt
                 )
             }
 
         return NewsFeedResponse(
             channel: channel.rawValue,
-            updatedAt: Self.isoNow(),
+            updatedAt: fetchedDates.min().map(ToolDate.iso) ?? "",
             sources: Array(Set(sources)).sorted(),
             unavailableSources: Array(Set(unavailable)).sorted(),
             items: Array(unique)
         )
     }
 
-    private func loadFeed(_ feed: Feed, channel: DiscoverChannel) async throws -> [NewsItem] {
+    private func loadFeed(_ feed: Feed, channel: DiscoverChannel, force: Bool) async throws -> (items: [NewsItem], fetchedAt: Date) {
         guard let url = URL(string: feed.url) else { throw DirectContentError.decode("资讯源地址无效") }
-        var request = URLRequest(url: url)
-        request.setValue("application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5", forHTTPHeaderField: "accept")
-        request.setValue("WhaleAgent/0.5", forHTTPHeaderField: "user-agent")
-        let data: Data
-        if let cached = cachedFeedData(for: feed.url) {
-            data = cached
-        } else {
-            let (fresh, response) = try await session.data(for: request)
-            try Self.check(response)
-            storeFeedData(fresh, for: feed.url)
-            data = fresh
-        }
+        let entry = try await feedStore.fetch(url: url, force: force, session: session)
+        let data = entry.data
         guard let xml = String(data: data, encoding: .utf8) else {
             throw DirectContentError.decode("\(feed.name) 返回了无法识别的编码")
         }
@@ -297,23 +246,12 @@ final class DirectContentClient: @unchecked Sendable {
                 publishedAt: Self.isoDate(published),
                 channel: channel.rawValue,
                 rank: nil,
-                section: feed.section
+                section: feed.section,
+                topics: [feed.section],
+                fetchedAt: ToolDate.iso(entry.fetchedAt)
             ))
         }
-        return items
-    }
-
-    private func cachedFeedData(for url: String) -> Data? {
-        feedCacheLock.lock()
-        defer { feedCacheLock.unlock() }
-        guard let entry = feedCache[url], Date().timeIntervalSince(entry.at) < 300 else { return nil }
-        return entry.data
-    }
-
-    private func storeFeedData(_ data: Data, for url: String) {
-        feedCacheLock.lock()
-        feedCache[url] = (data, Date())
-        feedCacheLock.unlock()
+        return (items, entry.fetchedAt)
     }
 
     // MARK: - Game rank
@@ -859,7 +797,7 @@ final class DirectContentClient: @unchecked Sendable {
 
         return MarketQuoteResponse(
             updatedAt: Self.isoNow(),
-            delayedMinutes: 15,
+            delayedMinutes: nil,
             source: "腾讯财经公开行情",
             quotes: quotes,
             errors: nil
@@ -921,7 +859,7 @@ final class DirectContentClient: @unchecked Sendable {
             name: name,
             days: safeDays,
             source: "腾讯财经公开行情",
-            delayedMinutes: 15,
+            delayedMinutes: nil,
             points: points
         )
     }
@@ -964,7 +902,7 @@ final class DirectContentClient: @unchecked Sendable {
             name: name,
             date: (latest["date"] as? String) ?? "",
             source: "腾讯财经公开行情",
-            delayedMinutes: 15,
+            delayedMinutes: nil,
             points: points
         )
     }
@@ -1078,7 +1016,7 @@ final class DirectContentClient: @unchecked Sendable {
             floatMarketCap: floatCapYi.map { $0 * 100_000_000 },
             timestamp: parseTencentTime(fields[30]),
             source: "腾讯财经公开行情",
-            delayedMinutes: 15
+            delayedMinutes: nil
         )
     }
 
@@ -1211,9 +1149,9 @@ final class DirectContentClient: @unchecked Sendable {
         return named[entity.lowercased()]
     }
 
-    private static func isoDate(_ raw: String) -> String {
+    static func isoDate(_ raw: String) -> String? {
         let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty else { return isoNow() }
+        guard !value.isEmpty else { return nil }
         let iso = ISO8601DateFormatter()
         iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         if let date = iso.date(from: value) { return iso.string(from: date) }
@@ -1226,7 +1164,7 @@ final class DirectContentClient: @unchecked Sendable {
             rfc.dateFormat = format
             if let date = rfc.date(from: value) { return iso.string(from: date) }
         }
-        return isoNow()
+        return nil
     }
 
     private static func isoNow() -> String {

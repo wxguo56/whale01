@@ -205,6 +205,9 @@ struct RootView: View {
 private struct ConfirmationSheet: View {
     @ObservedObject var model: AppModel
     let item: PendingTool
+    @State private var calendarPreview: CalendarWritePreview?
+    @State private var previewError: String?
+    @State private var checkingPreview = true
 
     var body: some View {
         NavigationStack {
@@ -228,6 +231,18 @@ private struct ConfirmationSheet: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .whaleCard()
 
+                    if checkingPreview {
+                        ProgressView("正在核对系统日历…")
+                    }
+                    if let preview = calendarPreview {
+                        Label(preview.detail, systemImage: preview.conflictCount > 0 ? "exclamationmark.calendar" : "calendar.badge.checkmark")
+                            .font(.subheadline).foregroundStyle(WhaleTheme.muted)
+                    }
+                    if let previewError {
+                        Text(previewError).font(.footnote).foregroundStyle(WhaleTheme.danger)
+                        Button("重新核对") { Task { await loadPreview() } }
+                    }
+
                     Label(ToolPresentation.confirmationNote(item.tool), systemImage: "checkmark.shield")
                         .font(.subheadline)
                         .foregroundStyle(WhaleTheme.muted)
@@ -239,12 +254,12 @@ private struct ConfirmationSheet: View {
                     }
 
                     Button {
-                        Task { await model.confirm(item) }
+                        Task { await model.confirm(item, calendarFingerprint: calendarPreview?.fingerprint) }
                     } label: {
                         Text("确认执行").whalePrimaryButton()
                     }
                     .buttonStyle(.plain)
-                    .disabled(model.isBusy)
+                    .disabled(model.isBusy || checkingPreview || previewError != nil)
                     .padding(.top, 8)
 
                     Button(role: .destructive) {
@@ -268,9 +283,21 @@ private struct ConfirmationSheet: View {
                 }
             }
         }
+        .task(id: item.id) { await loadPreview() }
+        .onChange(of: model.errorText) { _, value in
+            if value?.contains("日历内容已变化") == true { Task { await loadPreview() } }
+        }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
+    private func loadPreview() async {
+        checkingPreview = true
+        previewError = nil
+        defer { checkingPreview = false }
+        do { calendarPreview = try await model.calendarPreview(item) }
+        catch { previewError = error.localizedDescription }
+    }
+
 }
 
 private struct ContentBottomKey: PreferenceKey {

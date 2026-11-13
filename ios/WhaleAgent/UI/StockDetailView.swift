@@ -123,7 +123,7 @@ struct StockDetailView: View {
             HStack(spacing: 5) {
                 Image(systemName: "clock")
                     .font(.system(size: 9, weight: .semibold))
-                Text("最近成交 \(DiscoverFormat.clock(quote.timestamp)) · 约延迟 15 分钟")
+                Text("最近成交 \(DiscoverFormat.clock(quote.timestamp)) · 延迟以来源为准，未知时明确说明")
             }
             .font(.system(size: 10))
             .foregroundStyle(WhaleTheme.muted)
@@ -240,7 +240,7 @@ struct StockDetailView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(WhaleTheme.muted)
                     .frame(maxWidth: .infinity, minHeight: 120)
-            case .loaded:
+            case .loaded, .cached, .stale, .partial:
                 StockChart(
                     mode: chartMode,
                     intraday: model.intraday,
@@ -345,7 +345,7 @@ struct StockDetailView: View {
                         .font(.system(size: 11))
                         .foregroundStyle(WhaleTheme.muted)
                         .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
-                case .loaded:
+                case .loaded, .cached, .stale, .partial:
                     Text("证券资料暂时为空。")
                         .font(.system(size: 11))
                         .foregroundStyle(WhaleTheme.muted)
@@ -467,7 +467,7 @@ struct StockDetailView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(WhaleTheme.muted)
                     .frame(maxWidth: .infinity, minHeight: 70, alignment: .leading)
-            case .loaded:
+            case .loaded, .cached, .stale, .partial:
                 FundFlowChart(points: model.fundFlow)
                 if let latest = model.fundFlow.last {
                     HStack {

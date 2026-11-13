@@ -38,6 +38,7 @@ final class XfyunASRClient {
     private var socket: URLSessionWebSocketTask?
     private var converter: AVAudioConverter?
     private var segments: [Int: String] = [:]
+    private var audioLease: UUID?
     private var isRunning = false
     private var stopping = false
     private var stopTimeout: Task<Void, Never>?
@@ -60,9 +61,9 @@ final class XfyunASRClient {
         segments = [:]
         stopping = false
 
-        let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .measurement, options: [.duckOthers])
-        try session.setActive(true, options: .notifyOthersOnDeactivation)
+        audioLease = try AudioSessionCoordinator.shared.acquire(.recording) { [weak self] in
+            self?.fail("讯飞录音被打断，已保留草稿。")
+        }
 
         guard let url = authorizationURL() else {
             throw NSError(domain: "XfyunASR", code: -1, userInfo: [NSLocalizedDescriptionKey: "无法生成讯飞鉴权地址"])
@@ -104,8 +105,8 @@ final class XfyunASRClient {
         sendDataFrame(status: 2, audio: "")
         stopTimeout = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 2_500_000_000)
-            guard let self, self.isRunning else { return }
-            self.finish(final: true)
+            guard !Task.isCancelled, let self, self.isRunning else { return }
+            self.fail("讯飞没有返回最终识别结果，已保留草稿。")
         }
     }
 
@@ -226,7 +227,8 @@ final class XfyunASRClient {
         audioEngine.inputNode.removeTap(onBus: 0)
         socket?.cancel(with: .normalClosure, reason: nil)
         socket = nil
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        AudioSessionCoordinator.shared.release(audioLease)
+        audioLease = nil
         let text = currentText
         if final, !text.isEmpty {
             onFinal?(text)

@@ -179,6 +179,18 @@ enum DiscoverLoadState: Equatable {
     case loading
     case loaded
     case failed(String)
+    case cached
+    case stale(String)
+    case partial(String)
+
+    var notice: String? {
+        switch self {
+        case .cached: return "显示上次缓存 · 获取时间见来源"
+        case .stale(let message): return "更新失败，保留上次数据 · \(message)"
+        case .partial(let message): return "部分来源未更新 · \(message)"
+        default: return nil
+        }
+    }
 }
 
 struct NewsFeedResponse: Codable {
@@ -195,10 +207,19 @@ struct NewsItem: Codable, Identifiable, Hashable {
     let summary: String
     let source: String
     let link: String
-    let publishedAt: String
+    let publishedAt: String?
     let channel: String
     let rank: Int?
     var section: String? = nil
+    var topics: [String]? = nil
+    var fetchedAt: String? = nil
+
+    var topicIDs: Set<String> { Set((topics ?? []) + [section].compactMap { $0 }) }
+    func mergingTopics(from other: NewsItem) -> NewsItem {
+        var result = self
+        result.topics = Array(topicIDs.union(other.topicIDs)).sorted()
+        return result
+    }
 
     var url: URL? { URL(string: link) }
     var displayTitle: String { NewsText.plain(title) }
@@ -241,8 +262,8 @@ extension DiscoverChannel {
         }
     }
 
-    func matches(section: String, itemSection: String?) -> Bool {
-        section == "all" || itemSection == section
+    func matches(section: String, itemSection: String?, topics: [String]? = nil) -> Bool {
+        section == "all" || itemSection == section || (topics ?? []).contains(section)
     }
 }
 
@@ -345,7 +366,7 @@ struct AIPaper: Codable, Identifiable, Hashable {
     let title: String
     let summary: String
     let authors: String
-    let publishedAt: String
+    let publishedAt: String?
     let link: String
     let category: String
 
@@ -530,7 +551,7 @@ struct AppStoreAppDetail: Decodable, Identifiable, Hashable {
 
 struct MarketQuoteResponse: Decodable {
     let updatedAt: String
-    let delayedMinutes: Int
+    let delayedMinutes: Int?
     let source: String
     let quotes: [StockQuote]
     let errors: [MarketQuoteError]?
@@ -596,7 +617,7 @@ struct KlineResponse: Decodable {
     let name: String
     let days: Int
     let source: String
-    let delayedMinutes: Int
+    let delayedMinutes: Int?
     let points: [KlinePoint]
 }
 
@@ -638,7 +659,7 @@ struct IntradayResponse: Decodable {
     let name: String
     let date: String
     let source: String
-    let delayedMinutes: Int
+    let delayedMinutes: Int?
     let points: [IntradayPoint]
 }
 

@@ -19,7 +19,8 @@ final class SpeechPlaybackController: NSObject, ObservableObject {
     var onStateChange: ((Bool) -> Void)?
 
     private let synthesizer = AVSpeechSynthesizer()
-    private var isSessionActive = false
+    private var audioLease: UUID?
+    private var currentUtterance: AVSpeechUtterance?
 
     override init() {
         super.init()
@@ -37,7 +38,7 @@ final class SpeechPlaybackController: NSObject, ObservableObject {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         stop()
-        activateSession()
+        guard activateSession() else { return }
 
         let utterance = AVSpeechUtterance(string: trimmed)
         utterance.voice = AVSpeechSynthesisVoice(language: "zh-CN")
@@ -45,12 +46,14 @@ final class SpeechPlaybackController: NSObject, ObservableObject {
         utterance.pitchMultiplier = 1.0
         utterance.preUtteranceDelay = 0.05
 
+        currentUtterance = utterance
         isSpeaking = true
         onStateChange?(true)
         synthesizer.speak(utterance)
     }
 
     func stop() {
+        currentUtterance = nil
         if synthesizer.isSpeaking || synthesizer.isPaused {
             synthesizer.stopSpeaking(at: .immediate)
         }
@@ -61,28 +64,25 @@ final class SpeechPlaybackController: NSObject, ObservableObject {
         deactivateSession()
     }
 
-    private func activateSession() {
-        let session = AVAudioSession.sharedInstance()
+    private func activateSession() -> Bool {
         do {
-            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-            try session.setActive(true, options: .notifyOthersOnDeactivation)
-            isSessionActive = true
-        } catch {
-            // 播报失败不阻断对话；文字回复仍然可用。
-            isSessionActive = false
-        }
+            audioLease = try AudioSessionCoordinator.shared.acquire(.speech) { [weak self] in self?.stop() }
+            return true
+        } catch { return false }
     }
 
     private func deactivateSession() {
-        guard isSessionActive else { return }
-        isSessionActive = false
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        AudioSessionCoordinator.shared.release(audioLease)
+        audioLease = nil
     }
+
 }
 
 extension SpeechPlaybackController: AVSpeechSynthesizerDelegate {
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         Task { @MainActor in
+            guard self.currentUtterance === utterance else { return }
+            self.currentUtterance = nil
             self.isSpeaking = false
             self.onStateChange?(false)
             self.deactivateSession()
@@ -91,6 +91,8 @@ extension SpeechPlaybackController: AVSpeechSynthesizerDelegate {
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
         Task { @MainActor in
+            guard self.currentUtterance === utterance else { return }
+            self.currentUtterance = nil
             self.isSpeaking = false
             self.onStateChange?(false)
             self.deactivateSession()

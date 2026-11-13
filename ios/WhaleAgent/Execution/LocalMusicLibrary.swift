@@ -46,6 +46,7 @@ final class LocalMusicLibrary: ObservableObject {
     var prefersShuffle = false
 
     private var player: AVAudioPlayer?
+    private var audioLease: UUID?
     private var ticker: Timer?
     private let fm = FileManager.default
     private var didBootstrap = false
@@ -190,9 +191,10 @@ final class LocalMusicLibrary: ObservableObject {
         let audio = try AVAudioPlayer(contentsOf: url)
         audio.delegate = audioDelegate
         audio.prepareToPlay()
-        try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-        try AVAudioSession.sharedInstance().setActive(true)
+        audioLease = try AudioSessionCoordinator.shared.acquire(.music) { [weak self] in self?.pause() }
         guard audio.play() else {
+            AudioSessionCoordinator.shared.release(audioLease)
+            audioLease = nil
             throw NSError(domain: "LocalMusic", code: 500, userInfo: [NSLocalizedDescriptionKey: "系统没能开始播放这首歌"])
         }
         player = audio
@@ -205,6 +207,8 @@ final class LocalMusicLibrary: ObservableObject {
 
     func pause() {
         player?.pause()
+        AudioSessionCoordinator.shared.release(audioLease)
+        audioLease = nil
         isPlaying = false
     }
 
@@ -212,7 +216,10 @@ final class LocalMusicLibrary: ObservableObject {
         guard let player else {
             throw NSError(domain: "LocalMusic", code: 409, userInfo: [NSLocalizedDescriptionKey: "还没有选中的本机歌曲"])
         }
+        audioLease = try AudioSessionCoordinator.shared.acquire(.music) { [weak self] in self?.pause() }
         guard player.play() else {
+            AudioSessionCoordinator.shared.release(audioLease)
+            audioLease = nil
             throw NSError(domain: "LocalMusic", code: 500, userInfo: [NSLocalizedDescriptionKey: "继续播放失败"])
         }
         isPlaying = true
@@ -220,6 +227,8 @@ final class LocalMusicLibrary: ObservableObject {
     }
 
     func stop() {
+        AudioSessionCoordinator.shared.release(audioLease)
+        audioLease = nil
         stopTicker()
         player?.stop()
         player = nil
@@ -309,6 +318,8 @@ final class LocalMusicLibrary: ObservableObject {
         }
         guard tracks.indices.contains(index + 1) else {
             stopTicker()
+            AudioSessionCoordinator.shared.release(audioLease)
+            audioLease = nil
             return
         }
         try? play(track: tracks[index + 1])

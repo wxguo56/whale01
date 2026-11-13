@@ -33,10 +33,10 @@ final class MemoryStore: @unchecked Sendable {
     private let fileURL: URL
     private var items: [MemoryPreference] = []
 
-    private init() {
+    init(fileURL suppliedURL: URL? = nil) {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSTemporaryDirectory())
-        fileURL = documents.appendingPathComponent("memory-preferences.json")
+        fileURL = suppliedURL ?? documents.appendingPathComponent("memory-preferences.json")
         load()
     }
 
@@ -52,6 +52,16 @@ final class MemoryStore: @unchecked Sendable {
         return values.map { "- \($0.key)：\($0.value)" }.joined(separator: "\n")
     }
 
+    func snapshotText(matching request: String) -> String {
+        let values = list().filter { item in
+            request.localizedCaseInsensitiveContains(item.key)
+                || (item.key == "称呼")
+                || (RealDataGuard.intent(for: request) == .homeNavigation && RealDataGuard.homeAddress(in: [item]) != nil)
+        }.prefix(8)
+        guard !values.isEmpty else { return "本轮没有相关偏好；需要时使用 list_memory 查询，不要猜测。" }
+        return values.map { "- \($0.key)：\($0.value)" }.joined(separator: "\n")
+    }
+
     @discardableResult
     func set(key rawKey: String, value rawValue: String) throws -> MemoryPreference {
         let key = normalize(rawKey)
@@ -63,25 +73,29 @@ final class MemoryStore: @unchecked Sendable {
         let id = key.lowercased()
         let preference = MemoryPreference(id: id, key: key, value: value, updatedAt: Date())
         lock.lock()
+        defer { lock.unlock() }
+        let original = items
         if let index = items.firstIndex(where: { $0.id == id }) {
             items[index] = preference
         } else {
             items.insert(preference, at: 0)
         }
         items.sort { $0.updatedAt > $1.updatedAt }
-        saveLocked()
-        lock.unlock()
+        do { try saveLocked() } catch { items = original; throw error }
         return preference
     }
 
     @discardableResult
-    func delete(id: String) -> Bool {
+    func delete(id: String) throws -> Bool {
         lock.lock()
+        defer { lock.unlock() }
+        let original = items
         let before = items.count
         items.removeAll { $0.id == id || $0.key.lowercased() == id.lowercased() }
         let removed = items.count != before
-        if removed { saveLocked() }
-        lock.unlock()
+        if removed {
+            do { try saveLocked() } catch { items = original; throw error }
+        }
         return removed
     }
 
@@ -99,8 +113,8 @@ final class MemoryStore: @unchecked Sendable {
         items = decoded.sorted { $0.updatedAt > $1.updatedAt }
     }
 
-    private func saveLocked() {
-        guard let data = try? JSONEncoder().encode(items) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+    private func saveLocked() throws {
+        let data = try JSONEncoder().encode(items)
+        try data.write(to: fileURL, options: [.atomic, .completeFileProtectionUnlessOpen])
     }
 }

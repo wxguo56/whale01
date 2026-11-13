@@ -46,11 +46,11 @@ struct VoiceView: View {
             startPulse()
         }
         .onDisappear {
-            voice.stop()
+            voice.cancel()
         }
-        .onChange(of: voice.isRecording) { wasRecording, isRecording in
-            guard wasRecording, !isRecording, !isFinishing, voice.errorText == nil else { return }
-            let text = voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        .onChange(of: voice.finalResult) { _, result in
+            guard let result, !isFinishing, voice.errorText == nil else { return }
+            let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { return }
             isFinishing = true
             onSend(text)
@@ -234,28 +234,30 @@ struct VoiceView: View {
 
     private func finishAndSend() {
         guard !isFinishing else { return }
-        let text = voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else {
-            voice.stop()
-            localHint = "还没听到内容，请再说一次。"
-            return
-        }
         isFinishing = true
-        voice.stop()
-        onSend(text)
+        Task {
+            guard let final = await voice.finishRecognition(), !final.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                localHint = voice.errorText ?? "还没收到完整内容，请检查草稿后再试。"
+                isFinishing = false
+                return
+            }
+            onSend(final)
+        }
     }
 
     private func finishToText() {
         guard !isFinishing else { return }
         isFinishing = true
-        voice.stop()
-        onClose(voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines))
+        Task {
+            _ = await voice.finishRecognition()
+            onClose(voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
     }
 
     private func cancel() {
         guard !isFinishing else { return }
         isFinishing = true
-        voice.stop()
+        voice.cancel()
         onCancel()
     }
 

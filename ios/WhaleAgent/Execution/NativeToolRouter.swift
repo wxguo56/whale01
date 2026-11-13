@@ -32,6 +32,14 @@ final class NativeToolRouter {
         ledger = .shared
     }
 
+    func calendarPreview(_ pending: PendingTool) async throws -> CalendarWritePreview? {
+        guard ["create_calendar_event", "update_calendar_event"].contains(pending.tool) else { return nil }
+        if let missing = await permissions.ensure(tool: "list_calendar_events", arguments: pending.arguments) {
+            throw ToolExecutionError(code: "permission_denied", message: "需要日历读取权限才能核对冲突。", permission: missing)
+        }
+        return try eventKit.calendarPreview(arguments: pending.arguments)
+    }
+
     func execute(_ pending: PendingTool) async -> ToolResultPayload {
         let result = await executeInternal(pending)
         await recordAction(pending, result: result)
@@ -249,12 +257,12 @@ final class NativeToolRouter {
                     await ledger.resolvePending(
                         operationId: write.operationId,
                         outcome: CachedToolOutcome(
-                            status: "failed",
+                            status: "execution_unknown",
                             data: nil,
-                            error: ToolErrorPayload(code: "reconciled_absent", message: "核对后未发现该提醒")
+                            error: ToolErrorPayload(code: "execution_unknown", message: "暂未发现提醒，无法排除权限或同步问题，请先在系统核对。")
                         )
                     )
-                    notes.append("已核对：未发现提醒「\(write.title)」，可以重新发起。")
+                    notes.append("已核对：未发现提醒「\(write.title)」，请先在系统核对，未自动重放。")
                 }
             case "create_calendar_event":
                 guard !write.title.isEmpty, let rawStart = write.startAt, let start = ToolDate.parse(rawStart) else {
@@ -276,145 +284,29 @@ final class NativeToolRouter {
                     await ledger.resolvePending(
                         operationId: write.operationId,
                         outcome: CachedToolOutcome(
-                            status: "failed",
-                            data: nil,
-                            error: ToolErrorPayload(code: "reconciled_absent", message: "核对后未发现该日程")
-                        )
-                    )
-                    notes.append("已核对：未发现日程「\(write.title)」，可以重新发起。")
-                }
-            case "update_reminder":
-                let stillExists: Bool
-                if let recordId = write.recordId, !recordId.isEmpty {
-                    stillExists = eventKit.reminderExists(recordId: recordId)
-                } else {
-                    let due = write.dueAt.flatMap { ToolDate.parse($0) }
-                    if write.title.isEmpty {
-                        stillExists = false
-                    } else {
-                        stillExists = await eventKit.findReminder(title: write.title, dueAt: due) != nil
-                    }
-                }
-                if !stillExists {
-                    await ledger.resolvePending(
-                        operationId: write.operationId,
-                        outcome: CachedToolOutcome(
-                            status: "failed",
-                            data: nil,
-                            error: ToolErrorPayload(code: "reminder_not_found", message: "核对后没有找到要修改的提醒")
-                        )
-                    )
-                    notes.append("已核对：未找到要修改的提醒，可能已被删除。")
-                } else if age > 120 {
-                    await ledger.resolvePending(
-                        operationId: write.operationId,
-                        outcome: CachedToolOutcome(
                             status: "execution_unknown",
                             data: nil,
-                            error: ToolErrorPayload(
-                                code: "execution_unknown",
-                                message: "提醒仍存在，但无法确认修改是否已生效，请先在提醒事项中核对，不要直接重试。"
-                            )
+                            error: ToolErrorPayload(code: "execution_unknown", message: "暂未发现日程，无法排除权限或同步问题，请先在系统核对。")
                         )
                     )
-                    notes.append("已核对：提醒仍存在，但修改结果无法自动确认，请打开系统核对。")
+                    notes.append("已核对：未发现日程「\(write.title)」，请先在系统核对，未自动重放。")
                 }
-            case "delete_reminder":
-                let stillExists: Bool
-                if let recordId = write.recordId, !recordId.isEmpty {
-                    stillExists = eventKit.reminderExists(recordId: recordId)
-                } else {
-                    let due = write.dueAt.flatMap { ToolDate.parse($0) }
-                    if write.title.isEmpty {
-                        stillExists = false
-                    } else {
-                        stillExists = await eventKit.findReminder(title: write.title, dueAt: due) != nil
-                    }
+            case "update_reminder", "delete_reminder", "update_calendar_event", "delete_calendar_event":
+                guard age > 120 else { continue }
+                let presence: SystemRecordPresence = write.tool.contains("reminder")
+                    ? eventKit.reminderPresence(recordId: write.recordId ?? "")
+                    : eventKit.calendarEventPresence(eventId: write.recordId ?? "")
+                let detail: String
+                switch presence {
+                case .present: detail = "目标仍存在，但无法确认上次修改或删除的结果。"
+                case .missing: detail = "当前没有查到目标；账号同步或标识变化也可能造成缺失，不能据此认定删除成功。"
+                case .unobservable: detail = "当前没有完整权限或稳定目标标识，无法核对上次结果。"
                 }
-                if !stillExists {
-                    let data = JSONValue.object([
-                        "recordId": .string(write.recordId ?? ""),
-                        "deleted": .bool(true),
-                        "source": .string("eventkit"),
-                        "reconciled": .bool(true)
-                    ])
-                    await ledger.resolvePending(
-                        operationId: write.operationId,
-                        outcome: CachedToolOutcome(status: "success", data: data, error: nil)
-                    )
-                    notes.append("已核对：该提醒已不存在，删除实际已生效。")
-                } else if age > 120 {
-                    await ledger.resolvePending(
-                        operationId: write.operationId,
-                        outcome: CachedToolOutcome(
-                            status: "failed",
-                            data: nil,
-                            error: ToolErrorPayload(code: "delete_not_applied", message: "提醒仍然存在，删除未生效")
-                        )
-                    )
-                    notes.append("已核对：提醒仍然存在，删除未生效，可以重新发起。")
-                }
-            case "update_calendar_event":
-                let stillExists: Bool
-                if let eventId = write.recordId, !eventId.isEmpty {
-                    stillExists = eventKit.calendarEventExists(eventId: eventId)
-                } else {
-                    stillExists = false
-                }
-                if !stillExists {
-                    await ledger.resolvePending(
-                        operationId: write.operationId,
-                        outcome: CachedToolOutcome(
-                            status: "failed",
-                            data: nil,
-                            error: ToolErrorPayload(code: "event_not_found", message: "核对后没有找到要修改的日程")
-                        )
-                    )
-                    notes.append("已核对：未找到要修改的日程，可能已被删除。")
-                } else if age > 120 {
-                    await ledger.resolvePending(
-                        operationId: write.operationId,
-                        outcome: CachedToolOutcome(
-                            status: "execution_unknown",
-                            data: nil,
-                            error: ToolErrorPayload(
-                                code: "execution_unknown",
-                                message: "日程仍存在，但无法确认修改是否已生效，请先在日历中核对，不要直接重试。"
-                            )
-                        )
-                    )
-                    notes.append("已核对：日程仍存在，但修改结果无法自动确认，请打开系统日历核对。")
-                }
-            case "delete_calendar_event":
-                let stillExists: Bool
-                if let eventId = write.recordId, !eventId.isEmpty {
-                    stillExists = eventKit.calendarEventExists(eventId: eventId)
-                } else {
-                    stillExists = false
-                }
-                if !stillExists {
-                    let data = JSONValue.object([
-                        "eventId": .string(write.recordId ?? ""),
-                        "deleted": .bool(true),
-                        "source": .string("eventkit"),
-                        "reconciled": .bool(true)
-                    ])
-                    await ledger.resolvePending(
-                        operationId: write.operationId,
-                        outcome: CachedToolOutcome(status: "success", data: data, error: nil)
-                    )
-                    notes.append("已核对：该日程已不存在，删除实际已生效。")
-                } else if age > 120 {
-                    await ledger.resolvePending(
-                        operationId: write.operationId,
-                        outcome: CachedToolOutcome(
-                            status: "failed",
-                            data: nil,
-                            error: ToolErrorPayload(code: "delete_not_applied", message: "日程仍然存在，删除未生效")
-                        )
-                    )
-                    notes.append("已核对：日程仍然存在，删除未生效，可以重新发起。")
-                }
+                await ledger.resolvePending(operationId: write.operationId, outcome: CachedToolOutcome(
+                    status: "execution_unknown", data: nil,
+                    error: ToolErrorPayload(code: "execution_unknown", message: detail + "请到系统核对，勿直接重试。")
+                ))
+                notes.append(detail + "请到系统核对，未自动重放操作。")
             default:
                 continue
             }
@@ -570,7 +462,7 @@ final class NativeToolRouter {
         guard let id, !id.isEmpty else {
             throw ToolExecutionError(code: "missing_memory_reference", message: "需要偏好 id 或 key")
         }
-        let deleted = MemoryStore.shared.delete(id: id)
+        let deleted = try MemoryStore.shared.delete(id: id)
         return .object([
             "id": .string(id),
             "deleted": .bool(deleted),
@@ -691,7 +583,7 @@ final class NativeToolRouter {
             "updatedAt": .string(response.updatedAt),
             "sources": .array((response.sources ?? []).map { .string($0) }),
             "unavailableSources": .array((response.unavailableSources ?? []).map { .string($0) }),
-            "items": .array(response.items.map(newsJSON))
+            "items": .array(response.items.prefix(limit).map(newsJSON))
         ])
     }
 
@@ -730,7 +622,7 @@ final class NativeToolRouter {
         return .object([
             "query": .string(query),
             "updatedAt": .string(response.updatedAt),
-            "delayedMinutes": .number(Double(response.delayedMinutes)),
+            "delayedMinutes": response.delayedMinutes.map { .number(Double($0)) } ?? .null,
             "source": .string(response.source),
             "quotes": .array(response.quotes.map(quoteJSON))
         ])
@@ -757,7 +649,7 @@ final class NativeToolRouter {
             "name": .string(response.name),
             "days": .number(Double(response.days)),
             "source": .string(response.source),
-            "delayedMinutes": .number(Double(response.delayedMinutes)),
+            "delayedMinutes": response.delayedMinutes.map { .number(Double($0)) } ?? .null,
             "points": .array(response.points.map(klineJSON))
         ])
     }
@@ -772,7 +664,7 @@ final class NativeToolRouter {
             "name": .string(response.name),
             "date": .string(response.date),
             "source": .string(response.source),
-            "delayedMinutes": .number(Double(response.delayedMinutes)),
+            "delayedMinutes": response.delayedMinutes.map { .number(Double($0)) } ?? .null,
             "points": .array(response.points.map(intradayJSON))
         ])
     }
@@ -784,7 +676,7 @@ final class NativeToolRouter {
             "summary": .string(item.summary),
             "source": .string(item.source),
             "link": .string(item.link),
-            "publishedAt": .string(item.publishedAt),
+            "publishedAt": item.publishedAt.map(JSONValue.string) ?? .null,
             "channel": .string(item.channel),
             "rank": jsonNumber(item.rank.map { Double($0) })
         ])
@@ -812,7 +704,7 @@ final class NativeToolRouter {
             "floatMarketCap": jsonNumber(quote.floatMarketCap),
             "timestamp": jsonText(quote.timestamp),
             "source": .string(quote.source ?? "腾讯财经公开行情"),
-            "delayedMinutes": .number(Double(quote.delayedMinutes ?? 15))
+            "delayedMinutes": quote.delayedMinutes.map { .number(Double($0)) } ?? .null
         ])
     }
 

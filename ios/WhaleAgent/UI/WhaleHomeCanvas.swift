@@ -139,7 +139,7 @@ struct WhaleHomeCanvas: View {
             discoverCard(
                 title: "A股自选",
                 subtitle: "指数 · 个股 · 日 K",
-                badge: "延迟 15 分钟",
+                badge: "公开行情",
                 icon: "chart.line.uptrend.xyaxis",
                 gradient: LinearGradient(
                     colors: [WhaleTheme.moon, WhaleTheme.accentDeep],
