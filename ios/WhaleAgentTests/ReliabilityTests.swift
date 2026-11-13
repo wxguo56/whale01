@@ -41,7 +41,7 @@ final class ReliabilityTests: XCTestCase {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Shanghai")!
         let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 10))!
-        for text in ["今晚取快递", "明天取快递", "三点取快递", "明天25点取快递", "把买菜改到明天", "我想把买菜改到明天下午三点", "帮我把买菜标记完成", "先别添加买菜", "每周五买菜"] {
+        for text in ["今晚取快递", "明天取快递", "三点取快递", "明天25点取快递", "明天123点取快递", "明天晚上十二点取快递", "把买菜改到明天", "我想把买菜改到明天下午三点", "帮我把买菜标记完成", "先别添加买菜", "每周五买菜"] {
             let result = TodoQuickParser.parseAdd(text, now: now, calendar: calendar)
             XCTAssertNotNil(result.validationError, text)
             XCTAssertNil(result.dueAt, text)
@@ -63,6 +63,22 @@ final class ReliabilityTests: XCTestCase {
         XCTAssertEqual(scheduled.title, "取快递")
         let relative = TodoQuickParser.parseAdd("10分钟后喝水", now: now, calendar: calendar)
         XCTAssertEqual(relative.dueAt?.timeIntervalSince(now), 600)
+        let clockCases: [(String, Int, Int, Int)] = [
+            ("明早八点取快递", 14, 8, 0),
+            ("明天下午两点十五分取快递", 14, 14, 15),
+            ("明天下午三点一刻取快递", 14, 15, 15),
+            ("明天凌晨一点取快递", 14, 1, 0),
+            ("下星期五下午三点取快递", 20, 15, 0),
+            ("下礼拜五下午三点取快递", 20, 15, 0)
+        ]
+        for (text, day, hour, minute) in clockCases {
+            let parsed = TodoQuickParser.parseAdd(text, now: now, calendar: calendar)
+            XCTAssertNil(parsed.validationError, text)
+            let due = parsed.dueAt!
+            XCTAssertEqual(calendar.component(.day, from: due), day, text)
+            XCTAssertEqual(calendar.component(.hour, from: due), hour, text)
+            XCTAssertEqual(calendar.component(.minute, from: due), minute, text)
+        }
     }
 
     func testUnknownPublishedDateStaysUnknown() {
