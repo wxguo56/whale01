@@ -16,6 +16,7 @@ final class ReliabilityTests: XCTestCase {
         }
         XCTAssertTrue(RealDataGuard.isClarifying("你想查哪个城市的天气？", for: .weather))
         XCTAssertFalse(RealDataGuard.isClarifying("今天股价上涨，要继续看吗？", for: .stock))
+        XCTAssertFalse(RealDataGuard.finalReply(for: .weather, usedTools: [], proposed: "北京晴天，要查哪个城市？").contains("北京晴天"))
         XCTAssertTrue(RealDataGuard.finalReply(for: .stock, usedTools: ["search_stock"], proposed: "股价20元").contains("没有取得真实行情"))
     }
 

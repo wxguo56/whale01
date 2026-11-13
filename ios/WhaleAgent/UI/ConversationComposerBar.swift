@@ -18,6 +18,7 @@ struct ConversationComposerBar: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var showFileImporter = false
     @State private var importError: String?
+    @State private var finishingVoice = false
 
     var body: some View {
         VStack(spacing: 7) {
@@ -64,6 +65,7 @@ struct ConversationComposerBar: View {
         .onChange(of: model.messages.isEmpty) { _, empty in
             if empty { draft = "" }
         }
+        .onDisappear { voice.cancel() }
     }
 
     // MARK: - Composer
@@ -102,7 +104,7 @@ struct ConversationComposerBar: View {
                 .frame(height: 24)
                 .padding(.horizontal, 4)
                 .focused($focused)
-                .disabled(model.isBusy)
+                .disabled(model.isBusy || voice.isFinalizing || finishingVoice)
                 .submitLabel(.send)
                 .onSubmit { submit() }
 
@@ -147,7 +149,7 @@ struct ConversationComposerBar: View {
                     .shadow(color: WhaleTheme.accent.opacity(0.24), radius: 10, y: 4)
             }
             .buttonStyle(.plain)
-            .disabled(model.isBusy || isDraftEmpty)
+            .disabled(model.isBusy || isDraftEmpty || finishingVoice)
             .opacity(model.isBusy || isDraftEmpty ? 0.5 : 1)
             .accessibilityLabel("发送")
         }
@@ -210,14 +212,27 @@ struct ConversationComposerBar: View {
     }
 
     private func submit() {
-        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
-        if voice.isRecording {
-            voice.stop()
+        guard !finishingVoice else { return }
+        if voice.isRecording || voice.isFinalizing {
+            finishingVoice = true
+            Task {
+                defer { finishingVoice = false }
+                guard let final = await voice.finishRecognition(), !final.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    draft = voice.transcript
+                    focused = true
+                    return
+                }
+                focused = false
+                draft = ""
+                await model.send(text: final)
+            }
+        } else {
+            let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { return }
+            focused = false
+            draft = ""
+            Task { await model.send(text: text) }
         }
-        focused = false
-        draft = ""
-        Task { await model.send(text: text) }
     }
 
     private func ingestPhoto() async {

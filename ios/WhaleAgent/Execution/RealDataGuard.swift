@@ -116,10 +116,24 @@ enum RealDataGuard {
     }
 
     static func finalReply(for intent: RealDataIntent, usedTools: Set<String>, proposed: String) -> String {
-        if isClarifying(proposed, for: intent) { return proposed }
         if let required = intent.requiredTool, usedTools.contains(required) { return proposed }
         if intent == .news, !usedTools.isDisjoint(with: ["search_web", "fetch_web_content"]) { return proposed }
         if intent == .stock, !usedTools.isDisjoint(with: ["get_stock_kline", "get_stock_intraday"]) { return proposed }
+        if isClarifying(proposed, for: intent) {
+            // No external facts are allowed through the clarification path.
+            // Emit a known missing-slot response rather than trusting arbitrary
+            // prose that happens to contain a question or a location keyword.
+            switch intent {
+            case .weather: return "你想查询哪个城市、哪一天的天气？"
+            case .news: return "你想了解哪个主题的最新资讯？"
+            case .stock: return "你想查哪只股票或指数？请提供名称或代码。"
+            case .merchantPrice: return "你想查哪家门店？请提供门店名称或来源链接。"
+            case .navigation: return "你想去哪里？请提供具体地点。"
+            case .homeNavigation: return "请提供具体家庭地址，我才能解析目的地。"
+            case .nearbyPlaces: return "你想找什么地点，按当前位置还是指定地区搜索？"
+            case .currentLocation: break
+            }
+        }
 
         switch intent {
         case .homeNavigation:
