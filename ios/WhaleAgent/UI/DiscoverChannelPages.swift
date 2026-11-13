@@ -43,36 +43,39 @@ struct AIChannelPage: View {
     @ObservedObject var model: DiscoverModel
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 12) {
-                    Color.clear.frame(height: 1).id("ai-top")
-                    VStack(alignment: .leading, spacing: 12) {
-                        newsHero
-                        moreNews
+        VStack(spacing: 0) {
+            NewsSectionBar(channel: .ai, selection: model.aiSection) { section in
+                Task { await model.selectNewsSection(section, for: .ai) }
+            }.padding(.horizontal, 16).padding(.bottom, 6)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 12) {
+                        Color.clear.frame(height: 1).id("ai-top")
+                        VStack(alignment: .leading, spacing: 12) {
+                            newsHero
+                            moreNews
+                        }
+                        .horizontalTabSwipe(
+                            onPrevious: { model.stepNewsSection(.ai, by: -1) },
+                            onNext: { model.stepNewsSection(.ai, by: 1) }
+                        )
+                        NewsSourceFooter(model: model)
                     }
-                    .horizontalTabSwipe(
-                        onPrevious: { model.stepNewsSection(.ai, by: -1) },
-                        onNext: { model.stepNewsSection(.ai, by: 1) }
-                    )
-                    NewsSourceFooter(model: model)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 30)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 30)
+                .scrollIndicators(.hidden)
+
+                .background(ScrollOffsetMemory(key: "ai-\(model.aiSection)"))
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("discover-reading-ai")
+                .refreshable { await model.refresh() }
+                .onChange(of: model.aiSection) { _, _ in
+                    withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("ai-top", anchor: .top) }
+                }
+                .task { await model.loadInitial() }
             }
-            .scrollIndicators(.hidden)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                NewsSectionBar(channel: .ai, selection: model.aiSection) { section in
-                    Task { await model.selectNewsSection(section, for: .ai) }
-                }.padding(.horizontal, 16).padding(.bottom, 6)
-            }
-            .background(ScrollOffsetMemory(key: "ai-\(model.aiSection)"))
-            .refreshable { await model.refresh() }
-            .onChange(of: model.aiSection) { _, _ in
-                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("ai-top", anchor: .top) }
-            }
-            .task { await model.loadInitial() }
         }
     }
 
@@ -386,26 +389,27 @@ struct GameChannelPage: View {
     }
 
     private var newsContent: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 11) {
-                    Color.clear.frame(height: 1).id("game-news-top")
-                    newsBody
-                    NewsSourceFooter(model: model, extra: "游戏频道来自游戏媒体公开 RSS，不是微信公众号。")
+        VStack(spacing: 0) {
+            NewsSectionBar(channel: .game, selection: model.gameNewsSection) { section in
+                Task { await model.selectNewsSection(section, for: .game) }
+            }.padding(.horizontal, 16).padding(.bottom, 6)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 11) {
+                        Color.clear.frame(height: 1).id("game-news-top")
+                        newsBody
+                        NewsSourceFooter(model: model, extra: "游戏频道来自游戏媒体公开 RSS，不是微信公众号。")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 30)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 30)
-            }
-            .scrollIndicators(.hidden)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                NewsSectionBar(channel: .game, selection: model.gameNewsSection) { section in
-                    Task { await model.selectNewsSection(section, for: .game) }
-                }.padding(.horizontal, 16).padding(.bottom, 6)
-            }
-            .background(ScrollOffsetMemory(key: "game-news"))
-            .refreshable { await model.refresh() }
-            .onChange(of: model.gameNewsSection) { _, _ in
-                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("game-news-top", anchor: .top) }
+                .scrollIndicators(.hidden)
+
+                .background(ScrollOffsetMemory(key: "game-news"))
+                .refreshable { await model.refresh() }
+                .onChange(of: model.gameNewsSection) { _, _ in
+                    withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("game-news-top", anchor: .top) }
+                }
             }
         }
     }
@@ -562,60 +566,61 @@ struct HeadlineChannelPage: View {
     @ObservedObject var model: DiscoverModel
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 11) {
-                    Color.clear.frame(height: 1).id("headline-top")
-                    VStack(alignment: .leading, spacing: 11) {
-                        if model.newsState == .loading && model.newsItems.isEmpty {
-                            NewsSkeleton()
-                        } else if case .failed(let message) = model.newsState, model.newsItems.isEmpty {
-                            DiscoverErrorState(message: message) {
-                                Task { await model.loadNews(channel: .headline, force: true) }
-                            }
-                        } else if model.headlineNews.isEmpty {
-                            Text("这个分类暂时没有新的资讯，换一个分类或下拉刷新。")
-                                .whaleFont(size: 13)
-                                .foregroundStyle(WhaleTheme.muted)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 14)
-                        } else {
-                            if let feature = model.headlineNews.first {
-                                NavigationLink(value: DiscoverRoute.news(feature)) {
-                                    NewsFeatureCard(item: feature)
+        VStack(spacing: 0) {
+            NewsSectionBar(channel: .headline, selection: model.headlineSection) { section in
+                Task { await model.selectNewsSection(section, for: .headline) }
+            }.padding(.horizontal, 16).padding(.bottom, 6)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 11) {
+                        Color.clear.frame(height: 1).id("headline-top")
+                        VStack(alignment: .leading, spacing: 11) {
+                            if model.newsState == .loading && model.newsItems.isEmpty {
+                                NewsSkeleton()
+                            } else if case .failed(let message) = model.newsState, model.newsItems.isEmpty {
+                                DiscoverErrorState(message: message) {
+                                    Task { await model.loadNews(channel: .headline, force: true) }
                                 }
-                                .buttonStyle(.plain)
-                            }
-                            ForEach(Array(model.headlineNews.dropFirst())) { item in
-                                NavigationLink(value: DiscoverRoute.news(item)) {
-                                    NewsRowCard(item: item)
+                            } else if model.headlineNews.isEmpty {
+                                Text("这个分类暂时没有新的资讯，换一个分类或下拉刷新。")
+                                    .whaleFont(size: 13)
+                                    .foregroundStyle(WhaleTheme.muted)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.vertical, 14)
+                            } else {
+                                if let feature = model.headlineNews.first {
+                                    NavigationLink(value: DiscoverRoute.news(feature)) {
+                                        NewsFeatureCard(item: feature)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
+                                ForEach(Array(model.headlineNews.dropFirst())) { item in
+                                    NavigationLink(value: DiscoverRoute.news(item)) {
+                                        NewsRowCard(item: item)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
                         }
+                        .horizontalTabSwipe(
+                            onPrevious: { model.stepNewsSection(.headline, by: -1) },
+                            onNext: { model.stepNewsSection(.headline, by: 1) }
+                        )
+                        NewsSourceFooter(model: model)
                     }
-                    .horizontalTabSwipe(
-                        onPrevious: { model.stepNewsSection(.headline, by: -1) },
-                        onNext: { model.stepNewsSection(.headline, by: 1) }
-                    )
-                    NewsSourceFooter(model: model)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 30)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 30)
+                .scrollIndicators(.hidden)
+
+                .background(ScrollOffsetMemory(key: "headline-\(model.headlineSection)"))
+                .refreshable { await model.refresh() }
+                .onChange(of: model.headlineSection) { _, _ in
+                    withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("headline-top", anchor: .top) }
+                }
+                .task { await model.loadInitial() }
             }
-            .scrollIndicators(.hidden)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                NewsSectionBar(channel: .headline, selection: model.headlineSection) { section in
-                    Task { await model.selectNewsSection(section, for: .headline) }
-                }.padding(.horizontal, 16).padding(.bottom, 6)
-            }
-            .background(ScrollOffsetMemory(key: "headline-\(model.headlineSection)"))
-            .refreshable { await model.refresh() }
-            .onChange(of: model.headlineSection) { _, _ in
-                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("headline-top", anchor: .top) }
-            }
-            .task { await model.loadInitial() }
         }
     }
 }
@@ -627,61 +632,62 @@ struct WeiboChannelPage: View {
     @State private var safari: SafariTarget?
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 10) {
-                DiscoverChannelHeader(channel: .weibo)
-                switch model.hotState {
-                case .loading where model.hotItems.isEmpty, .idle:
-                    NewsSkeleton()
-                case .failed(let message) where model.hotItems.isEmpty:
-                    DiscoverErrorState(message: message) {
-                        Task { await model.loadHot(force: true) }
-                    }
-                default:
-                    WeiboHotHeader(
-                        board: model.hotBoard,
-                        source: model.hotSource,
-                        updatedAt: model.hotUpdatedAt,
-                        count: model.hotItems.count
-                    )
-                    ForEach(model.hotItems) { item in
-                        if let url = item.url {
-                            Button { safari = SafariTarget(url: url) } label: {
-                                WeiboHotRowCard(item: item)
-                            }
-                            .buttonStyle(.plain)
-                        } else {
-                            WeiboHotRowCard(item: item)
-                        }
-                    }
-                    Text("来源：\(model.hotSource)；\(model.hotNote)")
-                        .whaleFont(size: 13)
-                        .foregroundStyle(WhaleTheme.muted.opacity(0.82))
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 6)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 30)
-            .horizontalTabSwipe(
-                onPrevious: { model.stepHotBoard(by: -1) },
-                onNext: { model.stepHotBoard(by: 1) }
-            )
-        }
-        .scrollIndicators(.hidden)
-        .safeAreaInset(edge: .top, spacing: 0) {
+        VStack(spacing: 0) {
             HotBoardBar(selection: model.hotBoard) { board in
                 Task { await model.selectHotBoard(board) }
             }.padding(.horizontal, 16).padding(.bottom, 6)
-        }
-        .background(ScrollOffsetMemory(key: "weibo"))
-        .refreshable { await model.loadHot(force: true) }
-        .task { await model.loadInitial() }
-        .sheet(item: $safari) { target in
-            InAppSafari(url: target.url)
-                .ignoresSafeArea()
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 10) {
+                    DiscoverChannelHeader(channel: .weibo)
+                    switch model.hotState {
+                    case .loading where model.hotItems.isEmpty, .idle:
+                        NewsSkeleton()
+                    case .failed(let message) where model.hotItems.isEmpty:
+                        DiscoverErrorState(message: message) {
+                            Task { await model.loadHot(force: true) }
+                        }
+                    default:
+                        WeiboHotHeader(
+                            board: model.hotBoard,
+                            source: model.hotSource,
+                            updatedAt: model.hotUpdatedAt,
+                            count: model.hotItems.count
+                        )
+                        ForEach(model.hotItems) { item in
+                            if let url = item.url {
+                                Button { safari = SafariTarget(url: url) } label: {
+                                    WeiboHotRowCard(item: item)
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                WeiboHotRowCard(item: item)
+                            }
+                        }
+                        Text("来源：\(model.hotSource)；\(model.hotNote)")
+                            .whaleFont(size: 13)
+                            .foregroundStyle(WhaleTheme.muted.opacity(0.82))
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 6)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 30)
+                .horizontalTabSwipe(
+                    onPrevious: { model.stepHotBoard(by: -1) },
+                    onNext: { model.stepHotBoard(by: 1) }
+                )
+            }
+            .scrollIndicators(.hidden)
+
+            .background(ScrollOffsetMemory(key: "weibo"))
+            .refreshable { await model.loadHot(force: true) }
+            .task { await model.loadInitial() }
+            .sheet(item: $safari) { target in
+                InAppSafari(url: target.url)
+                    .ignoresSafeArea()
+            }
         }
     }
 }

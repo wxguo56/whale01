@@ -52,8 +52,11 @@ final class InteractionUITests: XCTestCase {
         app.tabBars.buttons["发现"].tap()
         let all = app.buttons["discover-section-ai-all"]
         XCTAssertTrue(all.waitForExistence(timeout: 10))
+        let reading = app.descendants(matching: .any).matching(identifier: "discover-reading-ai").firstMatch
+        XCTAssertTrue(reading.waitForExistence(timeout: 10))
+        XCTAssertGreaterThanOrEqual(reading.frame.minY, all.frame.maxY - 1)
         let baseline = all.frame.minY
-        app.otherElements["discover-content-ai"].swipeUp()
+        reading.swipeUp()
         XCTAssertEqual(all.frame.minY, baseline, accuracy: 1)
         app.buttons["discover-section-ai-coding"].tap()
         XCTAssertEqual(all.frame.minY, baseline, accuracy: 1)
