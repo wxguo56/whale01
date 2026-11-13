@@ -92,7 +92,7 @@ private actor PausedDemoTransport: AgentTransport {
         return await withCheckedContinuation { continuation = $0 }
     }
     func releaseHealth() {
-        continuation?.resume(returning: HealthResponse(status: "ok", executionMode: "mock", modelMode: "mock", adapterConfigured: true, tools: 0, authRequired: false))
+        continuation?.resume(returning: HealthResponse(status: "ok", modelMode: "mock", executionMode: "mock", adapterConfigured: true, tools: 0, requiresDeferExecution: false, authRequired: false))
         continuation = nil
     }
     func turnSnapshot(turnId: String) async throws -> AgentTurnResponse { throw URLError(.unsupportedURL) }
