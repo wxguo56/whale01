@@ -4,8 +4,9 @@ import SwiftUI
 
 @MainActor
 final class DiscoverModel: ObservableObject {
-    let client = DiscoverClient()
-    private let store = WatchlistStore.shared
+    let client: DiscoverClient
+    private let marketProvider: any MarketDataProvider
+    private let store: WatchlistStore
     private let defaults = UserDefaults.standard
     private static let aiSectionKey = "whale.discover.aiSection"
     private static let headlineSectionKey = "whale.discover.headlineSection"
@@ -87,9 +88,15 @@ final class DiscoverModel: ObservableObject {
     @Published private(set) var searchResults: [StockSearchResult] = []
     @Published private(set) var searchState: DiscoverLoadState = .idle
 
-    init(initialChannel: DiscoverChannel = .ai) {
+    init(initialChannel: DiscoverChannel = .ai, marketProvider: (any MarketDataProvider)? = nil,
+         watchlistStore: WatchlistStore? = nil) {
+        let contentClient = DiscoverClient()
+        client = contentClient
+        self.marketProvider = marketProvider ?? contentClient
+        let selectedStore = watchlistStore ?? WatchlistStore.shared
+        store = selectedStore
         channel = initialChannel
-        watchlist = store.symbols
+        watchlist = selectedStore.symbols
         let saved = UserDefaults.standard
         let savedAISection = saved.string(forKey: Self.aiSectionKey) ?? "all"
         aiSection = DiscoverChannel.ai.newsSections.contains { $0.id == savedAISection } ? savedAISection : "all"
@@ -450,7 +457,7 @@ final class DiscoverModel: ObservableObject {
         if indexes.isEmpty && watchQuotes.isEmpty { marketState = .loading }
         var messages: [String] = []
         do {
-            let response = try await client.indexes()
+            let response = try await marketProvider.indexes()
             guard marketToken == token else { return }
             indexes = response.quotes
             indexesUpdatedAt = response.updatedAt
@@ -462,13 +469,13 @@ final class DiscoverModel: ObservableObject {
         }
         if !symbols.isEmpty {
             do {
-                let response = try await client.quotes(symbols: symbols)
+                let response = try await marketProvider.quotes(symbols: symbols)
                 guard marketToken == token, watchlist == symbols else { return }
                 watchQuotes = response.quotes.filter { watchlist.contains($0.symbol) }
                 watchUpdatedAt = response.updatedAt
                 marketSource = response.source
                 messages += (response.errors ?? []).map(\.message)
-                let flows = await client.todayFundFlows(symbols: symbols)
+                let flows = await marketProvider.todayFundFlows(symbols: symbols)
                 guard marketToken == token, watchlist == symbols else { return }
                 watchFlows = flows.filter { watchlist.contains($0.key) }
             } catch {
@@ -513,6 +520,14 @@ final class DiscoverModel: ObservableObject {
         searchState = .idle
     }
 
+    func searchNow() async {
+        searchTask?.cancel()
+        searchToken = UUID()
+        let text = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { clearSearch(); return }
+        await runSearch(text, token: searchToken)
+    }
+
     func addToWatchlist(_ symbol: String) {
         guard store.add(symbol) else { return }
     }
@@ -534,7 +549,7 @@ final class DiscoverModel: ObservableObject {
         guard searchToken == token, !Task.isCancelled else { return }
         searchState = .loading
         do {
-            let response = try await client.search(text)
+            let response = try await marketProvider.search(text)
             guard searchToken == token, !Task.isCancelled, searchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == text else { return }
             searchResults = response.results
             searchState = response.results.isEmpty ? .failed("没有找到「\(text)」匹配的 A 股或指数") : .loaded
