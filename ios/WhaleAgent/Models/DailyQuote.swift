@@ -132,10 +132,10 @@ enum DailyQuote {
         let day = calendar.ordinality(of: .day, in: .era, for: date) ?? 0
         let hour = calendar.component(.hour, from: date)
         let slot = min(slotsPerDay - 1, max(0, hour / 6))
-        let dayInCycle = ((day % daysPerCycle) + daysPerCycle) % daysPerCycle
-        let cycle = day / daysPerCycle
-        let raw = dayInCycle * slotsPerDay + slot
-        return (raw * 37 + cycle * 53) % pool.count
+        // 用绝对时段序号做排列：37 与 120 互质，任意连续 120 个时段正好覆盖整池，
+        // 因此无论从哪一天开始，连续 30 天的 120 条都不会重复。
+        let globalSlot = day * slotsPerDay + slot
+        return ((globalSlot * 37) % pool.count + pool.count) % pool.count
     }
 
     static func text(at date: Date, calendar: Calendar = .current) -> String {
