@@ -53,10 +53,12 @@ struct ConversationTabView: View {
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: showingStarter)
         }
         .onChange(of: model.messages.count) { oldCount, newCount in
-            if newCount > oldCount || newCount == 0 {
+            if newCount == 0 {
                 browsingStarter = false
+                showConversation = false
             }
             if newCount > oldCount && model.messages.last?.role == .user {
+                browsingStarter = false
                 showConversation = true
             }
         }

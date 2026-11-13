@@ -538,7 +538,7 @@ struct WhaleHomeCanvas: View {
 
     private var todayEvents: [CalendarEventPreview] {
         model.upcomingEvents
-            .filter { Calendar.current.isDateInToday($0.startAt) }
+            .filter { Calendar.current.isDateInToday($0.startAt) && $0.endAt > Date() }
             .sorted { $0.startAt < $1.startAt }
     }
 

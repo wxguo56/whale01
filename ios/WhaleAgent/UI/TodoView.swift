@@ -825,13 +825,16 @@ struct TodoView: View {
 
     private func undoLastChange() {
         guard let action = undoAction, !isSubmitting else { return }
+        let pressedAt = Date()
+        let expiry = undoExpiresAt
+        guard pressedAt <= expiry else { undoAction = nil; return }
         isSubmitting = true
         Task {
             defer { isSubmitting = false }
             do {
                 let latest = try await model.loadTodoReminders(includeCompleted: true)
                 let current = latest.first { $0.id == action.expected.id }
-                guard action.canUndo(current: current, now: Date(), expiresAt: undoExpiresAt) else {
+                guard action.canUndo(current: current, now: pressedAt, expiresAt: expiry) else {
                     throw ToolExecutionError(code: "undo_changed", message: "事项已变化或撤销时间已过，请到待办里核对。")
                 }
                 switch action {
