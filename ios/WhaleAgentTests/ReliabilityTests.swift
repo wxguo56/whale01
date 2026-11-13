@@ -63,6 +63,8 @@ final class ReliabilityTests: XCTestCase {
         XCTAssertEqual(scheduled.title, "取快递")
         let relative = TodoQuickParser.parseAdd("10分钟后喝水", now: now, calendar: calendar)
         XCTAssertEqual(relative.dueAt?.timeIntervalSince(now), 600)
+        XCTAssertEqual(TodoQuickParser.parseAdd("半小时后喝水", now: now, calendar: calendar).dueAt?.timeIntervalSince(now), 1800)
+        XCTAssertEqual(TodoQuickParser.parseAdd("1.5小时后喝水", now: now, calendar: calendar).dueAt?.timeIntervalSince(now), 5400)
         let clockCases: [(String, Int, Int, Int)] = [
             ("明早八点取快递", 14, 8, 0),
             ("明天下午两点十五分取快递", 14, 14, 15),

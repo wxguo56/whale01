@@ -38,12 +38,12 @@ enum TodoQuickParser {
         }
         text = text.trimmingCharacters(in: CharacterSet(charactersIn: "：:，,。. "))
         guard !text.isEmpty else { return Added(title: "", dueAt: nil, validationError: "请写具体的待办内容。") }
-        if let regex = try? NSRegularExpression(pattern: "([0-9]+)\\s*(分钟|小时)后"),
+        if let regex = try? NSRegularExpression(pattern: "(?<![0-9.])([0-9]+(?:\\.[0-9]+)?|半)\\s*个?\\s*(分钟|小时)后"),
            let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..<text.endIndex, in: text)),
            let amountRange = Range(match.range(at: 1), in: text),
            let unitRange = Range(match.range(at: 2), in: text),
            let tokenRange = Range(match.range, in: text),
-           let amount = Double(text[amountRange]), amount > 0, amount <= 10080 {
+           let amount = text[amountRange] == "半" ? 0.5 : Double(text[amountRange]), amount > 0, amount <= 10080 {
             let seconds = amount * (text[unitRange] == "小时" ? 3600 : 60)
             let title = text.replacingCharacters(in: tokenRange, with: "").replacingOccurrences(of: "提醒我", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
             return Added(title: title, dueAt: now.addingTimeInterval(seconds))
@@ -70,7 +70,7 @@ enum TodoQuickParser {
             }
         }
 
-        let temporalMarker = #"([0-9一二三四五六七八九十两]+\s*(分钟|小时|天|周)(后|前)|[0-9一二三四五六七八九十两]+\s*[点时]|[:：][0-9]|下周|下个月|月底|周末|早上|晚上|下午|中午|今晚|明早|明晚|稍后|待会|等会|[0-9]+月[0-9]+[日号])"#
+        let temporalMarker = #"([0-9一二三四五六七八九十两半几]+\s*个?\s*(分钟|小时|天|周)(后|前)|[0-9一二三四五六七八九十两]+\s*[点时]|[:：][0-9]|下周|下个月|月底|周末|早上|晚上|下午|中午|今晚|明早|明晚|稍后|待会|等会|[0-9]+月[0-9]+[日号])"#
         if resolveDay(in: text, now: now, calendar: calendar) != nil || resolveTime(in: text) != nil || text.range(of: temporalMarker, options: .regularExpression) != nil {
             return Added(title: text, dueAt: nil, validationError: "提醒时间不完整、已过去或暂时无法解析。请写清日期和时间，例如“明天下午三点取快递”；草稿已保留。")
         }
