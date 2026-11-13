@@ -1,7 +1,23 @@
 import XCTest
+import UIKit
 @testable import WhaleAgent
 
 final class ReliabilityTests: XCTestCase {
+    @MainActor
+    func testCompanionAssetsDecodeAsVisibleImages() throws {
+        for mood in WhaleCompanionView.Mood.allCases {
+            let image = try XCTUnwrap(UIImage(named: "Aurora-\(mood.rawValue)"), mood.rawValue)
+            XCTAssertGreaterThan(image.size.width, 0)
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = 1
+            let thumbnail = UIGraphicsImageRenderer(size: CGSize(width: 8, height: 8), format: format).image { _ in
+                image.draw(in: CGRect(x: 0, y: 0, width: 8, height: 8))
+            }
+            let cgImage = try XCTUnwrap(thumbnail.cgImage)
+            let data = try XCTUnwrap(cgImage.dataProvider?.data) as Data
+            XCTAssertTrue(data.contains { $0 != 0 }, "\(mood.rawValue) must render nonempty pixels")
+        }
+    }
     func testDiscussionDoesNotBecomeWeatherExecution() {
         for text in ["不要查天气", "天气这个词怎么解释", "假如我要导航回家", "你能不能查天气", "不用导航回家", "“查天气”", "查天气这句话怎么翻译"] {
             XCTAssertNil(RealDataGuard.intent(for: text), text)
