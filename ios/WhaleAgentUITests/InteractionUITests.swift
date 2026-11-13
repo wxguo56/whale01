@@ -2,6 +2,7 @@ import XCTest
 
 final class InteractionUITests: XCTestCase {
     private func launch() -> XCUIApplication {
+        continueAfterFailure = false
         let app = XCUIApplication()
         app.launchEnvironment["WHALE_DEMO_HOME"] = "1"
         app.launch()
@@ -13,8 +14,8 @@ final class InteractionUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["待办"].exists)
         XCTAssertTrue(app.tabBars.buttons["发现"].exists)
         app.tabBars.buttons["发现"].tap()
-        XCTAssertTrue(app.buttons["游戏动态"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["热榜"].exists)
+        XCTAssertTrue(app.buttons["discover-channel-game"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["discover-channel-weibo"].exists)
         app.tabBars.buttons["助手"].tap()
         XCTAssertTrue(app.staticTexts["常用操作"].waitForExistence(timeout: 5))
     }
@@ -26,6 +27,7 @@ final class InteractionUITests: XCTestCase {
         composer.typeText("draft preserved without sending")
         app.buttons["收起键盘"].tap()
         app.tabBars.buttons["发现"].tap()
+        XCTAssertTrue(app.buttons["discover-channel-music"].waitForExistence(timeout: 10))
         app.tabBars.buttons["助手"].tap()
         XCTAssertTrue((app.descendants(matching: .any).matching(identifier: "assistant-composer").firstMatch.value as? String ?? "").contains("draft preserved"))
         app.terminate()

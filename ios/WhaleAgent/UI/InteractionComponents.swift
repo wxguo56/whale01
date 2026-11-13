@@ -88,12 +88,13 @@ struct DiscoverHubView: View {
                                 Spacer(minLength: 0)
                                 Image(systemName: "chevron.right").foregroundStyle(WhaleTheme.muted)
                             }.padding(.vertical, 13).contentShape(Rectangle())
-                        }.buttonStyle(.plain).accessibilityLabel(channel.title)
+                        }.buttonStyle(.plain).accessibilityElement(children: .combine)
+                            .accessibilityLabel(channel.title).accessibilityIdentifier("discover-channel-" + channel.rawValue)
                         if channel != DiscoverChannel.allCases.last { Divider() }
                     }
                 }.whaleCard()
             }.padding(20)
         }.scrollIndicators(.hidden).background(WhaleTheme.background)
-            .background(ScrollOffsetMemory(key: "discover-hub"))
+            .accessibilityIdentifier("discover-hub")
     }
 }

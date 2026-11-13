@@ -5,6 +5,7 @@ parser.add_argument('--branch', default='codex/whale-reliability')
 parser.add_argument('--run', type=int)
 parser.add_argument('--dispatch')
 parser.add_argument('--scope')
+parser.add_argument('--log-pattern')
 parser.add_argument('--logs', action='store_true')
 parser.add_argument('--download-artifact', type=int)
 parser.add_argument('--out')
@@ -72,6 +73,9 @@ elif args.run:
             try: log = download('/actions/jobs/' + str(job['id']) + '/logs').decode('utf-8', errors='replace')
             except urllib.error.HTTPError as error:
                 print('Logs unavailable: HTTP ' + str(error.code))
+                continue
+            if args.log_pattern:
+                print('\n'.join(line for line in log.splitlines() if re.search(args.log_pattern, line))[-18000:])
                 continue
             errors = [line for line in log.splitlines() if re.search(r'error:|Test Case .*failed|fatal error|XCTAssert|failed -|Executed [0-9]+ tests|Test Suite .*passed|Testing started|Test Case .*passed', line)]
             if job['conclusion'] == 'failure':
