@@ -1,0 +1,89 @@
+[
+  {
+    "attachments": [
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "0659F121-4DE6-4FF2-841A-C2B36372789E.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "fixed-shell-ai_0_26D64E56-B28F-43C4-A280-03185CEA3D03.png",
+        "timestamp": 1794586342.401
+      },
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "235C9A52-0AFC-4C0A-887C-7F54E2701EEF.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "fixed-shell-market_0_795D26BE-7BE1-43A1-A709-E347489D0CFF.png",
+        "timestamp": 1794586329.759
+      },
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "FA556197-759C-4B39-9879-4A42455F05D8.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "fixed-shell-headline_0_46905D14-8789-47C2-89E3-757E1AC620B7.png",
+        "timestamp": 1794586325.003
+      },
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "D992BCC0-D315-4920-A8B6-D279F974D646.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "fixed-shell-game_0_9818D010-C62E-4AD8-8ACB-A93CB3C01DF3.png",
+        "timestamp": 1794586318.353
+      }
+    ],
+    "testIdentifier": "InteractionUITests/testChannelSwitchesKeepNavigationAndSelectorFramesFixed()",
+    "testIdentifierURL": "test://com.apple.xcode/WhaleAgent/WhaleAgentUITests/InteractionUITests/testChannelSwitchesKeepNavigationAndSelectorFramesFixed"
+  },
+  {
+    "attachments": [
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "38F1DB81-791C-40CF-BF8C-85C788B949A6.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "draft-after-discovery-tab_0_ECF11943-9CA2-4D5D-9589-7A4784B0A00B.png",
+        "timestamp": 1794586378.843
+      }
+    ],
+    "testIdentifier": "InteractionUITests/testDraftSurvivesTabSwitchAndAppRelaunchWithoutSending()",
+    "testIdentifierURL": "test://com.apple.xcode/WhaleAgent/WhaleAgentUITests/InteractionUITests/testDraftSurvivesTabSwitchAndAppRelaunchWithoutSending"
+  },
+  {
+    "attachments": [
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "568F417D-0376-4C8D-855B-BF367DB99167.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "pinned-ai-coding_0_E06206AA-8BA5-4223-A5F9-D386E76A2118.png",
+        "timestamp": 1794586430.266
+      }
+    ],
+    "testIdentifier": "InteractionUITests/testNewsSectionSelectorStaysPinnedWhileContentScrollsAndChanges()",
+    "testIdentifierURL": "test://com.apple.xcode/WhaleAgent/WhaleAgentUITests/InteractionUITests/testNewsSectionSelectorStaysPinnedWhileContentScrollsAndChanges"
+  },
+  {
+    "attachments": [
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "E13F15F8-8D48-4C83-A5CD-0FB42C6E58AF.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "discovery-after-tab-tap_0_DC172094-A802-4B02-9367-D440450822F3.png",
+        "timestamp": 1794586463.207
+      }
+    ],
+    "testIdentifier": "InteractionUITests/testThreeTabsKeepDiscoverySeparateFromTheAssistant()",
+    "testIdentifierURL": "test://com.apple.xcode/WhaleAgent/WhaleAgentUITests/InteractionUITests/testThreeTabsKeepDiscoverySeparateFromTheAssistant"
+  }
+]
