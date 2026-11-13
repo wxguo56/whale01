@@ -12,6 +12,7 @@ param(
     [long]$RunId = 0,
     [string]$Repo = "wxguo56/whale01",
     [string]$Destination = (Join-Path $env:USERPROFILE "WhaleAgent-Sideload.ipa"),
+    [string]$ExpectedSourceSHA = "",
     [string]$IpaPass = $env:IPA_PASS,
     [string]$PrivateKeyPath = (Join-Path $env:USERPROFILE ".whale\ipa-private.pem")
 )
@@ -39,6 +40,11 @@ if ($RunId -eq 0) {
     if (-not $run) { throw "No successful iOS Sideload IPA run found." }
     $RunId = $run.id
 }
+$runMetadata = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/actions/runs/$RunId" -Headers $headers
+if ($runMetadata.conclusion -ne "success") { throw "Run $RunId is not a successful build." }
+if ($ExpectedSourceSHA -and $runMetadata.head_sha -ne $ExpectedSourceSHA) {
+    throw "The build does not belong to the expected source commit. No IPA was copied."
+}
 
 $artifacts = (Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/actions/runs/$RunId/artifacts" -Headers $headers).artifacts
 $artifact = $artifacts | Where-Object { $_.name -eq "WhaleAgent-Sideload-ipa-enc" } | Select-Object -First 1
@@ -53,7 +59,7 @@ $work = Join-Path $env:TEMP ("whale-publish-" + [Guid]::NewGuid().ToString("N").
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 $zip = Join-Path $work "ipa.zip"
 
-Invoke-WebRequest -Uri "https://api.github.com/repos/$Repo/actions/artifacts/$($artifact.id)/zip" -Headers $headers -OutFile $zip
+Invoke-WebRequest -Uri "https://api.github.com/repos/$Repo/actions/artifacts/$($artifact.id)/zip?nocache=$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())" -Headers $headers -OutFile $zip
 Expand-Archive -Path $zip -DestinationPath $work -Force
 $ipa = Get-ChildItem -Path $work -Recurse -Filter "WhaleAgent-Sideload.ipa" | Select-Object -First 1
 if (-not $ipa) {
@@ -104,16 +110,26 @@ if (-not $ipa) {
     Write-Host "decrypted IPA_PASS artifact"
 }
 
+$manifestFile = Get-ChildItem -LiteralPath $work -Recurse -Filter 'WhaleAgent-Sideload.manifest.json' | Select-Object -First 1
+$expectedHashFile = Get-ChildItem -LiteralPath $work -Recurse -Filter 'WhaleAgent-Sideload.sha256' | Select-Object -First 1
+if (-not $manifestFile -or -not $expectedHashFile) { throw "This artifact has no candidate identity manifest; it cannot be published as the optimized build." }
+$manifest = Get-Content -LiteralPath $manifestFile.FullName -Raw | ConvertFrom-Json
+$expectedHash = ((Get-Content -LiteralPath $expectedHashFile.FullName -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
+$actualHash = (Get-FileHash -LiteralPath $ipa.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($actualHash -ne $expectedHash -or $actualHash -ne $manifest.ipaSHA256) { throw "IPA checksum mismatch. No IPA was copied." }
+if ($manifest.gitSHA -ne $runMetadata.head_sha) { throw "Artifact source identity mismatch. No IPA was copied." }
+
 $destinationDir = Split-Path -Parent $Destination
 New-Item -ItemType Directory -Force -Path $destinationDir | Out-Null
 Copy-Item -LiteralPath $ipa.FullName -Destination $Destination -Force
+Copy-Item -LiteralPath $manifestFile.FullName -Destination "$Destination.manifest.json" -Force
 
 $hash = (Get-FileHash -LiteralPath $Destination -Algorithm SHA256).Hash.ToLower()
 $sidecar = "$Destination.sha256"
 "$hash  WhaleAgent-Sideload.ipa" | Set-Content -Path $sidecar -Encoding ascii
 $size = (Get-Item -LiteralPath $Destination).Length
 
-$identity = "unknown"
+$identity = "$($manifest.version) $($manifest.installedBuild) source=$($manifest.gitSHA.Substring(0,12))"
 $python = Get-Command python -ErrorAction SilentlyContinue
 if ($python) {
     $probe = Join-Path $work "probe.py"
@@ -127,7 +143,10 @@ print(info.get('CFBundleShortVersionString', '?'), info.get('CFBundleVersion', '
     $identity = (& $python.Source $probe).Trim()
 }
 
-Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+$resolvedWork = [System.IO.Path]::GetFullPath($work)
+$resolvedTemp = [System.IO.Path]::GetFullPath($env:TEMP).TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+if (-not $resolvedWork.StartsWith($resolvedTemp, [System.StringComparison]::OrdinalIgnoreCase)) { throw "Temporary cleanup target is outside the expected temp directory." }
+Remove-Item -LiteralPath $resolvedWork -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host "published run $RunId -> $Destination"
 Write-Host "version/build: $identity"
