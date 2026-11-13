@@ -70,7 +70,8 @@ enum TodoQuickParser {
             }
         }
 
-        if resolveDay(in: text, now: now, calendar: calendar) != nil || resolveTime(in: text) != nil || text.range(of: "(后|前|[点时]|[:：][0-9]|下周|下个月|月底|周末|早上|晚上|下午|中午|今晚|明早|明晚|[0-9]+月[0-9]+[日号])", options: .regularExpression) != nil {
+        let temporalMarker = #"([0-9一二三四五六七八九十两]+\s*(分钟|小时|天|周)(后|前)|[0-9一二三四五六七八九十两]+\s*[点时]|[:：][0-9]|下周|下个月|月底|周末|早上|晚上|下午|中午|今晚|明早|明晚|稍后|待会|等会|[0-9]+月[0-9]+[日号])"#
+        if resolveDay(in: text, now: now, calendar: calendar) != nil || resolveTime(in: text) != nil || text.range(of: temporalMarker, options: .regularExpression) != nil {
             return Added(title: text, dueAt: nil, validationError: "提醒时间不完整、已过去或暂时无法解析。请写清日期和时间，例如“明天下午三点取快递”；草稿已保留。")
         }
         let cleaned = text.replacingOccurrences(of: "提醒我", with: "").trimmingCharacters(in: .whitespacesAndNewlines)

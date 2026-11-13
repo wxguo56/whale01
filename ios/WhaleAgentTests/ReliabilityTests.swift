@@ -49,6 +49,12 @@ final class ReliabilityTests: XCTestCase {
         let simple = TodoQuickParser.parseAdd("买菜", now: now, calendar: calendar)
         XCTAssertNil(simple.validationError)
         XCTAssertEqual(simple.title, "买菜")
+        for title in ["后期剪辑", "购买时钟", "画重点", "对比前两版"] {
+            let plain = TodoQuickParser.parseAdd(title, now: now, calendar: calendar)
+            XCTAssertNil(plain.validationError, title)
+            XCTAssertNil(plain.dueAt, title)
+            XCTAssertEqual(plain.title, title)
+        }
         XCTAssertNil(TodoQuickParser.parseAdd("新增待办：把文案改成蓝色", now: now, calendar: calendar).validationError)
         let scheduled = TodoQuickParser.parseAdd("明天下午三点取快递", now: now, calendar: calendar)
         XCTAssertNil(scheduled.validationError)
