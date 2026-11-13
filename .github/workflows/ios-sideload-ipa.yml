@@ -2,11 +2,6 @@ name: iOS Sideload IPA
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "ios/**"
-      - "!ios/**/*.md"
-      - ".github/workflows/ios-sideload-ipa.yml"
 
 concurrency:
   group: ios-sideload-${{ github.ref }}

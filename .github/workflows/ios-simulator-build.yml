@@ -1,120 +1,98 @@
-name: iOS Simulator Build
+name: Push Quick Validation
 
 on:
   workflow_dispatch:
+    inputs:
+      scope:
+        description: Quick compilation or full simulator interaction regression
+        type: choice
+        options: [quick, interaction]
+        default: quick
   push:
     paths:
       - "ios/**"
       - "!ios/**/*.md"
-      - ".github/workflows/ios-simulator-build.yml"
+      - "backend/**"
+      - "!backend/**/*.md"
+      - "tools/build_identity.py"
+      - ".github/workflows/ios-*.yml"
   pull_request:
     paths:
       - "ios/**"
       - "!ios/**/*.md"
-      - ".github/workflows/ios-simulator-build.yml"
+      - "backend/**"
+      - "!backend/**/*.md"
+      - "tools/build_identity.py"
+      - ".github/workflows/ios-*.yml"
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ios-simulator-${{ github.ref }}
+  group: whale-quick-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  backend:
+    if: ${{ inputs.scope != 'interaction' }}
+    name: Backend fixture regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run controlled backend tests
+        working-directory: backend
+        run: npm test
+
   build:
-    name: Build unsigned simulator app
+    if: ${{ inputs.scope != 'interaction' }}
+    name: Compile app and test targets without simulator boot
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Show Apple toolchain
-        run: |
-          xcodebuild -version
-          xcrun simctl list runtimes
-
+        run: xcodebuild -version
       - name: Install XcodeGen
         run: brew install xcodegen
-
       - name: Generate source identity
         run: python3 tools/build_identity.py
-
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate
-
-      - name: Inspect generated project
+      - name: Compile app and both test bundles
         working-directory: ios
         run: |
-          xcodebuild -list -project WhaleAgent.xcodeproj
-          xcodebuild -showsdks
-
-      - name: Build for iOS Simulator
-        working-directory: ios
-        run: |
-          set -o pipefail
-          xcodebuild \
-            -project WhaleAgent.xcodeproj \
-            -scheme WhaleAgent \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath build \
-          MARKETING_VERSION=0.7.0 \
-            CURRENT_PROJECT_VERSION="113.${{ github.run_attempt }}" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            build
-
-      - name: Run native unit tests
-        working-directory: ios
-        run: |
-          set -o pipefail
-          DEVICE_ID=$(xcrun simctl list devices available -j | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; c=[x for rt in d.values() for x in rt if x["name"].startswith("iPhone")]; c.sort(key=lambda x: x["name"] != "iPhone 16 Pro"); print(c[0]["udid"] if c else "")')
-          test -n "$DEVICE_ID"
-          xcrun simctl boot "$DEVICE_ID" || true
-          xcrun simctl bootstatus "$DEVICE_ID" -b
-          xcodebuild \
-            -project WhaleAgent.xcodeproj \
-            -scheme WhaleAgent \
-            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
-            -destination-timeout 120 \
-            -parallel-testing-enabled NO \
-            -test-timeouts-enabled YES \
-            -default-test-execution-time-allowance 30 \
-            -maximum-test-execution-time-allowance 60 \
-            -derivedDataPath build \
-            -resultBundlePath build/TestResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO \
-            test | tee test.log
-
-      - name: Run navigation and draft UI tests
-        working-directory: ios
-        run: |
-          set -o pipefail
-          DEVICE_ID=$(xcrun simctl list devices available -j | /usr/bin/python3 -c 'import json,sys; c=[x for rt in json.load(sys.stdin)["devices"].values() for x in rt if x["name"].startswith("iPhone")]; c.sort(key=lambda x: x["name"] != "iPhone 16 Pro"); print(c[0]["udid"])')
-          xcodebuild -project WhaleAgent.xcodeproj -scheme WhaleAgentInteractions \
-            -destination "platform=iOS Simulator,id=$DEVICE_ID" -parallel-testing-enabled NO \
-            -test-timeouts-enabled YES -maximum-test-execution-time-allowance 90 \
-            -derivedDataPath build -resultBundlePath build/InteractionResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO test | tee interaction-test.log
-
-      - name: Export interaction screenshots
-        if: always()
-        working-directory: ios
-        run: |
-          if [ -d build/InteractionResults.xcresult ]; then
-            xcrun xcresulttool export attachments --path build/InteractionResults.xcresult --output-path build/interaction-attachments
-          fi
-
-      - name: Upload test log
+          set -euo pipefail
+          for SCHEME in WhaleAgent WhaleAgentInteractions; do
+            xcodebuild \
+              -project WhaleAgent.xcodeproj \
+              -scheme "$SCHEME" \
+              -configuration Debug \
+              -sdk iphonesimulator \
+              -destination 'generic/platform=iOS Simulator' \
+              -derivedDataPath build \
+              MARKETING_VERSION=0.7.0 \
+              CURRENT_PROJECT_VERSION="113.${{ github.run_attempt }}" \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGN_IDENTITY="" \
+              build-for-testing | tee -a compile.log
+          done
+      - name: Upload compile log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-simulator-test-log
-          path: |
-            ios/test.log
-            ios/interaction-test.log
-            ios/build/InteractionResults.xcresult
-            ios/build/interaction-attachments
-            ios/build/TestResults.xcresult
+          name: ios-quick-compile-log
+          path: ios/compile.log
+          retention-days: 7
           if-no-files-found: warn
+
+  interaction:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.scope == 'interaction' }}
+    name: Manually requested full regression
+    uses: ./.github/workflows/ios-ui-tests.yml

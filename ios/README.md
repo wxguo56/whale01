@@ -22,10 +22,10 @@ git remote add origin https://github.com/<账号>/<仓库>.git
 git push -u origin main
 ```
 
-3. 推送包含 `ios/**` 的提交会自动触发 `iOS Simulator Build`；也可以在 Actions 页面手动 `Run workflow`。
-4. 构建结束后下载 artifact `ios-simulator-build-log`，查看完整 `ios/build.log`。
+3. 推送涉及 iOS、后端或 iOS 工作流的提交会自动触发 `Push Quick Validation`；也可以在 Actions 页面手动 `Run workflow`。
+4. 构建结束后下载 artifact `ios-quick-compile-log`，查看完整 `ios/compile.log`。
 
-判定通过的标准是：macOS job 为绿色，且日志包含 `BUILD SUCCEEDED`。只看到工作流启动、或者只拿到源码 ZIP，都不算编译通过。
+快速编译通过的标准是：macOS job 为绿色，且两个 scheme 日志都包含 `TEST BUILD SUCCEEDED`。这里仅编译测试目标；实际测试是否通过，需要查看手动测试结果。
 
 ## 本轮收紧的真实执行边界
 
@@ -52,7 +52,13 @@ xcodebuild \
 
 ## GitHub Actions 验证
 
-推送包含 `ios/**` 的提交，或在 Actions 页面手动运行 `iOS Simulator Build`。工作流在 `macos-15` 上安装 XcodeGen、生成工程并做不签名的模拟器编译。
+推送与 PR 自动运行 `Push Quick Validation`：Ubuntu 执行受控的后端回归，macOS 编译 App、原生单元测试和 UI 测试目标，不启动模拟器。新提交会取消同一分支仍在运行的旧快速校验。
+
+完整测试在 GitHub → Actions → `iOS Manual Interaction Tests` → `Run workflow` 中手动触发，选择待验分支。它启动 iPhone 模拟器，执行原生单元测试以及导航、草稿跨页/重启的 UI 测试；测试失败仍导出日志、xcresult 和截图。编译通过不能代替这些实际测试。
+
+在新工作流尚未合入默认分支时，也可以手动运行已有的 `Push Quick Validation`，选择 `scope=interaction`。该入口调用同一完整测试流程；默认 `scope=quick` 只做快速校验，push/PR 不会进入完整测试。
+
+`iOS UI Snapshot` 保留手动截图入口，`scope=interaction` 覆盖助手、待办、发现、设置、深色和大字号。`iOS Sideload IPA` 改为仅手动运行，候选完整测试通过后再打包，原有身份核对和加密上传保持有效。
 
 ## 真机签名前必须补齐
 

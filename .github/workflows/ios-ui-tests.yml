@@ -1,0 +1,77 @@
+name: iOS Manual Interaction Tests
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: whale-ui-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Native unit and navigation UI regression
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate source identity
+        run: python3 tools/build_identity.py
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+      - name: Boot iPhone simulator
+        run: |
+          set -euo pipefail
+          DEVICE_ID=$(xcrun simctl list devices available -j | /usr/bin/python3 -c 'import json,sys; c=[x for rt in json.load(sys.stdin)["devices"].values() for x in rt if x["name"].startswith("iPhone")]; c.sort(key=lambda x: x["name"] != "iPhone 16 Pro"); print(c[0]["udid"] if c else "")')
+          test -n "$DEVICE_ID"
+          echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$DEVICE_ID" || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+      - name: Run native unit tests
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild -project WhaleAgent.xcodeproj -scheme WhaleAgent \
+            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+            -destination-timeout 120 -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 30 \
+            -maximum-test-execution-time-allowance 60 \
+            -derivedDataPath build -resultBundlePath build/TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO test | tee test.log
+      - name: Run navigation and draft UI tests
+        if: ${{ !cancelled() }}
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild -project WhaleAgent.xcodeproj -scheme WhaleAgentInteractions \
+            -destination "platform=iOS Simulator,id=$DEVICE_ID" -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES -maximum-test-execution-time-allowance 90 \
+            -derivedDataPath build -resultBundlePath build/InteractionResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO test | tee interaction-test.log
+      - name: Export interaction screenshots
+        if: always()
+        working-directory: ios
+        run: |
+          if [ -d build/InteractionResults.xcresult ]; then
+            xcrun xcresulttool export attachments --path build/InteractionResults.xcresult --output-path build/interaction-attachments
+          fi
+      - name: Upload test logs and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-interaction-test-results
+          retention-days: 14
+          path: |
+            ios/test.log
+            ios/interaction-test.log
+            ios/build/InteractionResults.xcresult
+            ios/build/interaction-attachments
+            ios/build/TestResults.xcresult
+          if-no-files-found: warn
