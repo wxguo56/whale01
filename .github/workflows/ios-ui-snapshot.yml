@@ -97,19 +97,19 @@ jobs:
           if [ "$SNAPSHOT_SCOPE" = "interaction" ]; then
             for state in HOME HUB TODO SETTINGS; do
               env "SIMCTL_CHILD_WHALE_DEMO_${state}=1" xcrun simctl launch "$DEVICE_ID" com.whale01.agent
-              sleep 4
-              xcrun simctl io "$DEVICE_ID" screenshot "snapshots/habits-${state}.png"
+              sleep 15
+              capture_snapshot "snapshots/habits-${state}.png"
               xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
             done
             xcrun simctl ui "$DEVICE_ID" appearance dark
             SIMCTL_CHILD_WHALE_DEMO_HOME=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
             sleep 3
-            xcrun simctl io "$DEVICE_ID" screenshot snapshots/habits-HOME-dark.png
+            capture_snapshot snapshots/habits-HOME-dark.png
             xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
             xcrun simctl ui "$DEVICE_ID" appearance light
             SIMCTL_CHILD_WHALE_DEMO_HOME=1 SIMCTL_CHILD_WHALE_DEMO_LARGE_TEXT=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
             sleep 3
-            xcrun simctl io "$DEVICE_ID" screenshot snapshots/habits-HOME-large-text.png
+            capture_snapshot snapshots/habits-HOME-large-text.png
             xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
             exit 0
           fi
