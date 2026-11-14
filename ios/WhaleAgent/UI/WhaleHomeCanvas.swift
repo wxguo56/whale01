@@ -69,18 +69,35 @@ struct WhaleHomeCanvas: View {
                         if channel == .music { onOpenMusic() }
                         else { onOpenDiscover(channel) }
                     } label: {
-                        VStack(alignment: .leading, spacing: 11) {
-                            Image(systemName: channel.icon).font(.title3.weight(.semibold))
-                                .frame(width: 38, height: 38)
-                                .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
-                            Spacer(minLength: 0)
-                            Text(channel.title).whaleFont(size: 17, weight: .bold, design: .rounded)
-                                .fixedSize(horizontal: false, vertical: true)
-                            RollingSummaryText(
-                                lines: summaryLines(for: channel),
-                                delay: Double(offset) * 0.55
-                            )
-                        }.foregroundStyle(.white).padding(14)
+                        ZStack(alignment: .topLeading) {
+                            VStack(alignment: .leading, spacing: 0) {
+                                Image(systemName: channel.icon).font(.title3.weight(.semibold))
+                                    .frame(width: 38, height: 38)
+                                    .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+                                Spacer(minLength: 8)
+                                Text(channel.title).whaleFont(size: 17, weight: .bold, design: .rounded)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .frame(maxWidth: 70, maxHeight: .infinity, alignment: .leading)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(spacing: 4) {
+                                    Circle().fill(.white.opacity(0.5)).frame(width: 4, height: 4)
+                                    Text("实时摘要")
+                                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(.white.opacity(0.55))
+                                }
+                                RollingSummaryText(
+                                    lines: summaryLines(for: channel),
+                                    delay: Double(offset) * 0.55,
+                                    maxLines: 3,
+                                    fontSize: 10.5
+                                )
+                            }
+                            .padding(.leading, 76)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                        }
+                        .foregroundStyle(.white).padding(14)
                             .frame(maxWidth: .infinity, minHeight: 128, alignment: .leading)
                             .background {
                                 let shape = RoundedRectangle(cornerRadius: 19, style: .continuous)

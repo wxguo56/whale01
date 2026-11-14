@@ -100,6 +100,8 @@ struct RollingSummaryText: View {
     let lines: [String]
     var delay: Double = 0
     var interval: Double = 5.2
+    var maxLines: Int = 1
+    var fontSize: CGFloat = 11.5
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var index = 0
@@ -109,12 +111,16 @@ struct RollingSummaryText: View {
         return lines[min(index, lines.count - 1)]
     }
 
+    private var lineHeight: CGFloat { fontSize * 1.25 + 1 }
+
     var body: some View {
-        ZStack(alignment: .leading) {
+        ZStack(alignment: .topLeading) {
             Text(current)
-                .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                .font(.system(size: fontSize, weight: .medium, design: .rounded))
                 .foregroundStyle(.white.opacity(0.82))
-                .lineLimit(1)
+                .lineLimit(maxLines)
+                .lineSpacing(1)
+                .multilineTextAlignment(.leading)
                 .truncationMode(.tail)
                 .id(index)
                 .transition(.asymmetric(
@@ -122,8 +128,8 @@ struct RollingSummaryText: View {
                     removal: .move(edge: .top).combined(with: .opacity)
                 ))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 15)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(height: lineHeight * CGFloat(maxLines), alignment: .topLeading)
         .clipped()
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.42), value: index)
         .accessibilityElement(children: .ignore)
