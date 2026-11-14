@@ -363,6 +363,24 @@ final class CoreTests: XCTestCase {
     }
 
     @MainActor
+    func testWeatherFallbackMapsWWOToChinese() {
+        XCTAssertEqual(WeatherExecutor.wmoEquivalent(forWWO: 113), 0)
+        XCTAssertEqual(WeatherExecutor.wmoEquivalent(forWWO: 266), 61)
+        XCTAssertEqual(WeatherExecutor.wmoEquivalent(forWWO: 389), 95)
+        XCTAssertEqual(WeatherExecutor.summary(for: WeatherExecutor.wmoEquivalent(forWWO: 266)), "小雨")
+    }
+
+    func testWeatherFallbackParsesWttrPayloadWithoutFabricating() throws {
+        let json = """
+        {"current_condition":[{"temp_C":"17","FeelsLikeC":"18","humidity":"94","precipMM":"0.2","windspeedKmph":"9","weatherCode":"266"}],"weather":[{"date":"2026-11-14","maxtempC":"20","mintempC":"16","astronomy":[{"sunrise":"06:20 AM","sunset":"05:05 PM"}],"hourly":[{"time":"1200","tempC":"18","FeelsLikeC":"18","weatherCode":"116","chanceofrain":"10"}]}]}
+        """
+        let payload = try WeatherExecutor.parseFallback(data: Data(json.utf8))
+        XCTAssertEqual(payload["source"]?.stringValue, "wttr.in")
+        XCTAssertEqual(payload["dayCount"]?.doubleValue, 1)
+        XCTAssertEqual(payload["days"]?.arrayValue?.count, 1)
+        XCTAssertEqual(payload["current"]?.objectValue?["summary"]?.stringValue, "小雨")
+        XCTAssertEqual(payload["days"]?.arrayValue?.first?.objectValue?["temperatureC"]?.objectValue?["max"]?.doubleValue, 20)
+    }
     func testWeatherForecastParsesProviderPayloadWithoutFabricating() throws {
         let json = """
         {"timezone":"Asia/Shanghai","daily":{"time":["2026-11-10","2026-11-11"],"weather_code":[61,0],"temperature_2m_max":[18.4,21.6],"temperature_2m_min":[11.2,12.8],"precipitation_probability_max":[70,10]}}

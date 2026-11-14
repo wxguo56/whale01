@@ -95,6 +95,58 @@ final class WeatherExecutor {
         let current: Current?
     }
 
+    private struct WttrResponse: Decodable {
+        struct Current: Decodable {
+            let tempC: String?
+            let feelsLikeC: String?
+            let humidity: String?
+            let precipMM: String?
+            let windspeedKmph: String?
+            let weatherCode: String?
+
+            enum CodingKeys: String, CodingKey {
+                case tempC = "temp_C"
+                case feelsLikeC = "FeelsLikeC"
+                case humidity, precipMM, windspeedKmph, weatherCode
+            }
+        }
+
+        struct Astronomy: Decodable {
+            let sunrise: String?
+            let sunset: String?
+        }
+
+        struct Hourly: Decodable {
+            let time: String?
+            let tempC: String?
+            let feelsLikeC: String?
+            let weatherCode: String?
+            let chanceofrain: String?
+
+            enum CodingKeys: String, CodingKey {
+                case time
+                case tempC = "tempC"
+                case feelsLikeC = "FeelsLikeC"
+                case weatherCode, chanceofrain
+            }
+        }
+
+        struct Day: Decodable {
+            let date: String?
+            let maxtempC: String?
+            let mintempC: String?
+            let astronomy: [Astronomy]?
+            let hourly: [Hourly]?
+        }
+
+        let currentCondition: [Current]?
+        let weather: [Day]?
+
+        enum CodingKeys: String, CodingKey {
+            case currentCondition = "current_condition"
+            case weather
+        }
+    }
     private struct ResolvedLocation {
         let coordinate: CLLocationCoordinate2D
         let name: String
@@ -142,12 +194,28 @@ final class WeatherExecutor {
             )
         }
 
-        var payload = try await fetchForecast(
-            latitude: target.coordinate.latitude,
-            longitude: target.coordinate.longitude,
-            startDay: startDay,
-            endDay: endDay
-        )
+        var payload: [String: JSONValue]
+        do {
+            payload = try await fetchForecast(
+                latitude: target.coordinate.latitude,
+                longitude: target.coordinate.longitude,
+                startDay: startDay,
+                endDay: endDay
+            )
+        } catch {
+            let primary = error.localizedDescription
+            do {
+                payload = try await fetchFallbackForecast(
+                    latitude: target.coordinate.latitude,
+                    longitude: target.coordinate.longitude
+                )
+            } catch {
+                throw ToolExecutionError(
+                    code: "weather_provider_unavailable",
+                    message: "天气接口均不可用：Open-Meteo \(primary)；备用源 \(error.localizedDescription)"
+                )
+            }
+        }
         if let air = try? await fetchAirQuality(
             latitude: target.coordinate.latitude,
             longitude: target.coordinate.longitude
@@ -160,9 +228,9 @@ final class WeatherExecutor {
         payload["longitude"] = .number(target.coordinate.longitude)
         payload["requestedTimezone"] = .string(timezone)
         payload["fetchedAt"] = .string(ToolDate.iso(Date()))
-        payload["source"] = .string("open-meteo")
+        if payload["source"] == nil { payload["source"] = .string("open-meteo") }
         payload["simulated"] = .bool(false)
-        payload["note"] = .string("天气来自 Open-Meteo 公共预报接口；不同供应商的预报会有差异，以本轮返回值为准。")
+        if payload["note"] == nil { payload["note"] = .string("天气来自 Open-Meteo 公共预报接口；不同供应商的预报会有差异，以本轮返回值为准。") }
         return .object(payload)
     }
 
@@ -200,7 +268,7 @@ final class WeatherExecutor {
         }
 
         var request = URLRequest(url: url)
-        request.timeoutInterval = 20
+        request.timeoutInterval = 8
         request.setValue("WhaleAgent/1.0 (iOS)", forHTTPHeaderField: "User-Agent")
 
         let data: Data
@@ -222,6 +290,165 @@ final class WeatherExecutor {
         return try Self.parseForecast(data: data)
     }
 
+    private func fetchFallbackForecast(latitude: Double, longitude: Double) async throws -> [String: JSONValue] {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "wttr.in"
+        components.path = String(format: "/%.4f,%.4f", latitude, longitude)
+        components.queryItems = [URLQueryItem(name: "format", value: "j1")]
+        guard let url = components.url else {
+            throw ToolExecutionError(code: "invalid_query", message: "无法生成备用天气请求地址")
+        }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 12
+        request.setValue("WhaleAgent/1.0 (iOS)", forHTTPHeaderField: "User-Agent")
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw ToolExecutionError(
+                code: "weather_fallback_unavailable",
+                message: "备用天气接口请求失败：\(error.localizedDescription)"
+            )
+        }
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw ToolExecutionError(
+                code: "weather_fallback_unavailable",
+                message: "备用天气接口返回 HTTP \(http.statusCode)"
+            )
+        }
+        return try Self.parseFallback(data: data)
+    }
+
+    static func parseFallback(data: Data) throws -> [String: JSONValue] {
+        let decoded: WttrResponse
+        do {
+            decoded = try JSONDecoder().decode(WttrResponse.self, from: data)
+        } catch {
+            throw ToolExecutionError(
+                code: "weather_fallback_invalid",
+                message: "备用天气接口返回了无法解析的数据：\(error.localizedDescription)"
+            )
+        }
+        guard let rawDays = decoded.weather, !rawDays.isEmpty else {
+            throw ToolExecutionError(code: "weather_fallback_no_data", message: "备用天气接口没有返回逐日预报。")
+        }
+
+        var days: [JSONValue] = []
+        for day in rawDays {
+            guard let date = day.date else { continue }
+            let firstCode = day.hourly?.compactMap { Int($0.weatherCode ?? "") }.first ?? 113
+            let wmo = wmoEquivalent(forWWO: firstCode)
+            let high = day.maxtempC.flatMap(Double.init)
+            let low = day.mintempC.flatMap(Double.init)
+            let chance = day.hourly?.compactMap { Double($0.chanceofrain ?? "") }.max()
+            let astro = day.astronomy?.first
+            let row: [String: JSONValue] = [
+                "date": .string(date),
+                "condition": .string(conditionKey(for: wmo)),
+                "summary": .string(summary(for: wmo)),
+                "temperatureC": .object([
+                    "min": low.map { JSONValue.number(round1($0)) } ?? JSONValue.null,
+                    "max": high.map { JSONValue.number(round1($0)) } ?? JSONValue.null
+                ]),
+                "precipitationChance": chance.map { JSONValue.number(round1($0)) } ?? JSONValue.null,
+                "uvIndexMax": .null,
+                "sunrise": astro?.sunrise.map { JSONValue.string($0) } ?? JSONValue.null,
+                "sunset": astro?.sunset.map { JSONValue.string($0) } ?? JSONValue.null,
+                "advice": .string(advice(high: high, low: low, chance: chance, code: wmo))
+            ]
+            days.append(.object(row))
+        }
+        guard var payload = days.first?.objectValue else {
+            throw ToolExecutionError(code: "weather_fallback_no_data", message: "备用天气接口没有可用的逐日预报。")
+        }
+        payload["days"] = .array(days)
+        payload["dayCount"] = .number(Double(days.count))
+        payload["timezone"] = .string(TimeZone.current.identifier)
+        payload["source"] = .string("wttr.in")
+        payload["note"] = .string("Open-Meteo 在当前网络不可达，已回退到 wttr.in 公共天气接口；逐日预报为 3 天。")
+        if let astro = rawDays.first?.astronomy?.first,
+           let sunrise = astro.sunrise, let sunset = astro.sunset {
+            payload["sun"] = .object([
+                "sunrise": JSONValue.string(sunrise),
+                "sunset": JSONValue.string(sunset)
+            ])
+        }
+
+        let hour = Calendar.current.component(.hour, from: Date())
+        if let current = decoded.currentCondition?.first {
+            let code = Int(current.weatherCode ?? "") ?? 113
+            let wmo = wmoEquivalent(forWWO: code)
+            payload["current"] = .object([
+                "time": .string(ToolDate.iso(Date())),
+                "temperatureC": numberValue(current.tempC),
+                "apparentC": numberValue(current.feelsLikeC),
+                "humidity": numberValue(current.humidity),
+                "precipitationMM": numberValue(current.precipMM),
+                "windKph": numberValue(current.windspeedKmph),
+                "condition": .string(conditionKey(for: wmo)),
+                "summary": .string(summary(for: wmo)),
+                "isDay": .bool((6..<19).contains(hour))
+            ])
+        }
+
+        var hours: [JSONValue] = []
+        for (dayIndex, day) in rawDays.enumerated() {
+            guard let date = day.date else { continue }
+            for slot in day.hourly ?? [] {
+                guard let raw = slot.time, let stamp = Int(raw) else { continue }
+                let slotHour = stamp / 100
+                if dayIndex == 0 && slotHour < hour { continue }
+                let code = Int(slot.weatherCode ?? "") ?? 113
+                let wmo = wmoEquivalent(forWWO: code)
+                let time = String(format: "%@T%02d:00", date, slotHour)
+                hours.append(.object([
+                    "time": .string(time),
+                    "temperatureC": numberValue(slot.tempC),
+                    "apparentC": numberValue(slot.feelsLikeC),
+                    "precipitationChance": numberValue(slot.chanceofrain),
+                    "condition": .string(conditionKey(for: wmo)),
+                    "summary": .string(summary(for: wmo)),
+                    "isDay": .bool((6..<19).contains(slotHour))
+                ]))
+                if hours.count >= 24 { break }
+            }
+            if hours.count >= 24 { break }
+        }
+        if !hours.isEmpty { payload["hourly"] = .array(hours) }
+        return payload
+    }
+
+    private static func numberValue(_ text: String?) -> JSONValue {
+        guard let text, let value = Double(text) else { return .null }
+        return .number(round1(value))
+    }
+
+    static func wmoEquivalent(forWWO code: Int?) -> Int {
+        guard let code else { return 3 }
+        switch code {
+        case 113: return 0
+        case 116: return 2
+        case 119, 122: return 3
+        case 143, 248, 260: return 45
+        case 176, 263, 266, 293, 296: return 61
+        case 299, 302: return 63
+        case 305, 308: return 65
+        case 311, 314, 317, 320: return 67
+        case 323, 326: return 71
+        case 329, 332: return 73
+        case 335, 338: return 75
+        case 350, 374, 377: return 77
+        case 353, 356: return 80
+        case 359, 362: return 81
+        case 365, 368: return 85
+        case 371: return 86
+        case 386, 389: return 95
+        case 392, 395: return 96
+        default: return 3
+        }
+    }
     private func fetchAirQuality(latitude: Double, longitude: Double) async throws -> JSONValue {
         var components = URLComponents(string: "https://air-quality-api.open-meteo.com/v1/air-quality")
         components?.queryItems = [
