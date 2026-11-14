@@ -104,12 +104,14 @@ struct RollingSummaryText: View {
     var fontSize: CGFloat = 11.5
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var index = 0
+    @State private var tick = 0
 
     private var current: String {
         guard !lines.isEmpty else { return "" }
-        return lines[min(index, lines.count - 1)]
+        return lines[tick % lines.count]
     }
+
+    private var index: Int { lines.isEmpty ? 0 : tick % lines.count }
 
     private var lineHeight: CGFloat { fontSize * 1.25 + 1 }
 
@@ -135,17 +137,19 @@ struct RollingSummaryText: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(lines.first ?? "")
         .accessibilityHint(lines.count > 1 ? "共 \(lines.count) 条摘要，自动轮播" : "")
-        .task(id: lines) {
-            index = 0
-            guard lines.count > 1, !reduceMotion else { return }
+        .task {
+            guard !reduceMotion else { return }
             if delay > 0 {
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             }
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
                 if Task.isCancelled { break }
-                index = (index + 1) % max(lines.count, 1)
+                tick += 1
             }
+        }
+        .onChange(of: lines.isEmpty) { wasEmpty, isEmpty in
+            if wasEmpty && !isEmpty { tick = 0 }
         }
     }
 }
