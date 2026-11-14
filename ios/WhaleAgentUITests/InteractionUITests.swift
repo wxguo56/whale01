@@ -54,7 +54,11 @@ final class InteractionUITests: XCTestCase {
         app.tabBars.buttons["发现"].tap()
         for channel in ["ai", "headline"] {
             app.buttons["discover-channel-" + channel].tap()
-            let reading = app.descendants(matching: .any).matching(identifier: "discover-reading-" + channel).firstMatch
+            let content = app.otherElements["discover-content-" + channel]
+            XCTAssertTrue(content.waitForExistence(timeout: 10))
+            // SwiftUI may omit the custom inner identifier when news is still
+            // loading. Locate the real scroll viewport inside the fixed page.
+            let reading = content.scrollViews.firstMatch
             XCTAssertTrue(reading.waitForExistence(timeout: 10))
             XCTAssertFalse(app.buttons["discover-section-" + channel + "-all"].exists)
             let selector = app.buttons["discover-channel-ai"]
