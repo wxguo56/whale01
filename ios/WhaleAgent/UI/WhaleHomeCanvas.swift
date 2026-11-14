@@ -69,16 +69,19 @@ struct WhaleHomeCanvas: View {
                         if channel == .music { onOpenMusic() }
                         else { onOpenDiscover(channel) }
                     } label: {
-                        ZStack(alignment: .topLeading) {
+                        HStack(alignment: .top, spacing: 4) {
                             VStack(alignment: .leading, spacing: 0) {
-                                Image(systemName: channel.icon).font(.title3.weight(.semibold))
+                                Image(systemName: channel.icon)
+                                    .font(.system(size: 17, weight: .semibold))
                                     .frame(width: 38, height: 38)
                                     .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.10), lineWidth: 0.6))
                                 Spacer(minLength: 8)
                                 Text(channel.title).whaleFont(size: 17, weight: .bold, design: .rounded)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
-                            .frame(maxWidth: 70, maxHeight: .infinity, alignment: .leading)
+                            .frame(width: 70, alignment: .leading)
+                            .frame(maxHeight: .infinity, alignment: .top)
 
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack(spacing: 4) {
@@ -94,8 +97,7 @@ struct WhaleHomeCanvas: View {
                                     fontSize: 10.5
                                 )
                             }
-                            .padding(.leading, 76)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         }
                         .foregroundStyle(.white).padding(14)
                             .frame(maxWidth: .infinity, minHeight: 128, alignment: .leading)
