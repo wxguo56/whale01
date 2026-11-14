@@ -68,26 +68,29 @@ jobs:
           done
           xcrun simctl location "$DEVICE_ID" set 30.2741,120.1551 || true
           mkdir -p snapshots
+          capture_snapshot() {
+            python3 tools/capture_ui_snapshot.py "$DEVICE_ID" "$1"
+          }
           if [ "$SNAPSHOT_SCOPE" = "discover" ]; then
             SIMCTL_CHILD_WHALE_DEMO_HOME=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
             sleep 5
-            xcrun simctl io "$DEVICE_ID" screenshot snapshots/depth-home.png
+            capture_snapshot snapshots/depth-home.png
             xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
             for channel in ai game market headline weibo; do
               env "SIMCTL_CHILD_WHALE_DEMO_CHANNEL=$channel" xcrun simctl launch "$DEVICE_ID" com.whale01.agent
               sleep 6
-              xcrun simctl io "$DEVICE_ID" screenshot "snapshots/fixed-shell-${channel}.png"
+              capture_snapshot "snapshots/fixed-shell-${channel}.png"
               xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
             done
             xcrun simctl ui "$DEVICE_ID" appearance dark
             SIMCTL_CHILD_WHALE_DEMO_CHANNEL=ai xcrun simctl launch "$DEVICE_ID" com.whale01.agent
             sleep 4
-            xcrun simctl io "$DEVICE_ID" screenshot snapshots/fixed-shell-dark.png
+            capture_snapshot snapshots/fixed-shell-dark.png
             xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
             xcrun simctl ui "$DEVICE_ID" appearance light
             SIMCTL_CHILD_WHALE_DEMO_CHANNEL=ai SIMCTL_CHILD_WHALE_DEMO_LARGE_TEXT=1 xcrun simctl launch "$DEVICE_ID" com.whale01.agent
             sleep 4
-            xcrun simctl io "$DEVICE_ID" screenshot snapshots/fixed-shell-large-text.png
+            capture_snapshot snapshots/fixed-shell-large-text.png
             xcrun simctl terminate "$DEVICE_ID" com.whale01.agent || true
             exit 0
           fi
