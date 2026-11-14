@@ -572,7 +572,7 @@ private struct PreferencesSettingsView: View {
                 SettingsChrome.header("助手偏好", trailing: "随时可改")
 
                 SettingsChrome.card {
-                    Toggle("首页显示今日一句", isOn: $showQuote).font(.body).frame(minHeight: 52)
+                    Toggle("首页显示每日一句", isOn: $showQuote).font(.body).frame(minHeight: 52)
                 }
                 SettingsChrome.card {
                     Toggle(isOn: Binding(

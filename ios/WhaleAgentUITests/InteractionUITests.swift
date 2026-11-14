@@ -12,6 +12,17 @@ final class InteractionUITests: XCTestCase {
     func testThreeTabsKeepDiscoverySeparateFromTheAssistant() {
         let app = launch()
         XCTAssertTrue(app.tabBars.buttons["助手"].waitForExistence(timeout: 10))
+        let inspiration = app.buttons["home-inspiration-card"]
+        XCTAssertTrue(inspiration.waitForExistence(timeout: 10))
+        let today = app.otherElements["home-today-card"]
+        XCTAssertTrue(today.waitForExistence(timeout: 10))
+        XCTAssertLessThanOrEqual(inspiration.frame.maxY, today.frame.minY + 1)
+        XCTAssertTrue(today.buttons["home-today-weather"].exists)
+        XCTAssertFalse(app.staticTexts["今天想做点什么？"].exists)
+        XCTAssertFalse(app.staticTexts["有一件事需要核对"].exists)
+        XCTAssertFalse(app.staticTexts["天气暂未更新"].exists)
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "BOSS")).firstMatch.exists)
+        attach("home-inspiration-weather")
         XCTAssertTrue(app.tabBars.buttons["待办"].exists)
         XCTAssertTrue(app.tabBars.buttons["发现"].exists)
         XCTAssertLessThan(app.tabBars.buttons["助手"].frame.midX, app.tabBars.buttons["发现"].frame.midX)
@@ -71,8 +82,14 @@ final class InteractionUITests: XCTestCase {
             attach("unified-feed-" + channel)
         }
         app.tabBars.buttons["助手"].tap()
+        let homeScroll = app.scrollViews.firstMatch
         for channel in ["ai", "market", "game", "music", "headline", "weibo"] {
+            if !app.buttons["home-channel-" + channel].exists { homeScroll.swipeUp() }
             XCTAssertTrue(app.buttons["home-channel-" + channel].exists)
+        }
+        for _ in 0..<3 {
+            if app.buttons["home-channel-ai"].isHittable { break }
+            homeScroll.swipeDown()
         }
         app.buttons["home-channel-ai"].tap()
         XCTAssertTrue(app.otherElements["discover-content-ai"].waitForExistence(timeout: 10))

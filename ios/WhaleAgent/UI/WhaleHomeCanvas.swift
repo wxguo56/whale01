@@ -17,7 +17,6 @@ struct WhaleHomeCanvas: View {
     @State private var weatherLoading = false
     @State private var weatherError: String?
     @AppStorage("whale.home.showQuote") private var showQuote = true
-    @AppStorage("whale.profile.nickname") private var nickname = ""
     @State private var quoteExpanded = false
     @State private var showWeatherDetail = false
     @State private var homeTodos: [TodoReminder] = []
@@ -28,29 +27,10 @@ struct WhaleHomeCanvas: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text(nickname.isEmpty ? "今天想做点什么？" : "你好，\(nickname)")
-                    .font(.title2.bold()).foregroundStyle(WhaleTheme.ink)
-                if let confirmation = model.pending.first(where: \.requiresConfirmation) {
-                    Button { model.presentedConfirmation = confirmation } label: {
-                        Label("\(ToolPresentation.title(confirmation.tool))，等你确认", systemImage: "checkmark.circle")
-                            .font(.headline).frame(maxWidth: .infinity, alignment: .leading)
-                            .foregroundStyle(WhaleTheme.accent).whaleCard(padding: 14)
-                    }.buttonStyle(.plain)
-                } else if let task = model.taskRecords.first(where: {
-                    ["awaiting_tool_results", "completed_with_limits"].contains($0.status) && Date().timeIntervalSince($0.updatedAt) < 7 * 86400
-                }) {
-                    Button(action: onOpenRecords) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Label("有一件事需要核对", systemImage: "list.bullet.clipboard").font(.headline)
-                            Text(task.goal).font(.subheadline).lineLimit(2)
-                        }.foregroundStyle(WhaleTheme.ink).frame(maxWidth: .infinity, alignment: .leading).whaleCard(padding: 14)
-                    }.buttonStyle(.plain)
-                }
+                if showQuote { dailyQuote }
                 todayCard
                 InlinePlaybackView(model: model, onOpen: onOpenMusic)
                 categoryGrid
-                weatherSummary
-                if showQuote { dailyQuote }
                 AssistantActivityView(model: model)
                 if !model.messages.isEmpty {
                     Button(action: onOpenConversation) {
@@ -102,36 +82,44 @@ struct WhaleHomeCanvas: View {
             }
         }
     }
-    private var weatherSummary: some View {
+    private var todayWeather: some View {
         Button {
-            weatherExpanded = true; showWeatherDetail = true
+            if locationStatus == "granted", weatherDays.isEmpty, !weatherLoading {
+                Task { await loadWeather(force: true) }
+            } else {
+                weatherExpanded = true; showWeatherDetail = true
+            }
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: weatherDays.first?.icon ?? "cloud.sun").foregroundStyle(WhaleTheme.accent)
-                if weatherLoading && weatherDays.isEmpty { Text("正在更新天气…") }
+                if weatherLoading && weatherDays.isEmpty { Text("天气查询中…") }
                 else if let day = weatherDays.first {
                     Text("\(weatherLocation) · \(weather?.current?.summary ?? day.summary) · \(currentTemperatureText)")
-                } else { Text(locationStatus == "granted" ? "天气暂未更新" : "查看所在地天气") }
+                } else { Text(locationStatus == "granted" ? "刷新天气" : "查看天气") }
                 Spacer(minLength: 4)
                 Image(systemName: "chevron.right").font(.caption)
             }.font(.subheadline).foregroundStyle(WhaleTheme.muted)
-                .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
-                .padding(.horizontal, 14).background(WhaleTheme.soft, in: RoundedRectangle(cornerRadius: 14))
-        }.buttonStyle(.plain).accessibilityLabel("打开天气详情")
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        }.buttonStyle(.plain).accessibilityIdentifier("home-today-weather")
+            .accessibilityHint("查看天气详情；天气未获取时重新查询")
     }
     private var dailyQuote: some View {
         TimelineView(.periodic(from: Date(), by: 60)) { context in
             Button {
                 withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { quoteExpanded.toggle() }
             } label: {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "quote.opening").foregroundStyle(WhaleTheme.accent)
-                    Text(DailyQuote.text(at: context.date)).font(.subheadline).foregroundStyle(WhaleTheme.muted)
-                        .lineLimit(quoteExpanded ? nil : 1)
-                    Spacer(minLength: 0)
-                }.frame(minHeight: 44, alignment: .center)
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "quote.opening").font(.title3).foregroundStyle(WhaleTheme.accent)
+                    Text(DailyQuote.text(at: context.date)).whaleFont(size: 16, weight: .medium)
+                        .foregroundStyle(WhaleTheme.ink).lineSpacing(3)
+                        .lineLimit(quoteExpanded || textSize.isAccessibilitySize ? nil : 2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: quoteExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption).foregroundStyle(WhaleTheme.muted)
+                }.frame(minHeight: 44, alignment: .center).whaleCard(padding: 14)
             }.buttonStyle(.plain)
-                .accessibilityHint("点击展开今日一句")
+                .accessibilityIdentifier("home-inspiration-card")
+                .accessibilityHint("点击展开每日一句")
                 .contextMenu { Button("隐藏今日一句") { showQuote = false } }
         }
     }
@@ -469,12 +457,13 @@ struct WhaleHomeCanvas: View {
     // MARK: - Real calendar
 
     private var todayCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("今天 · \(todayLabel)").font(.headline).foregroundStyle(WhaleTheme.ink)
                 Spacer()
                 Button("查看待办", action: onOpenTodo).font(.subheadline).whaleTouchTarget()
             }
+            todayWeather
             if model.isDashboardLoading { ProgressView("正在读取安排…").font(.subheadline) }
             if calendarGranted {
                 if todayEvents.isEmpty { Text("今天暂无日程").font(.body).foregroundStyle(WhaleTheme.muted) }
@@ -495,7 +484,7 @@ struct WhaleHomeCanvas: View {
                 }.buttonStyle(.plain)
             }
             if let error = model.dashboardError { Text(error).font(.subheadline).foregroundStyle(WhaleTheme.warm) }
-        }.whaleCard()
+        }.whaleCard().accessibilityElement(children: .contain).accessibilityIdentifier("home-today-card")
     }
 
     private func eventRow(_ event: CalendarEventPreview) -> some View {
