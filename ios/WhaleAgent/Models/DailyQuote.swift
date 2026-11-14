@@ -1,9 +1,11 @@
 import Foundation
 
-/// 每日一句：每天四个六小时时段轮换，30 天正好用完 120 条。
+/// 每日一句：每 30 分钟轮换一次。120 条金句构成一个 60 小时的
+/// 不重复循环（37 与 120 互质），循环结束后从头重新排列。
 enum DailyQuote {
-    static let slotsPerDay = 4
-    static let daysPerCycle = 30
+    static let slotsPerDay = 48
+    static let slotMinutes = 30
+    static let poolCycleHours = 60
 
     static let pool: [String] = [
         "天行健，君子以自强不息。——《周易》",
@@ -131,9 +133,11 @@ enum DailyQuote {
     static func slotIndex(at date: Date, calendar: Calendar = .current) -> Int {
         let day = calendar.ordinality(of: .day, in: .era, for: date) ?? 0
         let hour = calendar.component(.hour, from: date)
-        let slot = min(slotsPerDay - 1, max(0, hour / 6))
+        let minute = calendar.component(.minute, from: date)
+        let halfHour = min(1, max(0, minute / slotMinutes))
+        let slot = min(slotsPerDay - 1, max(0, hour * 2 + halfHour))
         // 用绝对时段序号做排列：37 与 120 互质，任意连续 120 个时段正好覆盖整池，
-        // 因此无论从哪一天开始，连续 30 天的 120 条都不会重复。
+        // 因此连续 60 小时（120 个半小时）内不会重复。
         let globalSlot = day * slotsPerDay + slot
         return ((globalSlot * 37) % pool.count + pool.count) % pool.count
     }

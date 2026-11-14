@@ -450,30 +450,28 @@ final class CoreTests: XCTestCase {
         XCTAssertNil(DirectContentClient.parseQuote(symbol: "sh600519", body: "1~2~3"))
     }
 
-    func testDailyQuotePoolCoversThirtyDaysWithoutRepeat() {
+    func testDailyQuotePoolRepeatsOnlyAfterSixtyHours() {
         XCTAssertEqual(DailyQuote.pool.count, 120)
         XCTAssertEqual(Set(DailyQuote.pool).count, 120)
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Shanghai")!
         let start = calendar.date(from: DateComponents(year: 2026, month: 11, day: 1, hour: 0))!
         var indexes = Set<Int>()
-        for day in 0..<30 {
-            for slot in 0..<4 {
-                let date = calendar.date(byAdding: .hour, value: day * 24 + slot * 6, to: start)!
-                XCTAssertTrue(indexes.insert(DailyQuote.slotIndex(at: date, calendar: calendar)).inserted)
-            }
+        for slot in 0..<120 {
+            let date = calendar.date(byAdding: .minute, value: slot * 30, to: start)!
+            XCTAssertTrue(indexes.insert(DailyQuote.slotIndex(at: date, calendar: calendar)).inserted)
         }
         XCTAssertEqual(indexes.count, 120)
     }
 
-    func testDailyQuoteStaysStableInsideSixHourSlot() {
+    func testDailyQuoteStaysStableInsideHalfHourSlot() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Shanghai")!
-        let ten = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 10))!
-        let eleven = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 11, minute: 59))!
-        let noon = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 12))!
-        XCTAssertEqual(DailyQuote.slotIndex(at: ten, calendar: calendar), DailyQuote.slotIndex(at: eleven, calendar: calendar))
-        XCTAssertNotEqual(DailyQuote.slotIndex(at: eleven, calendar: calendar), DailyQuote.slotIndex(at: noon, calendar: calendar))
+        let ten = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 10, minute: 0))!
+        let tenTwentyNine = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 10, minute: 29))!
+        let tenThirty = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 10, minute: 30))!
+        XCTAssertEqual(DailyQuote.slotIndex(at: ten, calendar: calendar), DailyQuote.slotIndex(at: tenTwentyNine, calendar: calendar))
+        XCTAssertNotEqual(DailyQuote.slotIndex(at: tenTwentyNine, calendar: calendar), DailyQuote.slotIndex(at: tenThirty, calendar: calendar))
     }
 
     func testZhihuHeatAndLinksUseRealPublicValues() {

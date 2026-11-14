@@ -17,6 +17,7 @@ struct WhaleHomeCanvas: View {
     @State private var weatherLocation = ""
     @State private var weatherLoading = false
     @State private var weatherError: String?
+    @State private var weatherStartedAt: Date?
     @AppStorage("whale.home.showQuote") private var showQuote = true
     @State private var quoteExpanded = false
     @State private var showWeatherDetail = false
@@ -154,14 +155,14 @@ struct WhaleHomeCanvas: View {
                 withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { quoteExpanded.toggle() }
             } label: {
                 HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "quote.opening").font(.title3).foregroundStyle(WhaleTheme.accent)
-                    Text(DailyQuote.text(at: context.date)).whaleFont(size: 16, weight: .medium)
-                        .foregroundStyle(WhaleTheme.ink).lineSpacing(3)
+                    Image(systemName: "quote.opening").font(.system(size: 22, weight: .semibold)).foregroundStyle(WhaleTheme.accent)
+                    Text(DailyQuote.text(at: context.date)).whaleFont(size: 19, weight: .semibold)
+                        .foregroundStyle(WhaleTheme.ink).lineSpacing(4)
                         .lineLimit(quoteExpanded || textSize.isAccessibilitySize ? nil : 2)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     Image(systemName: quoteExpanded ? "chevron.up" : "chevron.down")
                         .font(.caption).foregroundStyle(WhaleTheme.muted)
-                }.frame(minHeight: 44, alignment: .center).whaleCard(padding: 14)
+                }.frame(minHeight: 44, alignment: .center).whaleCard(padding: 16).overlay(alignment: .leading) { RoundedRectangle(cornerRadius: 2, style: .continuous).fill(WhaleTheme.accent.opacity(0.85)).frame(width: 3).padding(.vertical, 14) }
             }.buttonStyle(.plain)
                 .accessibilityIdentifier("home-inspiration-card")
                 .accessibilityHint("点击展开每日一句")
@@ -465,17 +466,31 @@ struct WhaleHomeCanvas: View {
     }
 
     private func loadWeatherIfNeeded() async {
-        guard locationStatus == "granted", weatherDays.isEmpty, !weatherLoading else { return }
+        guard locationStatus == "granted", weatherDays.isEmpty else { return }
+        if weatherLoading, weatherLoadIsStale { weatherLoading = false }
+        guard !weatherLoading else { return }
         await loadWeather(force: false)
+    }
+
+    private var weatherLoadIsStale: Bool {
+        guard let started = weatherStartedAt else { return true }
+        return Date().timeIntervalSince(started) > 25
     }
 
     private func loadWeather(force: Bool) async {
         guard locationStatus == "granted" else { return }
-        guard !weatherLoading else { return }
+        if weatherLoading {
+            guard weatherLoadIsStale else { return }
+            weatherLoading = false
+        }
         if !force, !weatherDays.isEmpty { return }
         weatherLoading = true
         weatherError = nil
-        defer { weatherLoading = false }
+        weatherStartedAt = Date()
+        defer {
+            weatherLoading = false
+            weatherStartedAt = nil
+        }
 
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: Date())

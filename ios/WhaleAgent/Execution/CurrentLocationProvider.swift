@@ -76,27 +76,33 @@ final class CurrentLocationProvider: NSObject, CLLocationManagerDelegate {
             throw ToolExecutionError(code: "location_busy", message: "上一次定位请求尚未结束，请稍后重试")
         }
 
-        return try await withCheckedThrowingContinuation { continuation in
-            self.continuation = continuation
-            self.bestLocation = nil
-            manager.startUpdatingLocation()
-            timeoutTask?.cancel()
-            timeoutTask = Task { @MainActor [weak self] in
-                try? await Task.sleep(nanoseconds: 10_000_000_000)
-                guard !Task.isCancelled, let self else { return }
-                if let best = self.bestLocation {
-                    self.cached = best
-                    self.finish(.success(best))
-                } else {
-                    self.finish(
-                        .failure(
-                            ToolExecutionError(
-                                code: "location_timeout",
-                                message: "超过 10 秒没有取得有效位置；可以重试，或直接给我一个地区。"
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                self.continuation = continuation
+                self.bestLocation = nil
+                manager.startUpdatingLocation()
+                timeoutTask?.cancel()
+                timeoutTask = Task { @MainActor [weak self] in
+                    try? await Task.sleep(nanoseconds: 10_000_000_000)
+                    guard !Task.isCancelled, let self else { return }
+                    if let best = self.bestLocation {
+                        self.cached = best
+                        self.finish(.success(best))
+                    } else {
+                        self.finish(
+                            .failure(
+                                ToolExecutionError(
+                                    code: "location_timeout",
+                                    message: "超过 10 秒没有取得有效位置；可以重试，或直接给我一个地区。"
+                                )
                             )
                         )
-                    )
+                    }
                 }
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                self?.finish(.failure(CancellationError()))
             }
         }
     }

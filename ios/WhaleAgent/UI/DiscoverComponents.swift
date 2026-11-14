@@ -97,7 +97,7 @@ struct NewsFeatureCard: View {
 
             if !item.displaySummary.isEmpty {
                 Text(item.displaySummary)
-                    .whaleFont(size: 15)
+                    .whaleFont(size: 16)
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
@@ -394,7 +394,7 @@ struct AIPaperCard: View {
 
             if !paper.displaySummary.isEmpty {
                 Text(paper.displaySummary)
-                    .whaleFont(size: 15)
+                    .whaleFont(size: 16)
                     .foregroundStyle(WhaleTheme.muted)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
