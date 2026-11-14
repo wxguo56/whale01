@@ -132,6 +132,9 @@ enum WhaleTheme {
 }
 
 extension View {
+    func whaleChannelLabel(_ channel: DiscoverChannel, selected: Bool) -> some View {
+        modifier(ChannelLabelStyle(channel: channel, selected: selected))
+    }
     func whaleCard(padding: CGFloat = 16) -> some View {
         self
             .modifier(GlassCardStyle(padding: padding))
@@ -156,6 +159,50 @@ extension View {
 
     func whaleRaisedPill(selected: Bool) -> some View {
         modifier(RaisedPillStyle(selected: selected))
+    }
+}
+
+extension DiscoverChannel {
+    var entryGradient: LinearGradient {
+        switch self {
+        case .ai: return WhaleTheme.heroGradient
+        case .market: return LinearGradient(colors: [WhaleTheme.moon, WhaleTheme.accentDeep], startPoint: .topLeading, endPoint: .bottomTrailing)
+        case .game: return WhaleTheme.gameGradient
+        case .music: return WhaleTheme.musicGradient
+        case .headline: return WhaleTheme.headlineGradient
+        case .weibo: return WhaleTheme.weiboGradient
+        }
+    }
+    var entryInk: Color {
+        switch self {
+        case .ai: return Color(light: 0x096D65, dark: 0x82EAD5)
+        case .market: return Color(light: 0x225DA0, dark: 0x99C7FF)
+        case .game: return Color(light: 0x8D421D, dark: 0xF9C183)
+        case .music: return Color(light: 0x82447E, dark: 0xF0B5D8)
+        case .headline: return Color(light: 0x216D91, dark: 0x8DD9F4)
+        case .weibo: return Color(light: 0xAA3737, dark: 0xFFB1A2)
+        }
+    }
+}
+
+private struct ChannelLabelStyle: ViewModifier {
+    let channel: DiscoverChannel
+    let selected: Bool
+    func body(content: Content) -> some View {
+        content.foregroundStyle(selected ? Color.white : channel.entryInk)
+            .padding(.horizontal, 10).frame(minHeight: 44)
+            .fixedSize(horizontal: true, vertical: false)
+            .background {
+                let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+                if selected {
+                    shape.fill(channel.entryGradient).overlay(shape.fill(.black.opacity(0.28)))
+                } else {
+                    shape.fill(WhaleTheme.cardSolid).overlay(shape.fill(channel.entryInk.opacity(0.10)))
+                }
+            }
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(WhaleTheme.glassStroke, lineWidth: 0.8))
+            .whaleSoftElevation(selected: selected)
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

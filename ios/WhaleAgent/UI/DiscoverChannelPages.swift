@@ -44,21 +44,12 @@ struct AIChannelPage: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            NewsSectionBar(channel: .ai, selection: model.aiSection) { section in
-                Task { await model.selectNewsSection(section, for: .ai) }
-            }.padding(.horizontal, 16).padding(.bottom, 6)
-            ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
-                        Color.clear.frame(height: 1).id("ai-top")
                         VStack(alignment: .leading, spacing: 12) {
                             newsHero
                             moreNews
                         }
-                        .horizontalTabSwipe(
-                            onPrevious: { model.stepNewsSection(.ai, by: -1) },
-                            onNext: { model.stepNewsSection(.ai, by: 1) }
-                        )
                         NewsSourceFooter(model: model)
                     }
                     .padding(.horizontal, 16)
@@ -67,15 +58,11 @@ struct AIChannelPage: View {
                 }
                 .scrollIndicators(.hidden)
 
-                .background(ScrollOffsetMemory(key: "ai-\(model.aiSection)"))
+                .background(ScrollOffsetMemory(key: "ai-all"))
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("discover-reading-ai")
                 .refreshable { await model.refresh() }
-                .onChange(of: model.aiSection) { _, _ in
-                    withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("ai-top", anchor: .top) }
-                }
                 .task { await model.loadInitial() }
-            }
         }
     }
 
@@ -93,7 +80,7 @@ struct AIChannelPage: View {
             }
             .buttonStyle(.plain)
         } else if model.newsState == .loaded {
-            Text("这个分类暂时没有新的资讯，换一个分类或下拉刷新。")
+            Text("暂时没有新的资讯，下拉刷新试试。")
                 .whaleFont(size: 13)
                 .foregroundStyle(WhaleTheme.muted)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -104,7 +91,6 @@ struct AIChannelPage: View {
     @ViewBuilder
     private var moreNews: some View {
         if model.aiNews.count > 1 {
-            DiscoverSectionTitle(title: "更多动态", subtitle: "公开 RSS · 阅读全文请跳转原文")
             ForEach(Array(model.aiNews.dropFirst())) { item in
                 NavigationLink(value: DiscoverRoute.news(item)) {
                     NewsRowCard(item: item)
@@ -336,7 +322,6 @@ struct GameChannelPage: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
-                DiscoverChannelHeader(channel: .game)
                 GameSectionSegment(selection: $model.gameSection) { section in
                     Task { await model.selectGameSection(section) }
                 }
@@ -567,13 +552,8 @@ struct HeadlineChannelPage: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            NewsSectionBar(channel: .headline, selection: model.headlineSection) { section in
-                Task { await model.selectNewsSection(section, for: .headline) }
-            }.padding(.horizontal, 16).padding(.bottom, 6)
-            ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 11) {
-                        Color.clear.frame(height: 1).id("headline-top")
                         VStack(alignment: .leading, spacing: 11) {
                             if model.newsState == .loading && model.newsItems.isEmpty {
                                 NewsSkeleton()
@@ -582,7 +562,7 @@ struct HeadlineChannelPage: View {
                                     Task { await model.loadNews(channel: .headline, force: true) }
                                 }
                             } else if model.headlineNews.isEmpty {
-                                Text("这个分类暂时没有新的资讯，换一个分类或下拉刷新。")
+                                Text("暂时没有新的资讯，下拉刷新试试。")
                                     .whaleFont(size: 13)
                                     .foregroundStyle(WhaleTheme.muted)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -602,10 +582,6 @@ struct HeadlineChannelPage: View {
                                 }
                             }
                         }
-                        .horizontalTabSwipe(
-                            onPrevious: { model.stepNewsSection(.headline, by: -1) },
-                            onNext: { model.stepNewsSection(.headline, by: 1) }
-                        )
                         NewsSourceFooter(model: model)
                     }
                     .padding(.horizontal, 16)
@@ -614,13 +590,11 @@ struct HeadlineChannelPage: View {
                 }
                 .scrollIndicators(.hidden)
 
-                .background(ScrollOffsetMemory(key: "headline-\(model.headlineSection)"))
+                .background(ScrollOffsetMemory(key: "headline-all"))
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("discover-reading-headline")
                 .refreshable { await model.refresh() }
-                .onChange(of: model.headlineSection) { _, _ in
-                    withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("headline-top", anchor: .top) }
-                }
                 .task { await model.loadInitial() }
-            }
         }
     }
 }

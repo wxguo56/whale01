@@ -14,6 +14,8 @@ final class InteractionUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["助手"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.tabBars.buttons["待办"].exists)
         XCTAssertTrue(app.tabBars.buttons["发现"].exists)
+        XCTAssertLessThan(app.tabBars.buttons["助手"].frame.midX, app.tabBars.buttons["发现"].frame.midX)
+        XCTAssertLessThan(app.tabBars.buttons["发现"].frame.midX, app.tabBars.buttons["待办"].frame.midX)
         app.tabBars.buttons["待办"].tap()
         XCTAssertTrue(app.buttons["回到对话"].waitForExistence(timeout: 5))
         app.tabBars.buttons["发现"].tap()
@@ -47,21 +49,29 @@ final class InteractionUITests: XCTestCase {
             attach("fixed-shell-" + channel)
         }
     }
-    func testNewsSectionSelectorStaysPinnedWhileContentScrollsAndChanges() {
+    func testUnifiedFeedsHaveNoCategoryControlsAndKeepChannelBarPinned() {
         let app = launch()
         app.tabBars.buttons["发现"].tap()
-        let all = app.buttons["discover-section-ai-all"]
-        XCTAssertTrue(all.waitForExistence(timeout: 10))
-        let reading = app.descendants(matching: .any).matching(identifier: "discover-reading-ai").firstMatch
-        XCTAssertTrue(reading.waitForExistence(timeout: 10))
-        XCTAssertGreaterThanOrEqual(reading.frame.minY, all.frame.maxY - 1)
-        let baseline = all.frame.minY
-        reading.swipeUp()
-        XCTAssertEqual(all.frame.minY, baseline, accuracy: 1)
-        app.buttons["discover-section-ai-coding"].tap()
-        XCTAssertEqual(all.frame.minY, baseline, accuracy: 1)
-        XCTAssertTrue(app.tabBars.buttons["助手"].isHittable)
-        attach("pinned-ai-coding")
+        for channel in ["ai", "headline"] {
+            app.buttons["discover-channel-" + channel].tap()
+            let reading = app.descendants(matching: .any).matching(identifier: "discover-reading-" + channel).firstMatch
+            XCTAssertTrue(reading.waitForExistence(timeout: 10))
+            XCTAssertFalse(app.buttons["discover-section-" + channel + "-all"].exists)
+            let selector = app.buttons["discover-channel-ai"]
+            XCTAssertGreaterThanOrEqual(reading.frame.minY, selector.frame.maxY - 1)
+            let baseline = selector.frame.minY
+            reading.swipeUp()
+            XCTAssertEqual(selector.frame.minY, baseline, accuracy: 1)
+            XCTAssertFalse(app.staticTexts["更多动态"].exists)
+            XCTAssertFalse(app.staticTexts["公开 RSS · 阅读全文请跳转原文"].exists)
+            attach("unified-feed-" + channel)
+        }
+        app.tabBars.buttons["助手"].tap()
+        for channel in ["ai", "market", "game", "music", "headline", "weibo"] {
+            XCTAssertTrue(app.buttons["home-channel-" + channel].exists)
+        }
+        app.buttons["home-channel-ai"].tap()
+        XCTAssertTrue(app.otherElements["discover-content-ai"].waitForExistence(timeout: 10))
     }
     private func attach(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())

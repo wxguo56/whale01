@@ -28,15 +28,15 @@ struct RootView: View {
                 }
             }.tabItem { Label("助手", systemImage: "bubble.left.and.bubble.right") }.tag(AppTab.conversation)
             ZStack {
-                if page == .records {
-                    TodoView(model: model, embedded: true, onBackToChat: { page = .conversation }, bottomBarInset: 0)
-                }
-            }.tabItem { Label("待办", systemImage: "checklist") }.tag(AppTab.records)
-            ZStack {
                 if page == .discover {
                     DiscoverView(selection: $discoverChannel, appModel: model, onSettings: { showSettings = true })
                 }
             }.tabItem { Label("发现", systemImage: "square.grid.2x2") }.tag(AppTab.discover)
+            ZStack {
+                if page == .records {
+                    TodoView(model: model, embedded: true, onBackToChat: { page = .conversation }, bottomBarInset: 0)
+                }
+            }.tabItem { Label("待办", systemImage: "checklist") }.tag(AppTab.records)
         }
         .tint(WhaleTheme.accent)
         .toolbarBackground(WhaleTheme.chrome, for: .tabBar)

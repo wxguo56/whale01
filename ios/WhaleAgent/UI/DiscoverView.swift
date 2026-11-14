@@ -124,7 +124,7 @@ struct DiscoverChannelBar: View {
                     ForEach(DiscoverChannel.allCases) { channel in
                         Button { selection = channel } label: {
                             Text(channel.tabTitle).whaleFont(size: 14, weight: .semibold)
-                                .whaleRaisedPill(selected: selection == channel)
+                                .whaleChannelLabel(channel, selected: selection == channel)
                         }.buttonStyle(.plain).id(channel)
                             .accessibilityLabel(channel.title)
                             .accessibilityAddTraits(selection == channel ? .isSelected : [])

@@ -20,10 +20,9 @@ struct WhaleHomeCanvas: View {
     @AppStorage("whale.profile.nickname") private var nickname = ""
     @State private var quoteExpanded = false
     @State private var showWeatherDetail = false
-    @State private var showQuickActionEditor = false
-    @State private var quickActions = InteractionPreferences.quickActions()
     @State private var homeTodos: [TodoReminder] = []
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var textSize
     @State private var weatherExpanded = ProcessInfo.processInfo.environment["WHALE_DEMO_WEATHER"] == "1"
 
     var body: some View {
@@ -49,7 +48,7 @@ struct WhaleHomeCanvas: View {
                 }
                 todayCard
                 InlinePlaybackView(model: model, onOpen: onOpenMusic)
-                quickActionSection
+                categoryGrid
                 weatherSummary
                 if showQuote { dailyQuote }
                 AssistantActivityView(model: model)
@@ -72,42 +71,35 @@ struct WhaleHomeCanvas: View {
                         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { showWeatherDetail = false } } }
                 }
             }
-            .sheet(isPresented: $showQuickActionEditor) {
-                QuickActionEditor(actions: $quickActions)
-            }
     }
 
-    private var quickActionSection: some View {
+    private var categoryGrid: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("常用操作").font(.headline).foregroundStyle(WhaleTheme.ink)
-                Spacer()
-                Button("编辑") { showQuickActionEditor = true }.font(.subheadline).whaleTouchTarget()
+            Text("常用操作").font(.headline).foregroundStyle(WhaleTheme.ink)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: textSize.isAccessibilitySize ? 1 : 2), spacing: 10) {
+                ForEach(DiscoverChannel.allCases) { channel in
+                    Button {
+                        if channel == .music { onOpenMusic() }
+                        else { onOpenDiscover(channel) }
+                    } label: {
+                        VStack(alignment: .leading, spacing: 14) {
+                            Image(systemName: channel.icon).font(.title3.weight(.semibold))
+                                .frame(width: 38, height: 38)
+                                .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+                            Text(channel.title).whaleFont(size: 17, weight: .bold, design: .rounded)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }.foregroundStyle(.white).padding(14)
+                            .frame(maxWidth: .infinity, minHeight: 108, alignment: .leading)
+                            .background {
+                                let shape = RoundedRectangle(cornerRadius: 19, style: .continuous)
+                                shape.fill(channel.entryGradient).overlay(shape.fill(.black.opacity(0.28)))
+                            }
+                            .overlay(RoundedRectangle(cornerRadius: 19, style: .continuous).strokeBorder(.white.opacity(0.18), lineWidth: 0.8))
+                            .whaleSoftElevation()
+                    }.buttonStyle(.plain).accessibilityLabel(channel.title)
+                        .accessibilityIdentifier("home-channel-" + channel.rawValue)
+                }
             }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) { ForEach(quickActions) { quickActionButton($0) } }
-                VStack(alignment: .leading, spacing: 8) { ForEach(quickActions) { quickActionButton($0) } }
-            }
-        }
-    }
-    private func quickActionButton(_ action: QuickAction) -> some View {
-        Button { perform(action) } label: {
-            Label(action.title, systemImage: action.icon).font(.subheadline.weight(.medium))
-                .padding(.horizontal, 12).frame(minHeight: 44)
-                .background(WhaleTheme.accentSoft, in: RoundedRectangle(cornerRadius: 12))
-                .whaleSoftElevation()
-        }.buttonStyle(.plain).foregroundStyle(WhaleTheme.accentDeep)
-    }
-    private func perform(_ action: QuickAction) {
-        switch action {
-        case .schedule:
-            Task { await model.requestPermission("calendarRead"); await model.refreshDashboard(force: true) }
-        case .reminder: onOpenTodo()
-        case .music: onOpenMusic()
-        case .headlines: onOpenDiscover(.headline)
-        case .nearby:
-            onOpenConversation()
-            NotificationCenter.default.post(name: .whalePrefillDraft, object: nil, userInfo: ["text": "帮我找附近的"])
         }
     }
     private var weatherSummary: some View {
