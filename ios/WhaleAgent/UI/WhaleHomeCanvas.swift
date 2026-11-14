@@ -28,7 +28,7 @@ struct WhaleHomeCanvas: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
                 if showQuote { dailyQuote }
                 todayCard
                 InlinePlaybackView(model: model, onOpen: onOpenMusic)
@@ -63,7 +63,7 @@ struct WhaleHomeCanvas: View {
     private var categoryGrid: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("常用操作").font(.headline).foregroundStyle(WhaleTheme.ink)
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: textSize.isAccessibilitySize ? 1 : 2), spacing: 10) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 9), count: textSize.isAccessibilitySize ? 1 : 2), spacing: 9) {
                 ForEach(Array(DiscoverChannel.allCases.enumerated()), id: \.element) { offset, channel in
                     Button {
                         if channel == .music { onOpenMusic() }
@@ -72,9 +72,9 @@ struct WhaleHomeCanvas: View {
                         VStack(alignment: .leading, spacing: 0) {
                             HStack(alignment: .top, spacing: 8) {
                                 Image(systemName: channel.icon)
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .frame(width: 36, height: 36)
-                                    .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 11))
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .frame(width: 32, height: 32)
+                                    .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
 
                                 Spacer(minLength: 4)
 
@@ -87,17 +87,17 @@ struct WhaleHomeCanvas: View {
                                     .padding(.top, 1)
                             }
 
-                            Spacer(minLength: 8)
+                            Spacer(minLength: 6)
 
                             RollingSummaryText(
                                 lines: summaryLines(for: channel),
                                 delay: Double(offset) * 0.55,
                                 maxLines: 1,
-                                fontSize: 11
+                                fontSize: 13
                             )
                         }
-                        .foregroundStyle(.white).padding(12)
-                            .frame(maxWidth: .infinity, minHeight: 108, alignment: .leading)
+                        .foregroundStyle(.white).padding(10)
+                            .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
                             .background {
                                 let shape = RoundedRectangle(cornerRadius: 19, style: .continuous)
                                 shape.fill(channel.entryGradient).overlay(shape.fill(.black.opacity(0.30)))
