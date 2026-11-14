@@ -92,7 +92,7 @@ struct WhaleHomeCanvas: View {
                             .frame(maxWidth: .infinity, minHeight: 108, alignment: .leading)
                             .background {
                                 let shape = RoundedRectangle(cornerRadius: 19, style: .continuous)
-                                shape.fill(channel.entryGradient).overlay(shape.fill(.black.opacity(0.28)))
+                                shape.fill(channel.entryGradient).overlay(shape.fill(.black.opacity(0.30)))
                             }
                             .overlay(RoundedRectangle(cornerRadius: 19, style: .continuous).strokeBorder(.white.opacity(0.18), lineWidth: 0.8))
                             .whaleSoftElevation()

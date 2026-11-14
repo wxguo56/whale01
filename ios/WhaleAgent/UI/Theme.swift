@@ -195,7 +195,7 @@ private struct ChannelLabelStyle: ViewModifier {
             .background {
                 let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
                 if selected {
-                    shape.fill(channel.entryGradient).overlay(shape.fill(.black.opacity(0.28)))
+                    shape.fill(channel.entryGradient).overlay(shape.fill(.black.opacity(0.30)))
                 } else {
                     shape.fill(WhaleTheme.cardSolid).overlay(shape.fill(channel.entryInk.opacity(0.10)))
                 }
