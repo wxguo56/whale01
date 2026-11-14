@@ -3,6 +3,7 @@ import UIKit
 
 /// The conversation starter. Tapping 对话 lands here: a real chat surface with
 /// a rotating daily note, immediate prompts and the state the phone actually has.
+@MainActor
 struct WhaleHomeCanvas: View {
     @ObservedObject var model: AppModel
     let bottomInset: CGFloat
@@ -20,6 +21,7 @@ struct WhaleHomeCanvas: View {
     @State private var quoteExpanded = false
     @State private var showWeatherDetail = false
     @State private var homeTodos: [TodoReminder] = []
+    @StateObject private var digest = HomeDigestModel()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var textSize
     @State private var weatherExpanded = ProcessInfo.processInfo.environment["WHALE_DEMO_WEATHER"] == "1"
@@ -42,7 +44,12 @@ struct WhaleHomeCanvas: View {
                 .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 24)
         }.scrollIndicators(.hidden).scrollDismissesKeyboard(.interactively)
             .background(WhaleBackdrop())
-            .task { await loadWeatherIfNeeded(); await loadHomeTodos(); await model.refreshDashboard() }
+            .task {
+                await loadWeatherIfNeeded()
+                await loadHomeTodos()
+                await model.refreshDashboard()
+                await digest.prime()
+            }
             .onChange(of: model.permissionsSnapshot) { _, _ in Task { await loadWeatherIfNeeded(); await loadHomeTodos() } }
             .sheet(isPresented: $showWeatherDetail) {
                 NavigationStack {
@@ -57,19 +64,24 @@ struct WhaleHomeCanvas: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("常用操作").font(.headline).foregroundStyle(WhaleTheme.ink)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: textSize.isAccessibilitySize ? 1 : 2), spacing: 10) {
-                ForEach(DiscoverChannel.allCases) { channel in
+                ForEach(Array(DiscoverChannel.allCases.enumerated()), id: \.element) { offset, channel in
                     Button {
                         if channel == .music { onOpenMusic() }
                         else { onOpenDiscover(channel) }
                     } label: {
-                        VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 11) {
                             Image(systemName: channel.icon).font(.title3.weight(.semibold))
                                 .frame(width: 38, height: 38)
                                 .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+                            Spacer(minLength: 0)
                             Text(channel.title).whaleFont(size: 17, weight: .bold, design: .rounded)
                                 .fixedSize(horizontal: false, vertical: true)
+                            RollingSummaryText(
+                                lines: summaryLines(for: channel),
+                                delay: Double(offset) * 0.55
+                            )
                         }.foregroundStyle(.white).padding(14)
-                            .frame(maxWidth: .infinity, minHeight: 108, alignment: .leading)
+                            .frame(maxWidth: .infinity, minHeight: 128, alignment: .leading)
                             .background {
                                 let shape = RoundedRectangle(cornerRadius: 19, style: .continuous)
                                 shape.fill(channel.entryGradient).overlay(shape.fill(.black.opacity(0.30)))
@@ -81,6 +93,24 @@ struct WhaleHomeCanvas: View {
                 }
             }
         }
+    }
+
+    private func summaryLines(for channel: DiscoverChannel) -> [String] {
+        if channel == .music { return musicSummaryLines }
+        let live = digest.lines[channel] ?? []
+        return live.isEmpty ? [channel.subtitle] : live
+    }
+
+    private var musicSummaryLines: [String] {
+        if let track = model.playback.track {
+            let state = model.playback.state == "playing" ? "正在播放" : "已暂停"
+            var rows = ["\(state) · \(track.title) — \(track.artist)"]
+            if !model.musicTracks.isEmpty {
+                rows.append("曲库 \(model.musicTracks.count) 首 · \(model.musicPlayMode.title)")
+            }
+            return rows
+        }
+        return ["系统资料库 · 本地音乐", "点按进入播放控制"]
     }
     private var todayWeather: some View {
         Button {

@@ -493,4 +493,24 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(HotBoard.allCases.map(\.title), ["微博热搜", "知乎热榜"])
         XCTAssertEqual(HotBoard.zhihu.icon, "text.bubble.fill")
     }
+
+    @MainActor
+    func testHomeDigestUsesRealNewsTitlesAndSkipsBlank() {
+        let items = [
+            NewsItem(id: "a", title: "AI 芯片新进展", summary: "", source: "测试源", link: "https://example.com/a", publishedAt: nil, channel: "ai", rank: nil),
+            NewsItem(id: "b", title: "   ", summary: "", source: "测试源", link: "", publishedAt: nil, channel: "ai", rank: nil),
+            NewsItem(id: "c", title: "游戏科技大会新技术", summary: "", source: "测试源", link: "https://example.com/c", publishedAt: nil, channel: "ai", rank: nil)
+        ]
+        XCTAssertEqual(HomeDigestModel.newsLines(items), ["AI 芯片新进展", "游戏科技大会新技术"])
+        XCTAssertEqual(HomeDigestModel.newsLines([]), [])
+    }
+
+    @MainActor
+    func testHomeDigestHotLineKeepsRealHeat() {
+        let items = [
+            WeiboHotItem(rank: 1, id: "weibo-1", word: "测试热搜", note: "", category: "社会", tag: "", hotValue: 1_092_000, link: "")
+        ]
+        XCTAssertEqual(HomeDigestModel.hotLines(items), ["测试热搜 · 109.2万"])
+        XCTAssertEqual(HomeDigestModel.hotLines([]), [])
+    }
 }
