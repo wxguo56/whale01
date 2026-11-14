@@ -28,7 +28,7 @@ struct WhaleHomeCanvas: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 if showQuote { dailyQuote }
                 todayCard
                 InlinePlaybackView(model: model, onOpen: onOpenMusic)
@@ -61,33 +61,32 @@ struct WhaleHomeCanvas: View {
     }
 
     private var categoryGrid: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("常用操作").font(.headline).foregroundStyle(WhaleTheme.ink)
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 9), count: textSize.isAccessibilitySize ? 1 : 2), spacing: 9) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: textSize.isAccessibilitySize ? 1 : 2), spacing: 8) {
                 ForEach(Array(DiscoverChannel.allCases.enumerated()), id: \.element) { offset, channel in
                     Button {
                         if channel == .music { onOpenMusic() }
                         else { onOpenDiscover(channel) }
                     } label: {
                         VStack(alignment: .leading, spacing: 0) {
-                            HStack(alignment: .top, spacing: 8) {
-                                Image(systemName: channel.icon)
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .frame(width: 32, height: 32)
-                                    .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
-
-                                Spacer(minLength: 4)
-
+                            ZStack {
+                                HStack {
+                                    Image(systemName: channel.icon)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .frame(width: 32, height: 32)
+                                        .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
+                                    Spacer(minLength: 0)
+                                }
                                 Text(channel.title)
                                     .whaleFont(size: 17, weight: .bold, design: .rounded)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.8)
-                                    .multilineTextAlignment(.trailing)
-                                    .frame(maxWidth: .infinity, alignment: .trailing)
-                                    .padding(.top, 1)
+                                    .multilineTextAlignment(.center)
+                                    .frame(maxWidth: .infinity, alignment: .center)
                             }
 
-                            Spacer(minLength: 6)
+                            Spacer(minLength: 4)
 
                             RollingSummaryText(
                                 lines: summaryLines(for: channel),
@@ -96,8 +95,8 @@ struct WhaleHomeCanvas: View {
                                 fontSize: 13
                             )
                         }
-                        .foregroundStyle(.white).padding(10)
-                            .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
+                        .foregroundStyle(.white).padding(9)
+                            .frame(maxWidth: .infinity, minHeight: 84, alignment: .leading)
                             .background {
                                 let shape = RoundedRectangle(cornerRadius: 19, style: .continuous)
                                 shape.fill(channel.entryGradient).overlay(shape.fill(.black.opacity(0.30)))
