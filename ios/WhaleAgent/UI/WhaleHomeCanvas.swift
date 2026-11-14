@@ -157,7 +157,7 @@ struct WhaleHomeCanvas: View {
             } label: {
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: "quote.opening").font(.system(size: 22, weight: .semibold)).foregroundStyle(WhaleTheme.accent)
-                    Text(DailyQuote.text(at: context.date)).whaleFont(size: 19, weight: .semibold)
+                    Text(DailyQuote.text(at: context.date)).whaleFont(size: 20, weight: .semibold)
                         .foregroundStyle(WhaleTheme.ink).lineSpacing(4)
                         .lineLimit(quoteExpanded || textSize.isAccessibilitySize ? nil : 2)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -487,10 +487,11 @@ struct WhaleHomeCanvas: View {
         if !force, !weatherDays.isEmpty { return }
         weatherLoading = true
         weatherError = nil
-        weatherStartedAt = Date()
+        let startedAt = Date()
+        weatherStartedAt = startedAt
         let watchdog = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 22_000_000_000)
-            guard !Task.isCancelled, weatherLoading, weatherLoadIsStale else { return }
+            guard !Task.isCancelled, weatherLoading, weatherStartedAt == startedAt else { return }
             weatherLoading = false
             weatherStartedAt = nil
             weatherError = "天气查询超时，请点按刷新天气重试。"
@@ -518,6 +519,7 @@ struct WhaleHomeCanvas: View {
             weatherDays = days
             weather = WeatherSnapshot.from(data)
             weatherLocation = data.objectValue?.optionalString("locationName") ?? "当前位置"
+            weatherError = nil
         } catch {
             weatherError = error.localizedDescription
         }

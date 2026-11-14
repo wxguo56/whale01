@@ -16,10 +16,10 @@ struct WhaleTabBar: View {
         .frame(height: 60)
         .background {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(WhaleTheme.chrome)
                 .overlay {
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(WhaleTheme.chrome.opacity(0.72))
+                        .fill(LinearGradient(colors: [Color.white.opacity(0.55), WhaleTheme.chrome.opacity(0.2)], startPoint: .top, endPoint: .bottom))
                 }
                 .overlay {
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
