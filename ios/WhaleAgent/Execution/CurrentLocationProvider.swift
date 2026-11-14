@@ -83,7 +83,7 @@ final class CurrentLocationProvider: NSObject, CLLocationManagerDelegate {
                 manager.startUpdatingLocation()
                 timeoutTask?.cancel()
                 timeoutTask = Task { @MainActor [weak self] in
-                    try? await Task.sleep(nanoseconds: 10_000_000_000)
+                    try? await Task.sleep(nanoseconds: 6_000_000_000)
                     guard !Task.isCancelled, let self else { return }
                     if let best = self.bestLocation {
                         self.cached = best
@@ -93,7 +93,7 @@ final class CurrentLocationProvider: NSObject, CLLocationManagerDelegate {
                             .failure(
                                 ToolExecutionError(
                                     code: "location_timeout",
-                                    message: "超过 10 秒没有取得有效位置；可以重试，或直接给我一个地区。"
+                                    message: "超过 6 秒没有取得有效位置；可以重试，或直接给我一个地区。"
                                 )
                             )
                         )

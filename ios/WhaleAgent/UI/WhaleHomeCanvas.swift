@@ -475,7 +475,7 @@ struct WhaleHomeCanvas: View {
 
     private var weatherLoadIsStale: Bool {
         guard let started = weatherStartedAt else { return true }
-        return Date().timeIntervalSince(started) > 25
+        return Date().timeIntervalSince(started) > 20
     }
 
     private func loadWeather(force: Bool) async {
@@ -490,7 +490,7 @@ struct WhaleHomeCanvas: View {
         let startedAt = Date()
         weatherStartedAt = startedAt
         let watchdog = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 22_000_000_000)
+            try? await Task.sleep(nanoseconds: 18_000_000_000)
             guard !Task.isCancelled, weatherLoading, weatherStartedAt == startedAt else { return }
             weatherLoading = false
             weatherStartedAt = nil

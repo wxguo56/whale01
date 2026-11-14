@@ -268,7 +268,7 @@ final class WeatherExecutor {
         }
 
         var request = URLRequest(url: url)
-        request.timeoutInterval = 6
+        request.timeoutInterval = 4
         request.setValue("WhaleAgent/1.0 (iOS)", forHTTPHeaderField: "User-Agent")
 
         let data: Data
@@ -300,7 +300,7 @@ final class WeatherExecutor {
             throw ToolExecutionError(code: "invalid_query", message: "无法生成备用天气请求地址")
         }
         var request = URLRequest(url: url)
-        request.timeoutInterval = 8
+        request.timeoutInterval = 6
         request.setValue("WhaleAgent/1.0 (iOS)", forHTTPHeaderField: "User-Agent")
         let data: Data
         let response: URLResponse
@@ -461,7 +461,7 @@ final class WeatherExecutor {
             throw ToolExecutionError(code: "invalid_query", message: "无法生成空气质量请求地址")
         }
         var request = URLRequest(url: url)
-        request.timeoutInterval = 4
+        request.timeoutInterval = 3
         request.setValue("WhaleAgent/1.0 (iOS)", forHTTPHeaderField: "User-Agent")
         let (data, response) = try await session.data(for: request)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
