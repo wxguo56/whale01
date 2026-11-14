@@ -1,4 +1,4 @@
-"""Capture a simulator frame after its plain launch surface disappears."""
+"""Filter blank simulator frames; UI tests and human review verify the app."""
 import argparse
 import struct
 import subprocess
@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 
 
-def has_app_surface(bmp: Path) -> bool:
+def has_nonblank_content(bmp: Path) -> bool:
     data = bmp.read_bytes()
     if data[:2] != b"BM":
         raise ValueError("Expected a BMP preview")
@@ -46,12 +46,12 @@ def main() -> None:
             subprocess.run(["xcrun", "simctl", "io", args.device, "screenshot", str(args.output)], check=True)
             subprocess.run(["sips", "-Z", "200", "-s", "format", "bmp", str(args.output), "--out", str(preview)],
                            check=True, stdout=subprocess.DEVNULL)
-            if has_app_surface(preview):
-                print("Captured app surface:", args.output.name, flush=True)
+            if has_nonblank_content(preview):
+                print("Captured nonblank frame:", args.output.name, flush=True)
                 return
             if time.monotonic() >= deadline:
-                raise SystemExit("App surface remained blank: " + args.output.name)
-            print("Waiting for app surface:", args.output.name, flush=True)
+                raise SystemExit("Screenshot remained blank: " + args.output.name)
+            print("Waiting for nonblank frame:", args.output.name, flush=True)
             time.sleep(3)
 
 
