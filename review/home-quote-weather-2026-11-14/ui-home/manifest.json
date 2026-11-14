@@ -1,0 +1,107 @@
+[
+  {
+    "attachments": [
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "5A2971BC-D78F-4369-8801-A8AE3CA05120.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "fixed-shell-ai_0_FF4CF582-189B-4A3B-A8EA-8983867BD3DA.png",
+        "timestamp": 1794629823.914
+      },
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "3626CD7A-A3EA-44DC-A755-ACE1CD58D53A.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "fixed-shell-market_0_D2019B2E-385A-442C-B47A-DD364632F7B1.png",
+        "timestamp": 1794629817.358
+      },
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "C9EE936F-F0F0-4D58-9FC3-1AF261F01358.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "fixed-shell-headline_0_71F62456-DCB4-42EF-B627-DEA5F7E11E9F.png",
+        "timestamp": 1794629814.342
+      },
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "EC5208C1-F84B-49C3-9BD2-75920EDE1FB0.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "fixed-shell-game_0_B4C53ACC-ED9C-4A27-8858-CE7DD42BE947.png",
+        "timestamp": 1794629810.683
+      }
+    ],
+    "testIdentifier": "InteractionUITests/testChannelSwitchesKeepNavigationAndSelectorFramesFixed()",
+    "testIdentifierURL": "test://com.apple.xcode/WhaleAgent/WhaleAgentUITests/InteractionUITests/testChannelSwitchesKeepNavigationAndSelectorFramesFixed"
+  },
+  {
+    "attachments": [
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "12795479-174A-47C1-BCA6-28AE4CA91262.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "draft-after-discovery-tab_0_F4A34E80-AFA0-4E1A-BE85-243A9FA07B88.png",
+        "timestamp": 1794629854.017
+      }
+    ],
+    "testIdentifier": "InteractionUITests/testDraftSurvivesTabSwitchAndAppRelaunchWithoutSending()",
+    "testIdentifierURL": "test://com.apple.xcode/WhaleAgent/WhaleAgentUITests/InteractionUITests/testDraftSurvivesTabSwitchAndAppRelaunchWithoutSending"
+  },
+  {
+    "attachments": [
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "560AAE11-7134-4A6E-A61E-BDD9E0FF55A5.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "discovery-after-tab-tap_0_A581A21D-C678-4BF7-BEF1-B4C5D5C4CE4D.png",
+        "timestamp": 1794629885.134
+      },
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "2EE5DCE4-C7DD-424E-9C06-4C3913977EC4.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "home-inspiration-weather_0_2F3265E1-1812-4969-9FF1-79FEE3165F20.png",
+        "timestamp": 1794629878.679
+      }
+    ],
+    "testIdentifier": "InteractionUITests/testThreeTabsKeepDiscoverySeparateFromTheAssistant()",
+    "testIdentifierURL": "test://com.apple.xcode/WhaleAgent/WhaleAgentUITests/InteractionUITests/testThreeTabsKeepDiscoverySeparateFromTheAssistant"
+  },
+  {
+    "attachments": [
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "A2BD9437-F3CB-451A-A0B5-B993C159E5FF.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "unified-feed-headline_0_255B0027-4072-4526-92FE-532E8305E4D3.png",
+        "timestamp": 1794629933.251
+      },
+      {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "BEB0C3A5-7D46-4D50-B4C6-777F0A79718D",
+        "deviceName": "iPhone 16 Pro",
+        "exportedFileName": "FB8C944E-C72D-4C64-8B22-B40581DC9787.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "unified-feed-ai_0_E9F5C4C4-D4C8-4FFF-98F8-6CC0C5537556.png",
+        "timestamp": 1794629921.103
+      }
+    ],
+    "testIdentifier": "InteractionUITests/testUnifiedFeedsHaveNoCategoryControlsAndKeepChannelBarPinned()",
+    "testIdentifierURL": "test://com.apple.xcode/WhaleAgent/WhaleAgentUITests/InteractionUITests/testUnifiedFeedsHaveNoCategoryControlsAndKeepChannelBarPinned"
+  }
+]
