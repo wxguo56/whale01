@@ -139,6 +139,7 @@ struct WhaleHomeCanvas: View {
             HStack(spacing: 10) {
                 Image(systemName: weatherDays.first?.icon ?? "cloud.sun").foregroundStyle(WhaleTheme.accent)
                 if weatherLoading && weatherDays.isEmpty { Text("天气查询中…") }
+                else if weatherError != nil { Text("天气获取失败 · 点按重试") }
                 else if let day = weatherDays.first {
                     Text("\(weatherLocation) · \(weather?.current?.summary ?? day.summary) · \(currentTemperatureText)")
                 } else { Text(locationStatus == "granted" ? "刷新天气" : "查看天气") }
@@ -487,7 +488,15 @@ struct WhaleHomeCanvas: View {
         weatherLoading = true
         weatherError = nil
         weatherStartedAt = Date()
+        let watchdog = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 22_000_000_000)
+            guard !Task.isCancelled, weatherLoading, weatherLoadIsStale else { return }
+            weatherLoading = false
+            weatherStartedAt = nil
+            weatherError = "天气查询超时，请点按刷新天气重试。"
+        }
         defer {
+            watchdog.cancel()
             weatherLoading = false
             weatherStartedAt = nil
         }
