@@ -166,7 +166,7 @@ extension DiscoverChannel {
     var entryGradient: LinearGradient {
         switch self {
         case .ai: return WhaleTheme.heroGradient
-        case .market: return LinearGradient(colors: [WhaleTheme.moon, WhaleTheme.accentDeep], startPoint: .topLeading, endPoint: .bottomTrailing)
+        case .market: return LinearGradient(colors: [Color(light: 0x2E73C8, dark: 0x326DA6), Color(light: 0x0B756F, dark: 0x267E74)], startPoint: .topLeading, endPoint: .bottomTrailing)
         case .game: return WhaleTheme.gameGradient
         case .music: return WhaleTheme.musicGradient
         case .headline: return WhaleTheme.headlineGradient
