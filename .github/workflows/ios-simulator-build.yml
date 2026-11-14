@@ -77,8 +77,8 @@ jobs:
               -sdk iphonesimulator \
               -destination 'generic/platform=iOS Simulator' \
               -derivedDataPath build \
-              MARKETING_VERSION=0.7.7 \
-              CURRENT_PROJECT_VERSION="120.${{ github.run_attempt }}" \
+              MARKETING_VERSION=0.7.8 \
+              CURRENT_PROJECT_VERSION="121.${{ github.run_attempt }}" \
               CODE_SIGNING_ALLOWED=NO \
               CODE_SIGNING_REQUIRED=NO \
               CODE_SIGN_IDENTITY="" \

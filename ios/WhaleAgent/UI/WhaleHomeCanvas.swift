@@ -69,38 +69,28 @@ struct WhaleHomeCanvas: View {
                         if channel == .music { onOpenMusic() }
                         else { onOpenDiscover(channel) }
                     } label: {
-                        HStack(alignment: .top, spacing: 4) {
-                            VStack(alignment: .leading, spacing: 0) {
-                                Image(systemName: channel.icon)
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .frame(width: 38, height: 38)
-                                    .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
-                                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.10), lineWidth: 0.6))
-                                Spacer(minLength: 8)
-                                Text(channel.title).whaleFont(size: 17, weight: .bold, design: .rounded)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .frame(width: 70, alignment: .leading)
-                            .frame(maxHeight: .infinity, alignment: .top)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Image(systemName: channel.icon)
+                                .font(.system(size: 18, weight: .semibold))
+                                .frame(width: 42, height: 42)
+                                .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 13))
 
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack(spacing: 4) {
-                                    Circle().fill(.white.opacity(0.5)).frame(width: 4, height: 4)
-                                    Text("实时摘要")
-                                        .font(.system(size: 9, weight: .semibold, design: .rounded))
-                                        .foregroundStyle(.white.opacity(0.55))
-                                }
-                                RollingSummaryText(
-                                    lines: summaryLines(for: channel),
-                                    delay: Double(offset) * 0.55,
-                                    maxLines: 3,
-                                    fontSize: 10.5
-                                )
-                            }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                            Spacer(minLength: 10)
+
+                            Text(channel.title)
+                                .whaleFont(size: 17, weight: .bold, design: .rounded)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            RollingSummaryText(
+                                lines: summaryLines(for: channel),
+                                delay: Double(offset) * 0.55,
+                                maxLines: 1,
+                                fontSize: 11.5
+                            )
+                            .padding(.top, 7)
                         }
                         .foregroundStyle(.white).padding(14)
-                            .frame(maxWidth: .infinity, minHeight: 128, alignment: .leading)
+                            .frame(maxWidth: .infinity, minHeight: 154, alignment: .leading)
                             .background {
                                 let shape = RoundedRectangle(cornerRadius: 19, style: .continuous)
                                 shape.fill(channel.entryGradient).overlay(shape.fill(.black.opacity(0.30)))
